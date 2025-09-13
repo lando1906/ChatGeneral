@@ -203,20 +203,26 @@
             flex-direction: column;
         }
 
-        .message {
-            max-width: 85%;
+        .message-group {
             margin-bottom: var(--spacing-md);
             display: flex;
             flex-direction: column;
             animation: fadeIn 0.3s ease;
         }
 
-        .message.user-message {
-            align-self: flex-end;
+        .message-group.user-group {
+            align-items: flex-end;
         }
 
-        .message.other-message {
-            align-self: flex-start;
+        .message-group.other-group {
+            align-items: flex-start;
+        }
+
+        .message {
+            max-width: 85%;
+            margin-bottom: 2px;
+            display: flex;
+            flex-direction: column;
         }
 
         .message-bubble {
@@ -226,22 +232,50 @@
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
         }
 
-        .user-message .message-bubble {
+        .user-group .message-bubble {
             background-color: var(--color-message-user);
             color: var(--color-text);
+        }
+
+        .user-group .message:first-child .message-bubble {
             border-bottom-right-radius: 0;
         }
 
-        .other-message .message-bubble {
+        .user-group .message:not(:first-child):not(:last-child) .message-bubble {
+            border-radius: var(--border-radius);
+        }
+
+        .user-group .message:last-child .message-bubble {
+            border-top-right-radius: 0;
+        }
+
+        .other-group .message-bubble {
             background-color: var(--color-message-other);
             color: var(--color-text);
+        }
+
+        .other-group .message:first-child .message-bubble {
             border-bottom-left-radius: 0;
+        }
+
+        .other-group .message:not(:first-child):not(:last-child) .message-bubble {
+            border-radius: var(--border-radius);
+        }
+
+        .other-group .message:last-child .message-bubble {
+            border-top-left-radius: 0;
         }
 
         .message-sender {
             font-weight: 600;
             margin-bottom: var(--spacing-xs);
             font-size: 0.85rem;
+            padding-left: var(--spacing-sm);
+            display: none;
+        }
+
+        .message-group:not(.consecutive) .message:first-child .message-sender {
+            display: block;
         }
 
         .message-time {
@@ -249,10 +283,37 @@
             color: var(--color-text-light);
             margin-top: var(--spacing-xs);
             text-align: right;
+            padding-right: var(--spacing-sm);
         }
 
-        .other-message .message-time {
+        .other-group .message-time {
             text-align: left;
+            padding-left: var(--spacing-sm);
+        }
+
+        .group-timestamp {
+            font-size: 0.7rem;
+            color: var(--color-text-light);
+            text-align: center;
+            margin: var(--spacing-md) 0;
+            position: relative;
+        }
+
+        .group-timestamp::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background-color: var(--color-text-light);
+            opacity: 0.3;
+            z-index: -1;
+        }
+
+        .group-timestamp span {
+            background-color: var(--color-background);
+            padding: 0 var(--spacing-sm);
         }
 
         /* Indicador de escritura */
@@ -366,6 +427,15 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .new-message {
+            animation: slideIn 0.3s ease;
+        }
+
         /* Personalización de scrollbar */
         ::-webkit-scrollbar {
             width: 5px;
@@ -470,6 +540,11 @@
             let typingTimeout;
             let currentTypingUser = null;
             let typingTimeoutIndicator;
+            
+            // Variables para agrupar mensajes
+            let lastMessageGroup = null;
+            let lastMessageSender = null;
+            const MESSAGE_GROUP_TIMEOUT = 120000; // 2 minutos
 
             // Cargar usuarios
             function loadUsers() {
@@ -501,7 +576,7 @@
                             <div class="user-name">${user.username}</div>
                             <div class="user-status">
                                 <span class="status-dot ${user.is_online ? 'status-online' : 'status-offline'}"></span>
-                                <span>${user.is_online ? 'En línea' : 'Desconectado'}</span>
+                                ${user.is_online ? 'En línea' : 'Desconectado'}
                             </div>
                         </div>
                     `;
@@ -513,11 +588,12 @@
 
             // Cargar mensajes iniciales
             function loadMessages() {
-                fetch('/api/messages?limit=100')
+                fetch('/api/messages')
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
                             renderMessages(data.messages);
+                            scrollToBottom();
                         }
                     })
                     .catch(error => {
@@ -528,180 +604,235 @@
             // Renderizar mensajes
             function renderMessages(messages) {
                 messagesContainer.innerHTML = '';
+                lastMessageGroup = null;
+                lastMessageSender = null;
                 
-                // Añadir indicador de escritura
-                const typingIndicatorElement = document.createElement('div');
-                typingIndicatorElement.classList.add('typing-indicator');
-                typingIndicatorElement.id = 'typingIndicator';
-                typingIndicatorElement.innerHTML = `
-                    <span id="typingText"></span>
-                    <div class="typing-dots">
-                        <div class="typing-dot"></div>
-                        <div class="typing-dot"></div>
-                        <div class="typing-dot"></div>
-                    </div>
-                `;
-                messagesContainer.appendChild(typingIndicatorElement);
-                
-                messages.forEach(msg => {
-                    const isCurrentUser = msg.username === '{{ username }}';
-                    const messageElement = document.createElement('div');
-                    messageElement.classList.add('message', isCurrentUser ? 'user-message' : 'other-message');
-                    
-                    const timestamp = new Date(msg.timestamp);
-                    const timeString = timestamp.toLocaleTimeString('es-ES', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                    });
-                    
-                    messageElement.innerHTML = `
-                        <div class="message-sender">${isCurrentUser ? 'Tú' : msg.username}</div>
-                        <div class="message-bubble">
-                            <p>${msg.message}</p>
-                        </div>
-                        <div class="message-time">${timeString}</div>
-                    `;
-                    messagesContainer.appendChild(messageElement);
+                messages.forEach(message => {
+                    addMessageToChat(message);
                 });
-                
-                scrollToBottom();
             }
 
-            // Función para desplazarse al final
+            // Agregar mensaje al chat
+            function addMessageToChat(message) {
+                const messageElement = createMessageElement(message);
+                
+                // Determinar si es un nuevo grupo de mensajes
+                const isConsecutive = lastMessageSender === message.username && 
+                                     (Date.now() - lastMessageGroup) < MESSAGE_GROUP_TIMEOUT;
+                
+                if (!isConsecutive) {
+                    // Crear un nuevo grupo
+                    const messageGroup = document.createElement('div');
+                    messageGroup.classList.add('message-group');
+                    messageGroup.classList.add(message.is_own ? 'user-group' : 'other-group');
+                    messageGroup.dataset.sender = message.username;
+                    
+                    // Agregar timestamp de grupo si ha pasado más de 5 minutos
+                    if (lastMessageGroup && (message.timestamp - lastMessageGroup) > 300000) {
+                        const timestampElement = document.createElement('div');
+                        timestampElement.classList.add('group-timestamp');
+                        const date = new Date(message.timestamp);
+                        timestampElement.innerHTML = `<span>${formatGroupTimestamp(date)}</span>`;
+                        messagesContainer.appendChild(timestampElement);
+                    }
+                    
+                    messagesContainer.appendChild(messageGroup);
+                    lastMessageSender = message.username;
+                }
+                
+                // Agregar el mensaje al último grupo
+                const messageGroups = document.querySelectorAll('.message-group');
+                const lastGroup = messageGroups[messageGroups.length - 1];
+                
+                // Verificar que el último grupo es del mismo remitente
+                if (lastGroup && lastGroup.dataset.sender === message.username) {
+                    lastGroup.appendChild(messageElement);
+                } else {
+                    // Si no es del mismo remitente, crear un nuevo grupo
+                    const messageGroup = document.createElement('div');
+                    messageGroup.classList.add('message-group');
+                    messageGroup.classList.add(message.is_own ? 'user-group' : 'other-group');
+                    messageGroup.dataset.sender = message.username;
+                    messageGroup.appendChild(messageElement);
+                    messagesContainer.appendChild(messageGroup);
+                    lastMessageSender = message.username;
+                }
+                
+                lastMessageGroup = message.timestamp;
+                
+                // Si es el último mensaje, hacer scroll
+                if (messageGroups.length === 0 || messageGroups[messageGroups.length - 1].lastChild === messageElement) {
+                    scrollToBottom();
+                }
+            }
+
+            // Crear elemento de mensaje
+            function createMessageElement(message) {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message');
+                
+                const messageBubble = document.createElement('div');
+                messageBubble.classList.add('message-bubble');
+                messageBubble.textContent = message.text;
+                
+                const messageTime = document.createElement('div');
+                messageTime.classList.add('message-time');
+                messageTime.textContent = formatTime(message.timestamp);
+                
+                const messageSender = document.createElement('div');
+                messageSender.classList.add('message-sender');
+                messageSender.textContent = message.username;
+                
+                messageDiv.appendChild(messageSender);
+                messageDiv.appendChild(messageBubble);
+                messageDiv.appendChild(messageTime);
+                
+                return messageDiv;
+            }
+
+            // Formatear hora
+            function formatTime(timestamp) {
+                const date = new Date(timestamp);
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+
+            // Formatear timestamp de grupo
+            function formatGroupTimestamp(date) {
+                const today = new Date();
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                
+                if (date.toDateString() === today.toDateString()) {
+                    return 'Hoy';
+                } else if (date.toDateString() === yesterday.toDateString()) {
+                    return 'Ayer';
+                } else {
+                    return date.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+                }
+            }
+
+            // Scroll al final del chat
             function scrollToBottom() {
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
 
-            // Función para enviar mensaje
+            // Enviar mensaje
             function sendMessage() {
                 const messageText = messageInput.value.trim();
+                
                 if (messageText) {
-                    socket.emit('send_message', { message: messageText });
+                    socket.emit('send_message', { text: messageText });
                     messageInput.value = '';
                     
-                    // Dejar de mostrar "escribiendo"
-                    typing = false;
-                    socket.emit('typing', { typing: false });
+                    // Dejar de escribir
+                    stopTyping();
                 }
             }
 
-            // Función para mostrar que el usuario está escribiendo
-            function updateTyping() {
+            // Emitir evento de escritura
+            function startTyping() {
                 if (!typing) {
                     typing = true;
-                    socket.emit('typing', { typing: true });
+                    socket.emit('typing_start');
                 }
                 
                 clearTimeout(typingTimeout);
-                typingTimeout = setTimeout(() => {
-                    typing = false;
-                    socket.emit('typing', { typing: false });
-                }, 1000);
+                typingTimeout = setTimeout(stopTyping, 1000);
             }
 
-            // Abrir panel lateral
-            menuButton.addEventListener('click', function() {
+            // Dejar de escribir
+            function stopTyping() {
+                clearTimeout(typingTimeout);
+                if (typing) {
+                    typing = false;
+                    socket.emit('typing_stop');
+                }
+            }
+
+            // Mostrar indicador de escritura
+            function showTypingIndicator(username) {
+                typingText.textContent = `${username} está escribiendo`;
+                typingIndicator.style.display = 'flex';
+                
+                clearTimeout(typingTimeoutIndicator);
+                typingTimeoutIndicator = setTimeout(() => {
+                    typingIndicator.style.display = 'none';
+                }, 3000);
+            }
+
+            // Ocultar indicador de escritura
+            function hideTypingIndicator() {
+                typingIndicator.style.display = 'none';
+            }
+
+            // Event Listeners
+            menuButton.addEventListener('click', () => {
                 usersSidebar.classList.add('active');
                 overlay.classList.add('active');
-                document.body.style.overflow = 'hidden';
                 loadUsers();
             });
-            
-            // Cerrar panel lateral
-            function closeUsersSidebar() {
+
+            closeSidebar.addEventListener('click', () => {
                 usersSidebar.classList.remove('active');
                 overlay.classList.remove('active');
-                document.body.style.overflow = 'auto';
-            }
-            
-            closeSidebar.addEventListener('click', closeUsersSidebar);
-            overlay.addEventListener('click', closeUsersSidebar);
-            
-            // Enviar mensaje al hacer clic en el botón
+            });
+
+            overlay.addEventListener('click', () => {
+                usersSidebar.classList.remove('active');
+                overlay.classList.remove('active');
+            });
+
             sendButton.addEventListener('click', sendMessage);
-            
-            // Enviar mensaje al presionar Enter
-            messageInput.addEventListener('keydown', function(e) {
+
+            messageInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     sendMessage();
                 }
             });
-            
-            // Detectar escritura
-            messageInput.addEventListener('input', updateTyping);
-            
-            // Botón de actualizar
-            refreshButton.addEventListener('click', function() {
-                loadUsers();
+
+            messageInput.addEventListener('input', startTyping);
+
+            refreshButton.addEventListener('click', () => {
                 loadMessages();
+                loadUsers();
             });
-            
-            // Botón de cerrar sesión
-            logoutButton.addEventListener('click', function() {
-                if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
-                    window.location.href = '/api/logout';
-                }
+
+            logoutButton.addEventListener('click', () => {
+                // Lógica para cerrar sesión
+                window.location.href = '/logout';
             });
-            
+
             // Eventos de SocketIO
-            socket.on('connect', function() {
+            socket.on('connect', () => {
                 console.log('Conectado al servidor');
             });
-            
-            socket.on('new_message', function(data) {
-                const isCurrentUser = data.username === '{{ username }}';
-                const messageElement = document.createElement('div');
-                messageElement.classList.add('message', isCurrentUser ? 'user-message' : 'other-message');
-                
-                const timestamp = new Date(data.timestamp);
-                const timeString = timestamp.toLocaleTimeString('es-ES', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-                
-                messageElement.innerHTML = `
-                    <div class="message-sender">${isCurrentUser ? 'Tú' : data.username}</div>
-                    <div class="message-bubble">
-                        <p>${data.message}</p>
-                    </div>
-                    <div class="message-time">${timeString}</div>
-                `;
-                
-                // Insertar antes del indicador de escritura
-                messagesContainer.insertBefore(messageElement, typingIndicator);
-                scrollToBottom();
+
+            socket.on('new_message', (message) => {
+                addMessageToChat(message);
             });
-            
-            socket.on('user_joined', function(data) {
-                loadUsers(); // Actualizar lista de usuarios
-            });
-            
-            socket.on('user_left', function(data) {
-                loadUsers(); // Actualizar lista de usuarios
-            });
-            
-            socket.on('user_typing', function(data) {
-                if (data.typing) {
+
+            socket.on('user_typing', (data) => {
+                if (data.username !== currentUser) { // currentUser debe definirse según tu lógica
+                    showTypingIndicator(data.username);
                     currentTypingUser = data.username;
-                    typingText.textContent = `${data.username} está escribiendo`;
-                    typingIndicator.style.display = 'flex';
-                    
-                    // Limpiar timeout anterior
-                    clearTimeout(typingTimeoutIndicator);
-                    typingTimeoutIndicator = setTimeout(() => {
-                        typingIndicator.style.display = 'none';
-                        currentTypingUser = null;
-                    }, 3000);
-                } else if (currentTypingUser === data.username) {
-                    typingIndicator.style.display = 'none';
+                }
+            });
+
+            socket.on('user_stop_typing', (data) => {
+                if (data.username === currentTypingUser) {
+                    hideTypingIndicator();
                     currentTypingUser = null;
                 }
             });
-            
-            // Cargar datos iniciales
-            loadUsers();
+
+            socket.on('users_update', (users) => {
+                renderUsers(users);
+            });
+
+            // Cargar mensajes y usuarios al iniciar
             loadMessages();
+            loadUsers();
         });
     </script>
 </body>
