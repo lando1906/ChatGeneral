@@ -3,33 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iniciar Sesión - Chat General</title>
+    <title>Iniciar Sesión o Registrarse</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --color-primary: #2563eb;
             --color-primary-dark: #1d4ed8;
-            --color-primary-light: #3b82f6;
-            --color-secondary: #60a5fa;
-            --color-accent: #93c5fd;
             --color-background: #f0f7ff;
-            --color-form-background: #ffffff;
             --color-text: #1f2937;
             --color-text-light: #6b7280;
-            --color-error: #ef4444;
-            --color-success: #10b981;
-            
-            --spacing-xs: 0.25rem;
-            --spacing-sm: 0.5rem;
             --spacing-md: 1rem;
             --spacing-lg: 1.5rem;
-            --spacing-xl: 2rem;
-            
             --border-radius: 12px;
-            --border-radius-sm: 8px;
-            
-            --transition: all 0.3s ease;
         }
 
         * {
@@ -40,502 +26,202 @@
         }
 
         body {
-            background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-dark) 100%);
+            background-color: var(--color-background);
             color: var(--color-text);
-            min-height: 100vh;
+            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: var(--spacing-md);
         }
 
-        .container {
+        .auth-container {
+            background: white;
+            padding: var(--spacing-lg);
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
             width: 100%;
             max-width: 400px;
-            background-color: var(--color-form-background);
-            border-radius: var(--border-radius);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-            overflow: hidden;
         }
 
-        .header {
-            background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
-            color: white;
-            padding: var(--spacing-xl);
+        .auth-container h1 {
             text-align: center;
-        }
-
-        .header h1 {
-            font-size: 1.8rem;
+            margin-bottom: var(--spacing-lg);
+            font-size: 1.5rem;
             font-weight: 600;
-            margin-bottom: var(--spacing-xs);
-        }
-
-        .header p {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-
-        .form-container {
-            padding: var(--spacing-xl);
         }
 
         .form-group {
-            margin-bottom: var(--spacing-lg);
-            position: relative;
+            margin-bottom: var(--spacing-md);
         }
 
         .form-group label {
             display: block;
-            margin-bottom: var(--spacing-xs);
             font-weight: 500;
-            font-size: 0.9rem;
-            color: var(--color-text);
+            margin-bottom: 0.5rem;
         }
 
-        .input-with-icon {
-            position: relative;
-        }
-
-        .input-icon {
-            position: absolute;
-            left: var(--spacing-md);
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--color-primary);
-        }
-
-        .form-control {
-            width: 100%;
-            padding: var(--spacing-md) var(--spacing-md) var(--spacing-md) 45px;
-            border: 1px solid #ddd;
-            border-radius: var(--border-radius);
-            font-size: 1rem;
-            transition: var(--transition);
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--color-primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
-        }
-
-        .password-toggle {
-            position: absolute;
-            right: var(--spacing-md);
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--color-text-light);
-            cursor: pointer;
-        }
-
-        .form-options {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: var(--spacing-lg);
-            font-size: 0.9rem;
-        }
-
-        .remember-me {
-            display: flex;
-            align-items: center;
-        }
-
-        .remember-me input {
-            margin-right: var(--spacing-xs);
-        }
-
-        .forgot-password {
-            color: var(--color-primary);
-            text-decoration: none;
-            transition: var(--transition);
-        }
-
-        .forgot-password:hover {
-            color: var(--color-primary-dark);
-            text-decoration: underline;
-        }
-
-        .btn {
-            display: block;
+        .form-group input {
             width: 100%;
             padding: var(--spacing-md);
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 0.9rem;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .checkbox-group input {
+            margin-right: 0.5rem;
+        }
+
+        .auth-button {
+            width: 100%;
+            padding: var(--spacing-md);
+            background-color: var(--color-primary);
+            color: white;
             border: none;
             border-radius: var(--border-radius);
             font-size: 1rem;
             font-weight: 500;
             cursor: pointer;
-            transition: var(--transition);
+            transition: background-color 0.2s;
         }
 
-        .btn-primary {
-            background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
-            color: white;
-            margin-bottom: var(--spacing-md);
+        .auth-button:hover {
+            background-color: var(--color-primary-dark);
         }
 
-        .btn-primary:hover {
-            background: linear-gradient(to right, var(--color-primary-dark), var(--color-primary));
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3);
-        }
-
-        .btn-secondary {
-            background-color: transparent;
-            color: var(--color-primary);
-            border: 1px solid var(--color-primary);
-        }
-
-        .btn-secondary:hover {
-            background-color: rgba(37, 99, 235, 0.1);
-        }
-
-        .footer {
+        .switch-form {
             text-align: center;
-            margin-top: var(--spacing-xl);
+            margin-top: var(--spacing-md);
             font-size: 0.9rem;
-            color: var(--color-text-light);
         }
 
-        .footer a {
+        .switch-form a {
             color: var(--color-primary);
             text-decoration: none;
             font-weight: 500;
-            transition: var(--transition);
         }
 
-        .footer a:hover {
-            color: var(--color-primary-dark);
+        .switch-form a:hover {
             text-decoration: underline;
         }
 
-        /* Formulario de registro */
-        #registerForm {
+        .error-message {
+            color: #ef4444;
+            font-size: 0.8rem;
+            text-align: center;
+            margin-bottom: var(--spacing-md);
             display: none;
         }
 
-        .terms {
-            font-size: 0.8rem;
-            color: var(--color-text-light);
-            margin-top: var(--spacing-md);
+        .terms-link {
             text-align: center;
+            margin-top: var(--spacing-md);
+            font-size: 0.8rem;
         }
 
-        .terms a {
+        .terms-link a {
             color: var(--color-primary);
             text-decoration: none;
         }
 
-        .terms a:hover {
+        .terms-link a:hover {
             text-decoration: underline;
-        }
-
-        /* Validación */
-        .error-message {
-            color: var(--color-error);
-            font-size: 0.8rem;
-            margin-top: var(--spacing-xs);
-            display: none;
-        }
-
-        .form-control.error {
-            border-color: var(--color-error);
-        }
-
-        /* Responsividad */
-        @media (max-width: 480px) {
-            .container {
-                max-width: 100%;
-            }
-            
-            .header {
-                padding: var(--spacing-lg);
-            }
-            
-            .form-container {
-                padding: var(--spacing-lg);
-            }
-            
-            .form-options {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: var(--spacing-md);
-            }
-        }
-
-        /* Animaciones */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .form-container {
-            animation: fadeIn 0.5s ease;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Chat General</h1>
-            <p>Conecta con usuarios alrededor del mundo</p>
+    <div class="auth-container">
+        <h1 id="formTitle">Iniciar Sesión</h1>
+        <div class="error-message" id="errorMessage"></div>
+        <form id="authForm">
+            <div class="form-group">
+                <label for="username">Usuario</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="rememberMe" name="rememberMe">
+                <label for="rememberMe">Recuérdame</label>
+            </div>
+            <button type="submit" class="auth-button" id="submitButton">Iniciar Sesión</button>
+        </form>
+        <div class="switch-form">
+            <span id="switchText">¿No tienes cuenta? </span>
+            <a href="#" id="switchLink">Regístrate</a>
         </div>
-        
-        <div class="form-container">
-            <!-- Formulario de Login -->
-            <form id="loginForm">
-                <div class="form-group">
-                    <label for="loginUsername">Nombre de usuario</label>
-                    <div class="input-with-icon">
-                        <i class="fas fa-user input-icon"></i>
-                        <input type="text" id="loginUsername" class="form-control" placeholder="Tu nombre de usuario" required>
-                    </div>
-                    <div class="error-message" id="loginUsernameError">Por favor ingresa tu nombre de usuario</div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="loginPassword">Contraseña</label>
-                    <div class="input-with-icon">
-                        <i class="fas fa-lock input-icon"></i>
-                        <input type="password" id="loginPassword" class="form-control" placeholder="Tu contraseña" required>
-                        <span class="password-toggle" id="loginPasswordToggle">
-                            <i class="far fa-eye"></i>
-                        </span>
-                    </div>
-                    <div class="error-message" id="loginPasswordError">La contraseña es requerida</div>
-                </div>
-                
-                <div class="form-options">
-                    <div class="remember-me">
-                        <input type="checkbox" id="rememberMe">
-                        <label for="rememberMe">Recordarme</label>
-                    </div>
-                    <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
-                </div>
-                
-                <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
-                <button type="button" id="showRegister" class="btn btn-secondary">Crear una cuenta</button>
-                
-                <div class="footer">
-                    ¿Necesitas ayuda? <a href="/terminos">Términos y Privacidad</a>
-                </div>
-            </form>
-            
-            <!-- Formulario de Registro -->
-            <form id="registerForm">
-                <div class="form-group">
-                    <label for="registerUsername">Nombre de usuario</label>
-                    <div class="input-with-icon">
-                        <i class="fas fa-user input-icon"></i>
-                        <input type="text" id="registerUsername" class="form-control" placeholder="Elige un nombre de usuario" required>
-                    </div>
-                    <div class="error-message" id="registerUsernameError">Por favor ingresa un nombre de usuario válido</div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="registerPassword">Contraseña</label>
-                    <div class="input-with-icon">
-                        <i class="fas fa-lock input-icon"></i>
-                        <input type="password" id="registerPassword" class="form-control" placeholder="Contraseña segura" required>
-                        <span class="password-toggle" id="registerPasswordToggle">
-                            <i class="far fa-eye"></i>
-                        </span>
-                    </div>
-                    <div class="error-message" id="registerPasswordError">La contraseña debe tener al menos 8 caracteres</div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="registerConfirmPassword">Confirmar contraseña</label>
-                    <div class="input-with-icon">
-                        <i class="fas fa-lock input-icon"></i>
-                        <input type="password" id="registerConfirmPassword" class="form-control" placeholder="Repite tu contraseña" required>
-                        <span class="password-toggle" id="registerConfirmPasswordToggle">
-                            <i class="far fa-eye"></i>
-                        </span>
-                    </div>
-                    <div class="error-message" id="registerConfirmPasswordError">Las contraseñas no coinciden</div>
-                </div>
-                
-                <button type="submit" class="btn btn-primary">Registrarse</button>
-                <button type="button" id="showLogin" class="btn btn-secondary">¿Ya tienes una cuenta?</button>
-                
-                <div class="terms">
-                    Al registrarte, aceptas nuestros <a href="/terminos">Términos de servicio</a> y <a href="/terminos">Política de privacidad</a>
-                </div>
-            </form>
+        <div class="terms-link">
+            <a href="/terminos">Términos y Condiciones</a>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const loginForm = document.getElementById('loginForm');
-            const registerForm = document.getElementById('registerForm');
-            const showRegister = document.getElementById('showRegister');
-            const showLogin = document.getElementById('showLogin');
-            
-            // Alternar entre formularios
-            showRegister.addEventListener('click', function() {
-                loginForm.style.display = 'none';
-                registerForm.style.display = 'block';
+            const authForm = document.getElementById('authForm');
+            const formTitle = document.getElementById('formTitle');
+            const submitButton = document.getElementById('submitButton');
+            const switchLink = document.getElementById('switchLink');
+            const switchText = document.getElementById('switchText');
+            const errorMessage = document.getElementById('errorMessage');
+            let isLogin = true;
+
+            // Cambiar entre login y registro
+            switchLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                isLogin = !isLogin;
+                formTitle.textContent = isLogin ? 'Iniciar Sesión' : 'Registrarse';
+                submitButton.textContent = isLogin ? 'Iniciar Sesión' : 'Registrarse';
+                switchText.textContent = isLogin ? '¿No tienes cuenta? ' : '¿Ya tienes cuenta? ';
+                switchLink.textContent = isLogin ? 'Regístrate' : 'Inicia Sesión';
+                errorMessage.style.display = 'none';
             });
-            
-            showLogin.addEventListener('click', function() {
-                registerForm.style.display = 'none';
-                loginForm.style.display = 'block';
-            });
-            
-            // Funcionalidad para mostrar/ocultar contraseña
-            function setupPasswordToggle(toggleId, inputId) {
-                const toggle = document.getElementById(toggleId);
-                const input = document.getElementById(inputId);
-                
-                toggle.addEventListener('click', function() {
-                    if (input.type === 'password') {
-                        input.type = 'text';
-                        toggle.innerHTML = '<i class="far fa-eye-slash"></i>';
+
+            // Enviar formulario
+            authForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                const rememberMe = document.getElementById('rememberMe').checked;
+                const url = isLogin ? '/api/login' : '/api/register';
+
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username,
+                        password,
+                        remember_me: rememberMe
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = '/chat';
                     } else {
-                        input.type = 'password';
-                        toggle.innerHTML = '<i class="far fa-eye"></i>';
+                        errorMessage.textContent = data.message;
+                        errorMessage.style.display = 'block';
                     }
+                })
+                .catch(error => {
+                    errorMessage.textContent = 'Error en la conexión. Intenta de nuevo.';
+                    errorMessage.style.display = 'block';
                 });
-            }
-            
-            setupPasswordToggle('loginPasswordToggle', 'loginPassword');
-            setupPasswordToggle('registerPasswordToggle', 'registerPassword');
-            setupPasswordToggle('registerConfirmPasswordToggle', 'registerConfirmPassword');
-            
-            // Validación de formularios
-            loginForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                let isValid = true;
-                
-                // Validar nombre de usuario
-                const loginUsername = document.getElementById('loginUsername');
-                const loginUsernameError = document.getElementById('loginUsernameError');
-                if (!loginUsername.value) {
-                    loginUsername.classList.add('error');
-                    loginUsernameError.style.display = 'block';
-                    isValid = false;
-                } else {
-                    loginUsername.classList.remove('error');
-                    loginUsernameError.style.display = 'none';
-                }
-                
-                // Validar contraseña
-                const loginPassword = document.getElementById('loginPassword');
-                const loginPasswordError = document.getElementById('loginPasswordError');
-                if (!loginPassword.value) {
-                    loginPassword.classList.add('error');
-                    loginPasswordError.style.display = 'block';
-                    isValid = false;
-                } else {
-                    loginPassword.classList.remove('error');
-                    loginPasswordError.style.display = 'none';
-                }
-                
-                if (isValid) {
-                    const loginData = {
-                        username: loginUsername.value,
-                        password: loginPassword.value,
-                        remember_me: document.getElementById('rememberMe').checked
-                    };
-                    
-                    // Enviar solicitud de login
-                    fetch('/api/login', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(loginData)
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            // Redirigir al chat
-                            window.location.href = '/chat';
-                        } else {
-                            alert('Error: ' + data.message);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Error de conexión');
-                    });
-                }
-            });
-            
-            registerForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                let isValid = true;
-                
-                // Validar nombre de usuario
-                const registerUsername = document.getElementById('registerUsername');
-                const registerUsernameError = document.getElementById('registerUsernameError');
-                if (!registerUsername.value) {
-                    registerUsername.classList.add('error');
-                    registerUsernameError.style.display = 'block';
-                    isValid = false;
-                } else {
-                    registerUsername.classList.remove('error');
-                    registerUsernameError.style.display = 'none';
-                }
-                
-                // Validar contraseña
-                const registerPassword = document.getElementById('registerPassword');
-                const registerPasswordError = document.getElementById('registerPasswordError');
-                if (!registerPassword.value || registerPassword.value.length < 8) {
-                    registerPassword.classList.add('error');
-                    registerPasswordError.style.display = 'block';
-                    isValid = false;
-                } else {
-                    registerPassword.classList.remove('error');
-                    registerPasswordError.style.display = 'none';
-                }
-                
-                // Validar confirmación de contraseña
-                const registerConfirmPassword = document.getElementById('registerConfirmPassword');
-                const registerConfirmPasswordError = document.getElementById('registerConfirmPasswordError');
-                if (registerPassword.value !== registerConfirmPassword.value) {
-                    registerConfirmPassword.classList.add('error');
-                    registerConfirmPasswordError.style.display = 'block';
-                    isValid = false;
-                } else {
-                    registerConfirmPassword.classList.remove('error');
-                    registerConfirmPasswordError.style.display = 'none';
-                }
-                
-                if (isValid) {
-                    const registerData = {
-                        username: registerUsername.value,
-                        password: registerPassword.value
-                    };
-                    
-                    // Enviar solicitud de registro
-                    fetch('/api/register', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(registerData)
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('Registro exitoso. Ahora puedes iniciar sesión.');
-                            registerForm.style.display = 'none';
-                            loginForm.style.display = 'block';
-                            // Llenar automáticamente el formulario de login
-                            document.getElementById('loginUsername').value = registerUsername.value;
-                        } else {
-                            alert('Error: ' + data.message);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Error de conexión');
-                    });
-                }
             });
         });
     </script>
