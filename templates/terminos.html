@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Términos de Servicio - Chat General</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --color-primary: #2563eb;
+            --color-primary-dark: #1d4ed8;
+            --color-primary-light: #3b82f6;
+            --color-secondary: #60a5fa;
+            --color-accent: #93c5fd;
+            --color-background: #f0f7ff;
+            --color-text: #1f2937;
+            --color-text-light: #6b7280;
+            
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-xxl: 3rem;
+            
+            --border-radius: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background-color: var(--color-background);
+            color: var(--color-text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
+            color: white;
+            padding: var(--spacing-xl);
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .back-button {
+            position: absolute;
+            top: var(--spacing-xl);
+            left: var(--spacing-xl);
+            color: white;
+            text-decoration: none;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            transition: opacity 0.3s;
+        }
+
+        .back-button:hover {
+            opacity: 0.8;
+        }
+
+        /* Navigation */
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: var(--spacing-xl);
+            border-bottom: 1px solid #ddd;
+        }
+
+        .nav-tab {
+            padding: var(--spacing-md) var(--spacing-xl);
+            text-decoration: none;
+            color: var(--color-text);
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .nav-tab.active {
+            color: var(--color-primary);
+            border-bottom: 3px solid var(--color-primary);
+        }
+
+        .nav-tab:hover:not(.active) {
+            color: var(--color-primary-dark);
+            border-bottom: 3px solid var(--color-primary-light);
+        }
+
+        /* Content */
+        .content {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: var(--spacing-xl);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .content-section {
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .content h2 {
+            color: var(--color-primary);
+            margin-bottom: var(--spacing-md);
+            font-size: 1.5rem;
+            border-left: 4px solid var(--color-primary);
+            padding-left: var(--spacing-md);
+        }
+
+        .content h3 {
+            color: var(--color-primary-dark);
+            margin: var(--spacing-lg) 0 var(--spacing-sm) 0;
+            font-size: 1.2rem;
+        }
+
+        .content p {
+            margin-bottom: var(--spacing-md);
+            text-align: justify;
+        }
+
+        .content ul, .content ol {
+            margin-bottom: var(--spacing-md);
+            padding-left: var(--spacing-xl);
+        }
+
+        .content li {
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .highlight {
+            background-color: rgba(37, 99, 235, 0.1);
+            border-left: 4px solid var(--color-primary);
+            padding: var(--spacing-md);
+            margin: var(--spacing-lg) 0;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        }
+
+        .last-updated {
+            text-align: right;
+            font-style: italic;
+            color: var(--color-text-light);
+            margin-top: var(--spacing-xl);
+            font-size: 0.9rem;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: var(--spacing-xxl);
+            padding: var(--spacing-xl);
+            color: var(--color-text-light);
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: var(--spacing-md);
+            }
+            
+            .header {
+                padding: var(--spacing-lg);
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .back-button {
+                position: relative;
+                top: 0;
+                left: 0;
+                justify-content: center;
+                margin-bottom: var(--spacing-md);
+            }
+            
+            .nav-tabs {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .nav-tab {
+                width: 100%;
+                text-align: center;
+                margin-bottom: var(--spacing-xs);
+            }
+            
+            .content {
+                padding: var(--spacing-lg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="javascript:history.back()" class="back-button">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+        <h1>Términos de Servicio y Política de Privacidad</h1>
+        <p>Conoce nuestros términos y cómo protegemos tu información</p>
+    </div>
+
+    <div class="container">
+        <div class="nav-tabs">
+            <a href="#terminos" class="nav-tab active">Términos de Servicio</a>
+            <a href="#privacidad" class="nav-tab">Política de Privacidad</a>
+        </div>
+
+        <div class="content">
+            <!-- Términos de Servicio -->
+            <div id="terminos" class="content-section">
+                <h2>Términos de Servicio de Chat General</h2>
+                <p class="last-updated">Última actualización: 10 de septiembre de 2025</p>
+                
+                <div class="highlight">
+                    Al utilizar nuestros servicios, aceptas cumplir con estos términos y condiciones. Te recomendamos leerlos detenidamente.
+                </div>
+                
+                <h3>1. Aceptación de los Términos</h3>
+                <p>Al acceder y utilizar Chat General, aceptas estar legalmente obligado por estos Términos de Servicio. Si no estás de acuerdo con alguno de estos términos, te rogamos que no utilices nuestra plataforma.</p>
+                
+                <h3>2. Descripción del Servicio</h3>
+                <p>Chat General es una plataforma de mensajería que permite a los usuarios registrados comunicarse entre sí a través de mensajes de texto en tiempo real. Nos reservamos el derecho de modificar o discontinuar el servicio en cualquier momento.</p>
+                
+                <h3>3. Registro de Usuario</h3>
+                <p>Para utilizar nuestros servicios, debes registrarte proporcionando un nombre de usuario y una contraseña. Eres responsable de:</p>
+                <ul>
+                    <li>Mantener la confidencialidad de tu cuenta y contraseña</li>
+                    <li>Toda la actividad que ocurra bajo tu cuenta</li>
+                    <li>Notificarnos inmediatamente cualquier uso no autorizado de tu cuenta</li>
+                </ul>
+                
+                <h3>4. Conducta del Usuario</h3>
+                <p>Al utilizar Chat General, aceptas no:</p>
+                <ul>
+                    <li>Publicar contenido ilegal, difamatorio, obsceno, ofensivo o inapropiado</li>
+                    <li>Acosar, intimidar o hostigar a otros usuarios</li>
+                    <li>Suplantar la identidad de otra persona o entidad</li>
+                    <li>Realizar actividades comerciales no autorizadas o publicidad</li>
+                    <li>Utilizar la plataforma para cualquier propósito ilegal</li>
+                </ul>
+                
+                <h3>5. Contenido del Usuario</h3>
+                <p>Eres el único responsable del contenido que publiques en Chat General. No reclamamos propiedad sobre tu contenido, pero al publicarlo nos concedes una licencia mundial, no exclusiva y libre de regalías para utilizar, reproducir y mostrar dicho contenido en relación con la prestación de nuestros servicios.</p>
+                
+                <h3>6. Limitación de Responsabilidad</h3>
+                <p>Chat General no será responsable por daños indirectos, incidentales, especiales o consecuentes que resulten del uso o la imposibilidad de uso del servicio, incluso si hemos sido advertidos de la posibilidad de tales daños.</p>
+                
+                <h3>7. Modificaciones de los Términos</h3>
+                <p>Nos reservamos el derecho de modificar estos términos en cualquier momento. Te notificaremos sobre cambios significativos a través de la plataforma o por correo electrónico. El uso continuado del servicio después de dichos cambios constituye tu aceptación de los nuevos términos.</p>
+                
+                <h3>8. Terminación</h3>
+                <p>Podemos suspender o terminar tu acceso a Chat General en cualquier momento, sin previo aviso o responsabilidad, si incumples estos Términos de Servicio.</p>
+                
+                <h3>9. Ley Aplicable</h3>
+                <p>Estos términos se regirán e interpretarán de acuerdo con las leyes de España, sin regardo a sus disposiciones sobre conflictos de leyes.</p>
+                
+                <h3>10. Contacto</h3>
+                <p>Si tienes preguntas sobre estos Términos de Servicio, por favor contáctanos en: <strong>soporte@chatgeneral.com</strong></p>
+            </div>
+            
+            <!-- Política de Privacidad -->
+            <div id="privacidad" class="content-section" style="display: none;">
+                <h2>Política de Privacidad de Chat General</h2>
+                <p class="last-updated">Última actualización: 15 de marzo de 2023</p>
+                
+                <div class="highlight">
+                    Tu privacidad es importante para nosotros. Esta política explica qué información recopilamos y cómo la utilizamos.
+                </div>
+                
+                <h3>1. Información que Recopilamos</h3>
+                <p>Recopilamos la siguiente información cuando utilizas Chat General:</p>
+                <ul>
+                    <li><strong>Información de registro:</strong> nombre de usuario y contraseña</li>
+                    <li><strong>Información de uso:</strong> cómo interactúas con nuestra plataforma</li>
+                    <li><strong>Contenido de mensajes:</strong> los mensajes que envías y recibes</li>
+                    <li><strong>Información técnica:</strong> dirección IP, tipo de dispositivo, navegador y sistema operativo</li>
+                </ul>
+                
+                <h3>2. Uso de la Información</h3>
+                <p>Utilizamos tu información para:</p>
+                <ul>
+                    <li>Proporcionar, mantener y mejorar nuestros servicios</li>
+                    <li>Personalizar tu experiencia en la plataforma</li>
+                    <li>Comunicarnos contigo sobre actualizaciones y cambios</li>
+                    <li>Garantizar la seguridad y prevenir fraudes</li>
+                    <li>Cumplir con obligaciones legales</li>
+                </ul>
+                
+                <h3>3. Compartición de Información</h3>
+                <p>No vendemos ni alquilamos tu información personal a terceros. Podemos compartir información en las siguientes circunstancias:</p>
+                <ul>
+                    <li>Con proveedores de servicios que nos ayudan a operar nuestra plataforma (están obligados a proteger tu información)</li>
+                    <li>Para cumplir con requisitos legales o responder a procesos legales</li>
+                    <li>Para proteger los derechos, propiedad o seguridad de Chat General, nuestros usuarios o el público</li>
+                    <li>En conexión con una fusión, adquisición o venta de activos</li>
+                </ul>
+                
+                <h3>4. Almacenamiento y Seguridad</h3>
+                <p>Implementamos medidas de seguridad técnicas y organizativas para proteger tu información. Sin embargo, ningún sistema es completamente seguro, por lo que no podemos garantizar la seguridad absoluta de tus datos.</p>
+                <p>Conservamos tu información durante el tiempo necesario para cumplir con los fines descritos en esta política, a menos que la ley requiera o permita un período de conservación más largo.</p>
+                
+                <h3>5. Tus Derechos</h3>
+                <p>Tienes derecho a:</p>
+                <ul>
+                    <li>Acceder a la información personal que tenemos sobre ti</li>
+                    <li>Solicitar la corrección de información inexacta</li>
+                    <li>Solicitar la eliminación de tu información personal</li>
+                    <li>Oponerte al procesamiento de tu información</li>
+                    <li>Solicitar la portabilidad de tus datos</li>
+                </ul>
+                <p>Para ejercer estos derechos, contáctanos en <strong>privacidad@chatgeneral.com</strong>.</p>
+                
+                <h3>6. Cookies y Tecnologías Similares</h3>
+                <p>Utilizamos cookies y tecnologías similares para mejorar tu experiencia, analizar el tráfico y personalizar contenido. Puedes configurar tu navegador para rechazar cookies, pero esto puede afectar la funcionalidad de nuestra plataforma.</p>
+                
+                <h3>7. Menores de Edad</h3>
+                <p>Nuestros servicios no están dirigidos a menores de 16 años. No recopilamos conscientemente información de menores. Si eres padre/madre o tutor y crees que tu hijo nos ha proporcionado información, contáctanos inmediatamente.</p>
+                
+                <h3>8. Cambios en esta Política</h3>
+                <p>Podemos actualizar esta política ocasionalmente. Te notificaremos sobre cambios significativos publicando la nueva política en nuestra plataforma o enviándote una notificación.</p>
+                
+                <h3>9. Contacto</h3>
+                <p>Si tienes preguntas sobre esta Política de Privacidad, por favor contáctanos en: <strong>privacidad@chatgeneral.com</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>© 2025 Chat General. Todos los derechos reservados.</p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const navTabs = document.querySelectorAll('.nav-tab');
+            const contentSections = document.querySelectorAll('.content-section');
+            
+            // Manejar clics en las pestañas
+            navTabs.forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Remover clase active de todas las pestañas
+                    navTabs.forEach(t => t.classList.remove('active'));
+                    
+                    // Añadir clase active a la pestaña clickeada
+                    this.classList.add('active');
+                    
+                    // Ocultar todas las secciones de contenido
+                    contentSections.forEach(section => {
+                        section.style.display = 'none';
+                    });
+                    
+                    // Mostrar la sección correspondiente
+                    const targetId = this.getAttribute('href').substring(1);
+                    document.getElementById(targetId).style.display = 'block';
+                });
+            });
+            
+            // Manejar hash en la URL
+            if (window.location.hash) {
+                const targetTab = document.querySelector(`.nav-tab[href="${window.location.hash}"]`);
+                if (targetTab) {
+                    targetTab.click();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
