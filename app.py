@@ -400,4 +400,4 @@ if __name__ == '__main__':
     # Iniciar hilo de limpieza de tokens
     cleanup_thread = threading.Thread(target=token_cleanup_scheduler, daemon=True)
     cleanup_thread.start()
-    socketio.run(app, debug=True, host='0.0.0.0', port=10000)
+    socketio.run(app, debug=False, host='0.0.0.0', port=10000, allow_unsafe_werkzeug=True)
