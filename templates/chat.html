@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat General Móvil</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --color-primary: #2563eb;
+            --color-primary-dark: #1d4ed8;
+            --color-primary-light: #3b82f6;
+            --color-secondary: #60a5fa;
+            --color-accent: #93c5fd;
+            --color-background: #f0f7ff;
+            --color-chat-background: #ffffff;
+            --color-message-user: #dbeafe;
+            --color-message-other: #f3f4f6;
+            --color-text: #1f2937;
+            --color-text-light: #6b7280;
+            --color-online: #10b981;
+            --color-offline: #9ca3af;
+            
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            
+            --border-radius: 12px;
+            --border-radius-sm: 8px;
+            
+            --sidebar-width: 280px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background-color: var(--color-background);
+            color: var(--color-text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header fijo */
+        .chat-header {
+            padding: var(--spacing-md);
+            background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            height: 60px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .menu-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            margin-right: var(--spacing-md);
+            cursor: pointer;
+        }
+
+        .chat-info h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .chat-info p {
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .header-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        /* Panel lateral de usuarios */
+        .users-sidebar {
+            position: fixed;
+            top: 60px;
+            left: -280px;
+            width: var(--sidebar-width);
+            height: calc(100% - 60px);
+            background: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            transition: left 0.3s ease;
+            z-index: 90;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .users-sidebar.active {
+            left: 0;
+        }
+
+        .users-header {
+            padding: var(--spacing-md);
+            background-color: var(--color-primary);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .users-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: var(--spacing-md);
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+            border-radius: var(--border-radius);
+            transition: background-color 0.2s;
+        }
+
+        .user-item:hover {
+            background-color: rgba(37, 99, 235, 0.1);
+            cursor: pointer;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: var(--spacing-md);
+            border: 2px solid var(--color-primary);
+        }
+
+        .user-info {
+            flex-grow: 1;
+        }
+
+        .user-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+            font-size: 0.95rem;
+        }
+
+        .user-status {
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: var(--spacing-xs);
+        }
+
+        .status-online {
+            background-color: var(--color-online);
+        }
+
+        .status-offline {
+            background-color: var(--color-offline);
+        }
+
+        /* Área de mensajes */
+        .messages-container {
+            flex-grow: 1;
+            padding: var(--spacing-md);
+            overflow-y: auto;
+            margin-top: 60px;
+            margin-bottom: 70px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            max-width: 85%;
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .message.user-message {
+            align-self: flex-end;
+        }
+
+        .message.other-message {
+            align-self: flex-start;
+        }
+
+        .message-bubble {
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius);
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message .message-bubble {
+            background-color: var(--color-message-user);
+            color: var(--color-text);
+            border-bottom-right-radius: 0;
+        }
+
+        .other-message .message-bubble {
+            background-color: var(--color-message-other);
+            color: var(--color-text);
+            border-bottom-left-radius: 0;
+        }
+
+        .message-sender {
+            font-weight: 600;
+            margin-bottom: var(--spacing-xs);
+            font-size: 0.85rem;
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            color: var(--color-text-light);
+            margin-top: var(--spacing-xs);
+            text-align: right;
+        }
+
+        .other-message .message-time {
+            text-align: left;
+        }
+
+        /* Indicador de escritura */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            padding: var(--spacing-sm) var(--spacing-md);
+            color: var(--color-text-light);
+            font-style: italic;
+            font-size: 0.8rem;
+            display: none;
+        }
+
+        .typing-dots {
+            display: flex;
+            margin-left: var(--spacing-xs);
+        }
+
+        .typing-dot {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background-color: var(--color-text-light);
+            margin: 0 1px;
+            animation: typingAnimation 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typingAnimation {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+
+        /* Input de mensajes */
+        .message-input-container {
+            padding: var(--spacing-md);
+            background-color: white;
+            border-top: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 80;
+            height: 70px;
+        }
+
+        .message-input {
+            flex-grow: 1;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            padding: var(--spacing-md);
+            font-family: 'Poppins', sans-serif;
+            resize: none;
+            height: 50px;
+            margin-right: var(--spacing-md);
+            transition: border-color 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .message-input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        .send-button {
+            background-color: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            flex-shrink: 0;
+        }
+
+        .send-button:hover {
+            background-color: var(--color-primary-dark);
+        }
+
+        /* Overlay para cerrar el panel */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 80;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+
+        .overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Animaciones */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Personalización de scrollbar */
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.1);
+            border-radius: 3px;
+        }
+
+        .users-list::-webkit-scrollbar-thumb {
+            background-color: rgba(37, 99, 235, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header fijo -->
+    <div class="chat-header">
+        <div class="header-left">
+            <button class="menu-button" id="menuButton">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="chat-info">
+                <h1>Chat General</h1>
+                <p id="onlineCount">Cargando...</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="header-button" id="refreshButton" title="Actualizar">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+            <button class="header-button" id="logoutButton" title="Cerrar sesión">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Overlay para cerrar el panel -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Panel lateral de usuarios -->
+    <div class="users-sidebar" id="usersSidebar">
+        <div class="users-header">
+            <h2>Usuarios Conectados</h2>
+            <span id="closeSidebar" style="cursor: pointer;"><i class="fas fa-times"></i></span>
+        </div>
+        <div class="users-list" id="usersList">
+            <!-- Los usuarios se cargarán dinámicamente -->
+        </div>
+    </div>
+
+    <!-- Área de mensajes -->
+    <div class="messages-container" id="messagesContainer">
+        <!-- Los mensajes se cargarán dinámicamente -->
+        
+        <!-- Indicador de escritura -->
+        <div class="typing-indicator" id="typingIndicator">
+            <span id="typingText"></span>
+            <div class="typing-dots">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input de mensajes -->
+    <div class="message-input-container">
+        <textarea class="message-input" placeholder="Escribe tu mensaje..." id="messageInput"></textarea>
+        <button class="send-button" id="sendButton">
+            <i class="fas fa-paper-plane"></i>
+        </button>
+    </div>
+
+    <!-- SocketIO -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuButton = document.getElementById('menuButton');
+            const closeSidebar = document.getElementById('closeSidebar');
+            const overlay = document.getElementById('overlay');
+            const usersSidebar = document.getElementById('usersSidebar');
+            const usersList = document.getElementById('usersList');
+            const messageInput = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+            const messagesContainer = document.getElementById('messagesContainer');
+            const typingIndicator = document.getElementById('typingIndicator');
+            const typingText = document.getElementById('typingText');
+            const onlineCount = document.getElementById('onlineCount');
+            const refreshButton = document.getElementById('refreshButton');
+            const logoutButton = document.getElementById('logoutButton');
+            
+            // Conectar con SocketIO
+            const socket = io();
+            
+            // Variables para control de escritura
+            let typing = false;
+            let typingTimeout;
+            let currentTypingUser = null;
+            let typingTimeoutIndicator;
+
+            // Cargar usuarios
+            function loadUsers() {
+                fetch('/api/users')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            renderUsers(data.users);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error cargando usuarios:', error);
+                    });
+            }
+
+            // Renderizar usuarios
+            function renderUsers(users) {
+                usersList.innerHTML = '';
+                let onlineUsers = 0;
+                
+                users.forEach(user => {
+                    if (user.is_online) onlineUsers++;
+                    
+                    const userItem = document.createElement('div');
+                    userItem.classList.add('user-item');
+                    userItem.innerHTML = `
+                        <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=2563eb&color=fff" alt="Usuario" class="user-avatar">
+                        <div class="user-info">
+                            <div class="user-name">${user.username}</div>
+                            <div class="user-status">
+                                <span class="status-dot ${user.is_online ? 'status-online' : 'status-offline'}"></span>
+                                <span>${user.is_online ? 'En línea' : 'Desconectado'}</span>
+                            </div>
+                        </div>
+                    `;
+                    usersList.appendChild(userItem);
+                });
+                
+                onlineCount.textContent = `${onlineUsers} usuarios en línea`;
+            }
+
+            // Cargar mensajes iniciales
+            function loadMessages() {
+                fetch('/api/messages?limit=100')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            renderMessages(data.messages);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error cargando mensajes:', error);
+                    });
+            }
+
+            // Renderizar mensajes
+            function renderMessages(messages) {
+                messagesContainer.innerHTML = '';
+                
+                // Añadir indicador de escritura
+                const typingIndicatorElement = document.createElement('div');
+                typingIndicatorElement.classList.add('typing-indicator');
+                typingIndicatorElement.id = 'typingIndicator';
+                typingIndicatorElement.innerHTML = `
+                    <span id="typingText"></span>
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                `;
+                messagesContainer.appendChild(typingIndicatorElement);
+                
+                messages.forEach(msg => {
+                    const isCurrentUser = msg.username === '{{ username }}';
+                    const messageElement = document.createElement('div');
+                    messageElement.classList.add('message', isCurrentUser ? 'user-message' : 'other-message');
+                    
+                    const timestamp = new Date(msg.timestamp);
+                    const timeString = timestamp.toLocaleTimeString('es-ES', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                    
+                    messageElement.innerHTML = `
+                        <div class="message-sender">${isCurrentUser ? 'Tú' : msg.username}</div>
+                        <div class="message-bubble">
+                            <p>${msg.message}</p>
+                        </div>
+                        <div class="message-time">${timeString}</div>
+                    `;
+                    messagesContainer.appendChild(messageElement);
+                });
+                
+                scrollToBottom();
+            }
+
+            // Función para desplazarse al final
+            function scrollToBottom() {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            // Función para enviar mensaje
+            function sendMessage() {
+                const messageText = messageInput.value.trim();
+                if (messageText) {
+                    socket.emit('send_message', { message: messageText });
+                    messageInput.value = '';
+                    
+                    // Dejar de mostrar "escribiendo"
+                    typing = false;
+                    socket.emit('typing', { typing: false });
+                }
+            }
+
+            // Función para mostrar que el usuario está escribiendo
+            function updateTyping() {
+                if (!typing) {
+                    typing = true;
+                    socket.emit('typing', { typing: true });
+                }
+                
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => {
+                    typing = false;
+                    socket.emit('typing', { typing: false });
+                }, 1000);
+            }
+
+            // Abrir panel lateral
+            menuButton.addEventListener('click', function() {
+                usersSidebar.classList.add('active');
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+                loadUsers();
+            });
+            
+            // Cerrar panel lateral
+            function closeUsersSidebar() {
+                usersSidebar.classList.remove('active');
+                overlay.classList.remove('active');
+                document.body.style.overflow = 'auto';
+            }
+            
+            closeSidebar.addEventListener('click', closeUsersSidebar);
+            overlay.addEventListener('click', closeUsersSidebar);
+            
+            // Enviar mensaje al hacer clic en el botón
+            sendButton.addEventListener('click', sendMessage);
+            
+            // Enviar mensaje al presionar Enter
+            messageInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            // Detectar escritura
+            messageInput.addEventListener('input', updateTyping);
+            
+            // Botón de actualizar
+            refreshButton.addEventListener('click', function() {
+                loadUsers();
+                loadMessages();
+            });
+            
+            // Botón de cerrar sesión
+            logoutButton.addEventListener('click', function() {
+                if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+                    window.location.href = '/api/logout';
+                }
+            });
+            
+            // Eventos de SocketIO
+            socket.on('connect', function() {
+                console.log('Conectado al servidor');
+            });
+            
+            socket.on('new_message', function(data) {
+                const isCurrentUser = data.username === '{{ username }}';
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('message', isCurrentUser ? 'user-message' : 'other-message');
+                
+                const timestamp = new Date(data.timestamp);
+                const timeString = timestamp.toLocaleTimeString('es-ES', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                messageElement.innerHTML = `
+                    <div class="message-sender">${isCurrentUser ? 'Tú' : data.username}</div>
+                    <div class="message-bubble">
+                        <p>${data.message}</p>
+                    </div>
+                    <div class="message-time">${timeString}</div>
+                `;
+                
+                // Insertar antes del indicador de escritura
+                messagesContainer.insertBefore(messageElement, typingIndicator);
+                scrollToBottom();
+            });
+            
+            socket.on('user_joined', function(data) {
+                loadUsers(); // Actualizar lista de usuarios
+            });
+            
+            socket.on('user_left', function(data) {
+                loadUsers(); // Actualizar lista de usuarios
+            });
+            
+            socket.on('user_typing', function(data) {
+                if (data.typing) {
+                    currentTypingUser = data.username;
+                    typingText.textContent = `${data.username} está escribiendo`;
+                    typingIndicator.style.display = 'flex';
+                    
+                    // Limpiar timeout anterior
+                    clearTimeout(typingTimeoutIndicator);
+                    typingTimeoutIndicator = setTimeout(() => {
+                        typingIndicator.style.display = 'none';
+                        currentTypingUser = null;
+                    }, 3000);
+                } else if (currentTypingUser === data.username) {
+                    typingIndicator.style.display = 'none';
+                    currentTypingUser = null;
+                }
+            });
+            
+            // Cargar datos iniciales
+            loadUsers();
+            loadMessages();
+        });
+    </script>
+</body>
+</html>
