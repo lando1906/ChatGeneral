@@ -21,16 +21,14 @@
             --color-text-light: #6b7280;
             --color-online: #10b981;
             --color-offline: #9ca3af;
-            
+            --color-attachment: #8b5cf6;
             --spacing-xs: 0.25rem;
             --spacing-sm: 0.5rem;
             --spacing-md: 1rem;
             --spacing-lg: 1.5rem;
             --spacing-xl: 2rem;
-            
             --border-radius: 12px;
             --border-radius-sm: 8px;
-            
             --sidebar-width: 280px;
         }
 
@@ -50,7 +48,6 @@
             overflow: hidden;
         }
 
-        /* Header fijo */
         .chat-header {
             padding: var(--spacing-md);
             background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
@@ -103,7 +100,6 @@
             cursor: pointer;
         }
 
-        /* Panel lateral de usuarios */
         .users-sidebar {
             position: fixed;
             top: 60px;
@@ -192,7 +188,6 @@
             background-color: var(--color-offline);
         }
 
-        /* Área de mensajes */
         .messages-container {
             flex-grow: 1;
             padding: var(--spacing-md);
@@ -203,26 +198,20 @@
             flex-direction: column;
         }
 
-        .message-group {
+        .message {
+            max-width: 85%;
             margin-bottom: var(--spacing-md);
             display: flex;
             flex-direction: column;
             animation: fadeIn 0.3s ease;
         }
 
-        .message-group.user-group {
-            align-items: flex-end;
+        .message.user-message {
+            align-self: flex-end;
         }
 
-        .message-group.other-group {
-            align-items: flex-start;
-        }
-
-        .message {
-            max-width: 85%;
-            margin-bottom: 2px;
-            display: flex;
-            flex-direction: column;
+        .message.other-message {
+            align-self: flex-start;
         }
 
         .message-bubble {
@@ -232,50 +221,26 @@
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
         }
 
-        .user-group .message-bubble {
+        .user-message .message-bubble {
             background-color: var(--color-message-user);
             color: var(--color-text);
-        }
-
-        .user-group .message:first-child .message-bubble {
             border-bottom-right-radius: 0;
         }
 
-        .user-group .message:not(:first-child):not(:last-child) .message-bubble {
-            border-radius: var(--border-radius);
-        }
-
-        .user-group .message:last-child .message-bubble {
-            border-top-right-radius: 0;
-        }
-
-        .other-group .message-bubble {
+        .other-message .message-bubble {
             background-color: var(--color-message-other);
             color: var(--color-text);
-        }
-
-        .other-group .message:first-child .message-bubble {
             border-bottom-left-radius: 0;
-        }
-
-        .other-group .message:not(:first-child):not(:last-child) .message-bubble {
-            border-radius: var(--border-radius);
-        }
-
-        .other-group .message:last-child .message-bubble {
-            border-top-left-radius: 0;
         }
 
         .message-sender {
             font-weight: 600;
             margin-bottom: var(--spacing-xs);
             font-size: 0.85rem;
-            padding-left: var(--spacing-sm);
-            display: none;
         }
 
-        .message-group:not(.consecutive) .message:first-child .message-sender {
-            display: block;
+        .message-text {
+            word-break: break-word;
         }
 
         .message-time {
@@ -283,40 +248,43 @@
             color: var(--color-text-light);
             margin-top: var(--spacing-xs);
             text-align: right;
-            padding-right: var(--spacing-sm);
         }
 
-        .other-group .message-time {
+        .other-message .message-time {
             text-align: left;
-            padding-left: var(--spacing-sm);
         }
 
-        .group-timestamp {
+        .attachment {
+            margin-top: var(--spacing-sm);
+            padding: var(--spacing-sm);
+            background-color: rgba(139, 92, 246, 0.1);
+            border-radius: var(--border-radius-sm);
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .attachment-icon {
+            color: var(--color-attachment);
+            margin-right: var(--spacing-sm);
+            font-size: 1.2rem;
+        }
+
+        .attachment-info {
+            flex-grow: 1;
+        }
+
+        .attachment-name {
+            font-weight: 500;
+            font-size: 0.85rem;
+            margin-bottom: 2px;
+        }
+
+        .attachment-size {
             font-size: 0.7rem;
             color: var(--color-text-light);
-            text-align: center;
-            margin: var(--spacing-md) 0;
-            position: relative;
         }
 
-        .group-timestamp::before {
-            content: "";
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background-color: var(--color-text-light);
-            opacity: 0.3;
-            z-index: -1;
-        }
-
-        .group-timestamp span {
-            background-color: var(--color-background);
-            padding: 0 var(--spacing-sm);
-        }
-
-        /* Indicador de escritura */
         .typing-indicator {
             display: flex;
             align-items: center;
@@ -350,7 +318,6 @@
             30% { transform: translateY(-5px); }
         }
 
-        /* Input de mensajes */
         .message-input-container {
             padding: var(--spacing-md);
             background-color: white;
@@ -363,6 +330,15 @@
             right: 0;
             z-index: 80;
             height: 70px;
+        }
+
+        .attachment-button {
+            background: none;
+            border: none;
+            color: var(--color-primary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin-right: var(--spacing-md);
         }
 
         .message-input {
@@ -402,7 +378,69 @@
             background-color: var(--color-primary-dark);
         }
 
-        /* Overlay para cerrar el panel */
+        .attachment-preview {
+            position: fixed;
+            bottom: 70px;
+            left: 0;
+            right: 0;
+            background-color: white;
+            padding: var(--spacing-md);
+            border-top: 1px solid #ddd;
+            display: none;
+            z-index: 85;
+        }
+
+        .attachment-preview.active {
+            display: block;
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .preview-title {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .remove-attachment {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        .preview-content {
+            display: flex;
+            align-items: center;
+        }
+
+        .preview-icon {
+            color: var(--color-attachment);
+            font-size: 2rem;
+            margin-right: var(--spacing-md);
+        }
+
+        .preview-info {
+            flex-grow: 1;
+        }
+
+        .preview-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+            font-size: 0.9rem;
+            word-break: break-all;
+        }
+
+        .preview-size {
+            font-size: 0.8rem;
+            color: var(--color-text-light);
+        }
+
         .overlay {
             position: fixed;
             top: 0;
@@ -421,22 +459,11 @@
             visibility: visible;
         }
 
-        /* Animaciones */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .new-message {
-            animation: slideIn 0.3s ease;
-        }
-
-        /* Personalización de scrollbar */
         ::-webkit-scrollbar {
             width: 5px;
         }
@@ -456,10 +483,9 @@
     </style>
 </head>
 <body>
-    <!-- Header fijo -->
     <div class="chat-header">
         <div class="header-left">
-            <button class="menu-button" id="menuButton">
+            <button class="menu-button" id="menuButton" aria-label="Abrir menú de usuarios">
                 <i class="fas fa-bars"></i>
             </button>
             <div class="chat-info">
@@ -477,25 +503,17 @@
         </div>
     </div>
 
-    <!-- Overlay para cerrar el panel -->
     <div class="overlay" id="overlay"></div>
 
-    <!-- Panel lateral de usuarios -->
     <div class="users-sidebar" id="usersSidebar">
         <div class="users-header">
             <h2>Usuarios Conectados</h2>
             <span id="closeSidebar" style="cursor: pointer;"><i class="fas fa-times"></i></span>
         </div>
-        <div class="users-list" id="usersList">
-            <!-- Los usuarios se cargarán dinámicamente -->
-        </div>
+        <div class="users-list" id="usersList"></div>
     </div>
 
-    <!-- Área de mensajes -->
     <div class="messages-container" id="messagesContainer">
-        <!-- Los mensajes se cargarán dinámicamente -->
-        
-        <!-- Indicador de escritura -->
         <div class="typing-indicator" id="typingIndicator">
             <span id="typingText"></span>
             <div class="typing-dots">
@@ -506,15 +524,35 @@
         </div>
     </div>
 
-    <!-- Input de mensajes -->
+    <div class="attachment-preview" id="attachmentPreview">
+        <div class="preview-header">
+            <div class="preview-title">Archivo adjunto</div>
+            <button class="remove-attachment" id="removeAttachment">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="preview-content">
+            <div class="preview-icon">
+                <i class="fas fa-file" id="previewIcon"></i>
+            </div>
+            <div class="preview-info">
+                <div class="preview-name" id="previewName"></div>
+                <div class="preview-size" id="previewSize"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="message-input-container">
+        <input type="file" id="fileInput" style="display: none;">
+        <button class="attachment-button" id="attachmentButton" title="Adjuntar archivo">
+            <i class="fas fa-paperclip"></i>
+        </button>
         <textarea class="message-input" placeholder="Escribe tu mensaje..." id="messageInput"></textarea>
         <button class="send-button" id="sendButton">
             <i class="fas fa-paper-plane"></i>
         </button>
     </div>
 
-    <!-- SocketIO -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -530,309 +568,311 @@
             const typingText = document.getElementById('typingText');
             const onlineCount = document.getElementById('onlineCount');
             const refreshButton = document.getElementById('refreshButton');
+            const attachmentButton = document.getElementById('attachmentButton');
+            const fileInput = document.getElementById('fileInput');
+            const attachmentPreview = document.getElementById('attachmentPreview');
+            const previewName = document.getElementById('previewName');
+            const previewSize = document.getElementById('previewSize');
+            const previewIcon = document.getElementById('previewIcon');
+            const removeAttachment = document.getElementById('removeAttachment');
             const logoutButton = document.getElementById('logoutButton');
             
-            // Conectar con SocketIO
-            const socket = io();
+            let selectedFile = null;
+            let isTyping = false;
+            let typingTimer = null;
             
-            // Variables para control de escritura
-            let typing = false;
-            let typingTimeout;
-            let currentTypingUser = null;
-            let typingTimeoutIndicator;
+            const socket = io('http://localhost:10000', {
+                transports: ['websocket', 'polling']
+            });
             
-            // Variables para agrupar mensajes
-            let lastMessageGroup = null;
-            let lastMessageSender = null;
-            const MESSAGE_GROUP_TIMEOUT = 120000; // 2 minutos
-
-            // Cargar usuarios
-            function loadUsers() {
-                fetch('/api/users')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            renderUsers(data.users);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error cargando usuarios:', error);
-                    });
-            }
-
-            // Renderizar usuarios
-            function renderUsers(users) {
-                usersList.innerHTML = '';
-                let onlineUsers = 0;
-                
-                users.forEach(user => {
-                    if (user.is_online) onlineUsers++;
-                    
-                    const userItem = document.createElement('div');
-                    userItem.classList.add('user-item');
-                    userItem.innerHTML = `
-                        <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=2563eb&color=fff" alt="Usuario" class="user-avatar">
-                        <div class="user-info">
-                            <div class="user-name">${user.username}</div>
-                            <div class="user-status">
-                                <span class="status-dot ${user.is_online ? 'status-online' : 'status-offline'}"></span>
-                                ${user.is_online ? 'En línea' : 'Desconectado'}
-                            </div>
-                        </div>
-                    `;
-                    usersList.appendChild(userItem);
-                });
-                
-                onlineCount.textContent = `${onlineUsers} usuarios en línea`;
-            }
-
-            // Cargar mensajes iniciales
-            function loadMessages() {
-                fetch('/api/messages')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            renderMessages(data.messages);
-                            scrollToBottom();
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error cargando mensajes:', error);
-                    });
-            }
-
-            // Renderizar mensajes
-            function renderMessages(messages) {
-                messagesContainer.innerHTML = '';
-                lastMessageGroup = null;
-                lastMessageSender = null;
-                
-                messages.forEach(message => {
-                    addMessageToChat(message);
-                });
-            }
-
-            // Agregar mensaje al chat
-            function addMessageToChat(message) {
-                const messageElement = createMessageElement(message);
-                
-                // Determinar si es un nuevo grupo de mensajes
-                const isConsecutive = lastMessageSender === message.username && 
-                                     (Date.now() - lastMessageGroup) < MESSAGE_GROUP_TIMEOUT;
-                
-                if (!isConsecutive) {
-                    // Crear un nuevo grupo
-                    const messageGroup = document.createElement('div');
-                    messageGroup.classList.add('message-group');
-                    messageGroup.classList.add(message.is_own ? 'user-group' : 'other-group');
-                    messageGroup.dataset.sender = message.username;
-                    
-                    // Agregar timestamp de grupo si ha pasado más de 5 minutos
-                    if (lastMessageGroup && (message.timestamp - lastMessageGroup) > 300000) {
-                        const timestampElement = document.createElement('div');
-                        timestampElement.classList.add('group-timestamp');
-                        const date = new Date(message.timestamp);
-                        timestampElement.innerHTML = `<span>${formatGroupTimestamp(date)}</span>`;
-                        messagesContainer.appendChild(timestampElement);
-                    }
-                    
-                    messagesContainer.appendChild(messageGroup);
-                    lastMessageSender = message.username;
-                }
-                
-                // Agregar el mensaje al último grupo
-                const messageGroups = document.querySelectorAll('.message-group');
-                const lastGroup = messageGroups[messageGroups.length - 1];
-                
-                // Verificar que el último grupo es del mismo remitente
-                if (lastGroup && lastGroup.dataset.sender === message.username) {
-                    lastGroup.appendChild(messageElement);
-                } else {
-                    // Si no es del mismo remitente, crear un nuevo grupo
-                    const messageGroup = document.createElement('div');
-                    messageGroup.classList.add('message-group');
-                    messageGroup.classList.add(message.is_own ? 'user-group' : 'other-group');
-                    messageGroup.dataset.sender = message.username;
-                    messageGroup.appendChild(messageElement);
-                    messagesContainer.appendChild(messageGroup);
-                    lastMessageSender = message.username;
-                }
-                
-                lastMessageGroup = message.timestamp;
-                
-                // Si es el último mensaje, hacer scroll
-                if (messageGroups.length === 0 || messageGroups[messageGroups.length - 1].lastChild === messageElement) {
-                    scrollToBottom();
-                }
-            }
-
-            // Crear elemento de mensaje
-            function createMessageElement(message) {
-                const messageDiv = document.createElement('div');
-                messageDiv.classList.add('message');
-                
-                const messageBubble = document.createElement('div');
-                messageBubble.classList.add('message-bubble');
-                messageBubble.textContent = message.text;
-                
-                const messageTime = document.createElement('div');
-                messageTime.classList.add('message-time');
-                messageTime.textContent = formatTime(message.timestamp);
-                
-                const messageSender = document.createElement('div');
-                messageSender.classList.add('message-sender');
-                messageSender.textContent = message.username;
-                
-                messageDiv.appendChild(messageSender);
-                messageDiv.appendChild(messageBubble);
-                messageDiv.appendChild(messageTime);
-                
-                return messageDiv;
-            }
-
-            // Formatear hora
-            function formatTime(timestamp) {
-                const date = new Date(timestamp);
-                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            }
-
-            // Formatear timestamp de grupo
-            function formatGroupTimestamp(date) {
-                const today = new Date();
-                const yesterday = new Date(today);
-                yesterday.setDate(yesterday.getDate() - 1);
-                
-                if (date.toDateString() === today.toDateString()) {
-                    return 'Hoy';
-                } else if (date.toDateString() === yesterday.toDateString()) {
-                    return 'Ayer';
-                } else {
-                    return date.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
-                }
-            }
-
-            // Scroll al final del chat
-            function scrollToBottom() {
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            }
-
-            // Enviar mensaje
-            function sendMessage() {
-                const messageText = messageInput.value.trim();
-                
-                if (messageText) {
-                    socket.emit('send_message', { text: messageText });
-                    messageInput.value = '';
-                    
-                    // Dejar de escribir
-                    stopTyping();
-                }
-            }
-
-            // Emitir evento de escritura
-            function startTyping() {
-                if (!typing) {
-                    typing = true;
-                    socket.emit('typing_start');
-                }
-                
-                clearTimeout(typingTimeout);
-                typingTimeout = setTimeout(stopTyping, 1000);
-            }
-
-            // Dejar de escribir
-            function stopTyping() {
-                clearTimeout(typingTimeout);
-                if (typing) {
-                    typing = false;
-                    socket.emit('typing_stop');
-                }
-            }
-
-            // Mostrar indicador de escritura
-            function showTypingIndicator(username) {
-                typingText.textContent = `${username} está escribiendo`;
-                typingIndicator.style.display = 'flex';
-                
-                clearTimeout(typingTimeoutIndicator);
-                typingTimeoutIndicator = setTimeout(() => {
-                    typingIndicator.style.display = 'none';
-                }, 3000);
-            }
-
-            // Ocultar indicador de escritura
-            function hideTypingIndicator() {
-                typingIndicator.style.display = 'none';
-            }
-
-            // Event Listeners
             menuButton.addEventListener('click', () => {
                 usersSidebar.classList.add('active');
                 overlay.classList.add('active');
-                loadUsers();
             });
-
+            
             closeSidebar.addEventListener('click', () => {
                 usersSidebar.classList.remove('active');
                 overlay.classList.remove('active');
             });
-
+            
             overlay.addEventListener('click', () => {
                 usersSidebar.classList.remove('active');
                 overlay.classList.remove('active');
             });
-
+            
+            function sendMessage() {
+                const messageText = messageInput.value.trim();
+                
+                if (messageText || selectedFile) {
+                    const message = {
+                        text: messageText,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    if (selectedFile) {
+                        const maxSize = 10 * 1024 * 1024; // 10MB
+                        if (selectedFile.size > maxSize) {
+                            alert('El archivo excede el tamaño máximo de 10MB.');
+                            return;
+                        }
+                        
+                        const formData = new FormData();
+                        formData.append('file', selectedFile);
+                        
+                        fetch('/api/upload', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                message.file = data.file;
+                                socket.emit('chat message', message);
+                            } else {
+                                alert('Error subiendo archivo: ' + data.message);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error subiendo archivo:', error);
+                            alert('Error al subir el archivo.');
+                        });
+                    } else {
+                        socket.emit('chat message', message);
+                    }
+                    
+                    messageInput.value = '';
+                    clearAttachment();
+                }
+            }
+            
             sendButton.addEventListener('click', sendMessage);
-
-            messageInput.addEventListener('keypress', (e) => {
+            
+            messageInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     sendMessage();
                 }
             });
-
-            messageInput.addEventListener('input', startTyping);
-
+            
+            attachmentButton.addEventListener('click', () => {
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    selectedFile = e.target.files[0];
+                    showAttachmentPreview(selectedFile);
+                }
+            });
+            
+            function showAttachmentPreview(file) {
+                const fileSize = formatFileSize(file.size);
+                const fileIcon = getFileIcon(file.type);
+                
+                previewName.textContent = file.name;
+                previewSize.textContent = fileSize;
+                previewIcon.className = `fas ${fileIcon}`;
+                
+                attachmentPreview.classList.add('active');
+            }
+            
+            removeAttachment.addEventListener('click', clearAttachment);
+            
+            function clearAttachment() {
+                selectedFile = null;
+                fileInput.value = '';
+                attachmentPreview.classList.remove('active');
+            }
+            
+            function getFileIcon(fileType) {
+                if (fileType.includes('image')) return 'fa-file-image';
+                if (fileType.includes('audio')) return 'fa-file-audio';
+                if (fileType.includes('video')) return 'fa-file-video';
+                if (fileType.includes('pdf')) return 'fa-file-pdf';
+                if (fileType.includes('zip') || fileType.includes('rar') || fileType.includes('tar')) return 'fa-file-archive';
+                if (fileType.includes('word')) return 'fa-file-word';
+                if (fileType.includes('excel')) return 'fa-file-excel';
+                if (fileType.includes('powerpoint')) return 'fa-file-powerpoint';
+                return 'fa-file';
+            }
+            
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+            
+            messageInput.addEventListener('input', () => {
+                if (!isTyping) {
+                    isTyping = true;
+                    socket.emit('typing', { typing: true });
+                }
+                
+                clearTimeout(typingTimer);
+                typingTimer = setTimeout(() => {
+                    isTyping = false;
+                    socket.emit('typing', { typing: false });
+                }, 1000);
+            });
+            
             refreshButton.addEventListener('click', () => {
-                loadMessages();
-                loadUsers();
+                socket.emit('get messages');
             });
-
+            
             logoutButton.addEventListener('click', () => {
-                // Lógica para cerrar sesión
-                window.location.href = '/logout';
+                fetch('/api/logout')
+                    .then(() => {
+                        socket.disconnect();
+                        window.location.href = '/auth';
+                    });
             });
-
-            // Eventos de SocketIO
-            socket.on('connect', () => {
-                console.log('Conectado al servidor');
+            
+            socket.on('connect_error', (error) => {
+                alert('Error de conexión con el servidor. Intenta de nuevo más tarde.');
             });
-
-            socket.on('new_message', (message) => {
-                addMessageToChat(message);
+            
+            socket.on('error', (data) => {
+                alert(data.message);
             });
-
-            socket.on('user_typing', (data) => {
-                if (data.username !== currentUser) { // currentUser debe definirse según tu lógica
-                    showTypingIndicator(data.username);
-                    currentTypingUser = data.username;
+            
+            socket.on('chat message', (data) => {
+                addMessageToChat(data);
+                scrollToBottom();
+            });
+            
+            socket.on('message history', (messages) => {
+                messagesContainer.innerHTML = '';
+                if (messages.length === 0) {
+                    messagesContainer.innerHTML = '<div class="message">No hay mensajes aún.</div>';
+                } else {
+                    messages.forEach(message => addMessageToChat(message));
+                }
+                scrollToBottom();
+            });
+            
+            socket.on('user list', (users) => {
+                updateUsersList(users);
+                onlineCount.textContent = `${users.length} usuarios en línea`;
+            });
+            
+            socket.on('user_joined', (data) => {
+                addMessageToChat({
+                    userId: 'system',
+                    username: 'Sistema',
+                    text: data.message,
+                    timestamp: data.timestamp
+                });
+                scrollToBottom();
+            });
+            
+            socket.on('user_left', (data) => {
+                addMessageToChat({
+                    userId: 'system',
+                    username: 'Sistema',
+                    text: data.message,
+                    timestamp: data.timestamp
+                });
+                scrollToBottom();
+            });
+            
+            socket.on('user typing', (data) => {
+                if (data.isTyping) {
+                    typingText.textContent = `${data.username} está escribiendo`;
+                    typingIndicator.style.display = 'flex';
+                } else {
+                    typingIndicator.style.display = 'none';
                 }
             });
-
-            socket.on('user_stop_typing', (data) => {
-                if (data.username === currentTypingUser) {
-                    hideTypingIndicator();
-                    currentTypingUser = null;
+            
+            function addMessageToChat(messageData) {
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('message');
+                
+                const isCurrentUser = messageData.userId === socket.id || messageData.userId === 'system';
+                messageElement.classList.add(isCurrentUser ? 'user-message' : 'other-message');
+                
+                let messageContent = `
+                    <div class="message-bubble">
+                        ${!isCurrentUser ? `<div class="message-sender">${escapeHtml(messageData.username)}</div>` : ''}
+                        ${messageData.text ? `<div class="message-text">${escapeHtml(messageData.text)}</div>` : ''}
+                `;
+                
+                if (messageData.file) {
+                    const fileIcon = getFileIcon(messageData.file.type);
+                    const fileSize = formatFileSize(messageData.file.size);
+                    
+                    if (messageData.file.type.includes('image') && messageData.file.url) {
+                        messageContent += `
+                            <div class="attachment">
+                                <img src="${messageData.file.url}" alt="${escapeHtml(messageData.file.name)}" style="max-width: 100%; border-radius: var(--border-radius-sm);">
+                            </div>
+                        `;
+                    } else {
+                        messageContent += `
+                            <div class="attachment">
+                                <div class="attachment-icon">
+                                    <i class="fas ${fileIcon}"></i>
+                                </div>
+                                <div class="attachment-info">
+                                    <div class="attachment-name">${escapeHtml(messageData.file.name)}</div>
+                                    <div class="attachment-size">${fileSize}</div>
+                                </div>
+                            </div>
+                        `;
+                    }
                 }
-            });
-
-            socket.on('users_update', (users) => {
-                renderUsers(users);
-            });
-
-            // Cargar mensajes y usuarios al iniciar
-            loadMessages();
-            loadUsers();
+                
+                messageContent += `
+                        <div class="message-time">${formatTime(messageData.timestamp)}</div>
+                    </div>
+                `;
+                
+                messageElement.innerHTML = messageContent;
+                messagesContainer.appendChild(messageElement);
+            }
+            
+            function updateUsersList(users) {
+                usersList.innerHTML = '';
+                
+                users.forEach(user => {
+                    const userElement = document.createElement('div');
+                    userElement.classList.add('user-item');
+                    
+                    userElement.innerHTML = `
+                        <img src="${user.avatar}" alt="${user.username}" class="user-avatar">
+                        <div class="user-info">
+                            <div class="user-name">${escapeHtml(user.username)}</div>
+                            <div class="user-status">
+                                <span class="status-dot ${user.online ? 'status-online' : 'status-offline'}"></span>
+                                ${user.online ? 'En línea' : 'Desconectado'}
+                            </div>
+                        </div>
+                    `;
+                    
+                    usersList.appendChild(userElement);
+                });
+            }
+            
+            function scrollToBottom() {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+            
+            function formatTime(timestamp) {
+                const date = new Date(timestamp);
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            
+            function escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            socket.emit('get messages');
+            socket.emit('get users');
         });
     </script>
 </body>
