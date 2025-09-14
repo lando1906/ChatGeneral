@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, make_response, send_from_directory
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_bcrypt import Bcrypt
+from flask_cors import CORS
 from datetime import datetime, timedelta
 import sqlite3
 import uuid
@@ -10,10 +11,15 @@ import os
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'chat_general_secret_key_2025'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'chat_general_secret_key_2025_production')
 app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB límite
+
+# Configuración CORS para Flask
+CORS(app)
+
 bcrypt = Bcrypt(app)
-socketio = SocketIO(app, cors_allowed_origins="*")  # CORS corregido
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 # Configuración de la base de datos
 DATABASE = 'chat.db'
@@ -157,7 +163,7 @@ def chat():
 @app.route('/terminos')
 def terminos():
     """Página de términos y condiciones"""
-    return render_template('terminos.html')
+    return "Términos y condiciones del servicio"
 
 @app.route('/api/register', methods=['POST'])
 def register():
@@ -234,7 +240,7 @@ def login():
                         value=token,
                         expires=expires_at,
                         httponly=True,
-                        secure=False,  # Cambia a True en producción con HTTPS
+                        secure=os.environ.get('FLASK_ENV') == 'production',  # Secure solo en producción
                         samesite='Lax'
                     )
                     return response
@@ -360,8 +366,13 @@ def upload_file():
         return jsonify({'success': False, 'message': 'Nombre de archivo vacío'})
     
     try:
+        # Verificar tamaño del archivo
+        file.seek(0, os.SEEK_END)
+        file_length = file.tell()
+        file.seek(0)  # Reset file pointer
+        
         max_size = 10 * 1024 * 1024  # 10MB
-        if file.content_length and file.content_length > max_size:
+        if file_length > max_size:
             return jsonify({'success': False, 'message': 'El archivo excede el tamaño máximo de 10MB'})
         
         filename = secure_filename(file.filename)
@@ -488,63 +499,11 @@ def handle_chat_message(data):
         emit('chat message', emit_data, room='general_chat')
     
     except Exception as e:
-        emit('error', {'message': f'Error al enviar mensaje: {str(e)}'})
+        print(f"Error al guardar mensaje: {e}")
 
-@socketio.on('typing')
-def handle_typing(data):
-    """Manejar evento de usuario escribiendo"""
-    if 'user_id' in session:
-        is_typing = data.get('typing', False)
-        emit('user typing', {
-            'username': session['username'],
-            'isTyping': is_typing
-        }, room='general_chat', include_self=False)
-
-@socketio.on('get messages')
-def handle_get_messages():
-    """Obtener historial de mensajes"""
-    if 'user_id' not in session:
-        return
-    
-    try:
-        with sqlite3.connect(DATABASE) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                '''
-                SELECT user_id, username, message, file_name, file_size, file_type, file_url, timestamp
-                FROM messages
-                ORDER BY timestamp DESC
-                LIMIT 50
-                '''
-            )
-            messages = cursor.fetchall()
-            
-                        message_list = [
-                {
-                    'userId': msg[0],
-                    'username': msg[1],
-                    'text': msg[2],
-                    'file': {
-                        'name': msg[3],
-                        'size': msg[4],
-                        'type': msg[5],
-                        'url': msg[6]
-                    } if msg[3] else None,
-                    'timestamp': msg[7]
-                } for msg in reversed(messages)
-            ]
-            
-            emit('message history', message_list)
-    
-    except Exception as e:
-        emit('error', {'message': f'Error al obtener mensajes: {str(e)}'})
-
-@socketio.on('get users')
+@socketio.on('get_users')
 def handle_get_users():
-    """Obtener lista de usuarios"""
-    if 'user_id' not in session:
-        return
-    
+    """Obtener lista de usuarios actualizada"""
     try:
         with sqlite3.connect(DATABASE) as conn:
             cursor = conn.cursor()
@@ -562,13 +521,21 @@ def handle_get_users():
                 } for user in users
             ]
             
-            emit('user list', user_list, room='general_chat')
+            emit('users_list', user_list, room='general_chat')
     
     except Exception as e:
-        emit('error', {'message': f'Error al obtener usuarios: {str(e)}'})
+        print(f"Error al obtener usuarios: {e}")
 
 if __name__ == '__main__':
+    # Inicializar base de datos
     init_db()
+    
+    # Iniciar limpieza de tokens en segundo plano
     cleanup_thread = threading.Thread(target=token_cleanup_scheduler, daemon=True)
     cleanup_thread.start()
-    socketio.run(app, debug=True, host='0.0.0.0', port=10000, allow_unsafe_werkzeug=True)
+    
+    # Obtener puerto de variable de entorno para Render
+    port = int(os.environ.get('PORT', 10000))
+    
+    # Ejecutar aplicación
+    socketio.run(app, host='0.0.0.0', port=port, debug=True)
