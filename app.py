@@ -13,7 +13,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'chat_general_secret_key_2025'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 bcrypt = Bcrypt(app)
-socketio = SocketIO(app, cors_allowed_origins=['http://localhost:10000'])  # Cambia a tu dominio en producción
+socketio = SocketIO(app, cors_allowed_origins="*")  # CORS corregido
 
 # Configuración de la base de datos
 DATABASE = 'chat.db'
@@ -125,6 +125,15 @@ def check_remember_token():
 # Crear carpeta de uploads si no existe
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
+    print(f"Carpeta de uploads creada: {app.config['UPLOAD_FOLDER']}")
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({'success': False, 'message': 'Error interno del servidor'}), 500
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({'success': False, 'message': 'Recurso no encontrado'}), 404
 
 @app.route('/')
 def index():
@@ -350,24 +359,33 @@ def upload_file():
     if file.filename == '':
         return jsonify({'success': False, 'message': 'Nombre de archivo vacío'})
     
-    if file:
+    try:
         max_size = 10 * 1024 * 1024  # 10MB
-        if file.content_length > max_size:
+        if file.content_length and file.content_length > max_size:
             return jsonify({'success': False, 'message': 'El archivo excede el tamaño máximo de 10MB'})
         
         filename = secure_filename(file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        # Asegurar que el nombre del archivo sea único
+        unique_filename = f"{uuid.uuid4().hex}_{filename}"
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
         file.save(file_path)
+        
+        # Obtener el tamaño real del archivo guardado
+        file_size = os.path.getsize(file_path)
         
         return jsonify({
             'success': True,
             'file': {
-                'name': filename,
-                'size': file.content_length,
+                'name': filename,  # Nombre original
+                'unique_name': unique_filename,  # Nombre único guardado
+                'size': file_size,  # Tamaño real
                 'type': file.content_type,
-                'url': f'/uploads/{filename}'
+                'url': f'/uploads/{unique_filename}'
             }
         })
+    
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error al subir archivo: {str(e)}'})
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
@@ -501,7 +519,7 @@ def handle_get_messages():
             )
             messages = cursor.fetchall()
             
-            message_list = [
+                        message_list = [
                 {
                     'userId': msg[0],
                     'username': msg[1],
@@ -553,4 +571,4 @@ if __name__ == '__main__':
     init_db()
     cleanup_thread = threading.Thread(target=token_cleanup_scheduler, daemon=True)
     cleanup_thread.start()
-    socketio.run(app, debug=True, host='0.0.0.0', port=10000)
+    socketio.run(app, debug=True, host='0.0.0.0', port=10000, allow_unsafe_werkzeug=True)
