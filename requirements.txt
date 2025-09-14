@@ -1,3 +1,6 @@
 Flask
 Flask-SocketIO
-python-socketio
+Flask-Bcrypt
+Flask-CORS
+python-socketio[client]
+eventlet
