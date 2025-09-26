@@ -4,3 +4,6 @@ Flask-Bcrypt
 Flask-CORS
 python-socketio[client]
 eventlet
+Flask-SQLAlchemy
+gunicorn
+python-dotenv
