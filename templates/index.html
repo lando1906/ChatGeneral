@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>toDusLinks - Comparte tus enlaces de toDus</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Socket.IO Client -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+
+    <style>
+        /* Estilo para la fuente Inter */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Estilo para el scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        /* Clase para ocultar elementos */
+        .hidden { display: none; }
+        /* Animación para modales */
+        .modal-content { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <!-- Contenedor principal -->
+    <div id="app" class="min-h-screen flex flex-col">
+
+        <!-- Barra de navegación -->
+        <nav class="bg-gray-800/50 backdrop-blur-sm shadow-lg sticky top-0 z-40">
+            <div class="container mx-auto px-6 py-3">
+                <div class="flex justify-between items-center">
+                    <div class="text-2xl font-bold text-white">toDus<span class="text-cyan-400">Links</span></div>
+                    <div id="auth-buttons" class="flex items-center space-x-4">
+                        <button id="login-btn" class="text-white hover:text-cyan-400 transition">Iniciar Sesión</button>
+                        <button id="signup-btn" class="bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-2 px-4 rounded-lg transition">Crear Cuenta</button>
+                    </div>
+                    <div id="user-session" class="hidden items-center space-x-4">
+                        <span id="welcome-message" class="text-gray-300"></span>
+                        <button id="new-post-btn" class="bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                            Publicar
+                        </button>
+                        <button id="logout-btn" class="text-gray-400 hover:text-white transition">Cerrar Sesión</button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Contenido principal -->
+        <main class="flex-grow container mx-auto px-6 py-8">
+            <header class="text-center mb-12">
+                <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3">Encuentra y comparte enlaces de toDus</h1>
+                <p class="text-gray-400 text-lg max-w-2xl mx-auto">La comunidad para descubrir perfiles, unirte a grupos y explorar canales en la plataforma toDus.</p>
+            </header>
+            <div id="feed" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Las tarjetas de enlaces se insertarán aquí dinámicamente desde la API -->
+            </div>
+        </main>
+
+        <footer class="bg-gray-800 py-6 mt-12">
+            <div class="container mx-auto text-center text-gray-400">
+                <p>&copy; 2025 toDusLinks. Todos los derechos reservados.</p>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Modals (Login, Signup, New Post) -->
+    <!-- Modal para Iniciar Sesión -->
+    <div id="login-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4 hidden">
+        <div class="bg-gray-800 rounded-xl shadow-2xl p-8 w-full max-w-md modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-white">Iniciar Sesión</h2>
+                <button class="close-modal-btn text-gray-400 hover:text-white text-3xl">&times;</button>
+            </div>
+            <form id="login-form">
+                <div class="mb-4">
+                    <label for="login-email" class="block mb-2 text-sm font-medium text-gray-300">Correo Electrónico</label>
+                    <input type="email" id="login-email" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5 focus:ring-cyan-500 focus:border-cyan-500" placeholder="tu@email.com" required>
+                </div>
+                <div class="mb-6">
+                    <label for="login-password" class="block mb-2 text-sm font-medium text-gray-300">Contraseña</label>
+                    <input type="password" id="login-password" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5 focus:ring-cyan-500 focus:border-cyan-500" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-3 px-4 rounded-lg transition">Entrar</button>
+                 <p class="text-red-400 text-sm mt-4 text-center hidden" id="login-error"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Crear Cuenta -->
+    <div id="signup-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4 hidden">
+        <div class="bg-gray-800 rounded-xl shadow-2xl p-8 w-full max-w-md modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-white">Crear Cuenta</h2>
+                <button class="close-modal-btn text-gray-400 hover:text-white text-3xl">&times;</button>
+            </div>
+            <form id="signup-form">
+                <div class="mb-4">
+                    <label for="signup-username" class="block mb-2 text-sm font-medium text-gray-300">Nombre de usuario</label>
+                    <input type="text" id="signup-username" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5" placeholder="usuario123" required>
+                </div>
+                <div class="mb-4">
+                    <label for="signup-email" class="block mb-2 text-sm font-medium text-gray-300">Correo Electrónico</label>
+                    <input type="email" id="signup-email" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5" placeholder="tu@email.com" required>
+                </div>
+                <div class="mb-6">
+                    <label for="signup-password" class="block mb-2 text-sm font-medium text-gray-300">Contraseña</label>
+                    <input type="password" id="signup-password" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-3 px-4 rounded-lg transition">Registrarse</button>
+                 <p class="text-red-400 text-sm mt-4 text-center hidden" id="signup-error"></p>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Modal para Nuevo Enlace -->
+    <div id="new-post-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4 hidden">
+        <div class="bg-gray-800 rounded-xl shadow-2xl p-8 w-full max-w-lg modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-white">Publicar un nuevo enlace</h2>
+                <button class="close-modal-btn text-gray-400 hover:text-white text-3xl">&times;</button>
+            </div>
+            <form id="new-post-form">
+                <div class="mb-4">
+                    <label for="post-link" class="block mb-2 text-sm font-medium text-gray-300">Enlace de toDus</label>
+                    <input type="url" id="post-link" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5" placeholder="https://todus.cu/..." required>
+                </div>
+                <div class="mb-4">
+                    <label for="post-description" class="block mb-2 text-sm font-medium text-gray-300">Descripción</label>
+                    <textarea id="post-description" rows="3" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5" placeholder="Habla un poco sobre tu perfil, grupo o canal..." required></textarea>
+                </div>
+                <div class="mb-4">
+                    <label for="post-image" class="block mb-2 text-sm font-medium text-gray-300">URL de la imagen de perfil</label>
+                    <input type="url" id="post-image" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5" placeholder="https://ejemplo.com/imagen.jpg" required>
+                </div>
+                 <div class="mb-6">
+                    <label for="post-type" class="block mb-2 text-sm font-medium text-gray-300">Tipo de enlace</label>
+                    <select id="post-type" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5">
+                        <option value="Perfil">Perfil</option>
+                        <option value="Grupo">Grupo</option>
+                        <option value="Canal">Canal</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-3 px-4 rounded-lg transition">Publicar Enlace</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-green-500 text-white py-2 px-4 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300">
+        <p id="toast-message">Mensaje de notificación</p>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const socket = io();
+            const feed = document.getElementById('feed');
+
+            // --- UI Elements ---
+            const authButtons = document.getElementById('auth-buttons');
+            const userSessionDiv = document.getElementById('user-session');
+            const welcomeMessage = document.getElementById('welcome-message');
+            const modals = {
+                login: document.getElementById('login-modal'),
+                signup: document.getElementById('signup-modal'),
+                newPost: document.getElementById('new-post-modal')
+            };
+
+            // --- Toast Notification ---
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+
+            function showToast(message, isError = false) {
+                toastMessage.textContent = message;
+                toast.className = `fixed bottom-5 right-5 text-white py-2 px-4 rounded-lg shadow-lg transform transition-transform duration-300 ${isError ? 'bg-red-500' : 'bg-green-500'}`;
+                toast.classList.remove('translate-x-full');
+                setTimeout(() => {
+                    toast.classList.add('translate-x-full');
+                }, 3000);
+            }
+
+            // --- UI Update Functions ---
+            const updateUIForLogin = (username) => {
+                authButtons.classList.add('hidden');
+                userSessionDiv.classList.remove('hidden');
+                welcomeMessage.textContent = `Hola, ${username}`;
+            };
+
+            const updateUIForLogout = () => {
+                authButtons.classList.remove('hidden');
+                userSessionDiv.classList.add('hidden');
+                welcomeMessage.textContent = '';
+            };
+
+            // --- Post Rendering ---
+            function createPostCard(post) {
+                const typeColors = {
+                    'Perfil': 'bg-blue-500/20 text-blue-300',
+                    'Grupo': 'bg-green-500/20 text-green-300',
+                    'Canal': 'bg-purple-500/20 text-purple-300',
+                };
+                const card = document.createElement('div');
+                card.className = "bg-gray-800 rounded-xl shadow-lg p-5 flex flex-col items-center text-center transform hover:-translate-y-1 transition-transform duration-300";
+                card.innerHTML = `
+                    <div class="relative mb-4">
+                        <img src="${post.image}" onerror="this.src='https://placehold.co/100x100/1f2937/9ca3af?text=Error'" alt="Foto de perfil" class="w-24 h-24 rounded-full object-cover border-4 border-gray-700">
+                        <span class="absolute bottom-0 right-0 text-xs font-semibold py-1 px-2 rounded-full ${typeColors[post.type] || ''}">${post.type}</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mb-4 flex-grow">${post.description}</p>
+                    <div class="text-xs text-gray-500 w-full text-right mb-2">Por: ${post.author}</div>
+                    <a href="${post.link}" target="_blank" rel="noopener noreferrer" class="w-full bg-gray-700 hover:bg-cyan-500 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
+                        Visitar
+                    </a>
+                `;
+                return card;
+            }
+
+            const prependPost = (post) => {
+                const postCard = createPostCard(post);
+                feed.prepend(postCard);
+            };
+
+            // --- API Calls ---
+            async function fetchPosts() {
+                try {
+                    const response = await fetch('/api/posts');
+                    const posts = await response.json();
+                    feed.innerHTML = ''; // Clear existing posts
+                    posts.forEach(post => feed.appendChild(createPostCard(post)));
+                } catch (error) {
+                    console.error('Error fetching posts:', error);
+                }
+            }
+
+            async function checkUserSession() {
+                try {
+                    const response = await fetch('/api/session');
+                    const data = await response.json();
+                    if (data.logged_in) {
+                        updateUIForLogin(data.username);
+                    } else {
+                        updateUIForLogout();
+                    }
+                } catch (error) {
+                    console.error('Error checking session:', error);
+                }
+            }
+            
+            // --- Modal Handling ---
+            const openModal = (modal) => modal.classList.remove('hidden');
+            const closeModal = (modal) => modal.classList.add('hidden');
+            
+            document.getElementById('login-btn').addEventListener('click', () => openModal(modals.login));
+            document.getElementById('signup-btn').addEventListener('click', () => openModal(modals.signup));
+            document.getElementById('new-post-btn').addEventListener('click', () => openModal(modals.newPost));
+
+            document.querySelectorAll('.close-modal-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    closeModal(btn.closest('.fixed'));
+                });
+            });
+
+            // --- Form Submissions ---
+            const handleFormSubmit = async (form, url, errorMessageElem) => {
+                errorMessageElem.classList.add('hidden');
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        if (url.includes('login') || url.includes('signup')) {
+                            updateUIForLogin(result.username);
+                            showToast(result.message);
+                        } else { // New Post
+                             showToast(result.message);
+                        }
+                        form.reset();
+                        closeModal(form.closest('.fixed'));
+                    } else {
+                        errorMessageElem.textContent = result.message;
+                        errorMessageElem.classList.remove('hidden');
+                    }
+                } catch (error) {
+                     errorMessageElem.textContent = 'A network error occurred.';
+                     errorMessageElem.classList.remove('hidden');
+                }
+            };
+            
+            document.getElementById('login-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                handleFormSubmit(e.target, '/api/login', document.getElementById('login-error'));
+            });
+
+            document.getElementById('signup-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                handleFormSubmit(e.target, '/api/signup', document.getElementById('signup-error'));
+            });
+
+            document.getElementById('new-post-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                // We use a custom handler here because we don't need the error message element
+                const form = e.target;
+                const formData = new FormData(form);
+                const data = {
+                    link: formData.get('post-link'),
+                    description: formData.get('post-description'),
+                    image: formData.get('post-image'),
+                    type: formData.get('post-type')
+                };
+
+                try {
+                    const response = await fetch('/api/posts', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    const result = await response.json();
+                    if(response.ok) {
+                        // The socket event will handle adding the post, so we just show a toast
+                        showToast("Enlace publicado con éxito!");
+                        form.reset();
+                        closeModal(modals.newPost);
+                    } else {
+                         showToast(result.message, true);
+                    }
+                } catch(error) {
+                    showToast("Error de conexión.", true);
+                }
+            });
+
+            document.getElementById('logout-btn').addEventListener('click', async () => {
+                await fetch('/api/logout', { method: 'POST' });
+                updateUIForLogout();
+                showToast("Has cerrado sesión.");
+            });
+
+            // --- Socket.IO Listener ---
+            socket.on('new_post', (post) => {
+                console.log('New post received via WebSocket:', post);
+                prependPost(post);
+            });
+
+            // --- Initial Load ---
+            fetchPosts();
+            checkUserSession();
+        });
+    </script>
+</body>
+</html>
