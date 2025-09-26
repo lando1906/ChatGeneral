@@ -60,30 +60,24 @@ class Post(db.Model):
 # --- Main Route ---
 @app.route('/')
 def index():
-    # The main HTML file is rendered from the templates folder
     return render_template('index.html')
 
 # --- API Routes ---
-
-# User Authentication
+# (El resto de las rutas API no cambian y van aquí...)
 @app.route('/api/signup', methods=['POST'])
 def signup():
     data = request.get_json()
     username = data.get('username')
     email = data.get('email')
     password = data.get('password')
-
     if not all([username, email, password]):
         return jsonify({'status': 'error', 'message': 'Missing data'}), 400
-
     if User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first():
         return jsonify({'status': 'error', 'message': 'User already exists'}), 409
-
     new_user = User(username=username, email=email)
     new_user.set_password(password)
     db.session.add(new_user)
     db.session.commit()
-    
     session['user_id'] = new_user.id
     session['username'] = new_user.username
     return jsonify({'status': 'success', 'message': 'User created successfully', 'username': new_user.username})
@@ -93,14 +87,11 @@ def login():
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
-
     user = User.query.filter_by(email=email).first()
-
     if user and user.check_password(password):
         session['user_id'] = user.id
         session['username'] = user.username
         return jsonify({'status': 'success', 'message': 'Logged in successfully', 'username': user.username})
-    
     return jsonify({'status': 'error', 'message': 'Invalid credentials'}), 401
 
 @app.route('/api/logout', methods=['POST'])
@@ -114,7 +105,6 @@ def check_session():
         return jsonify({'logged_in': True, 'username': session.get('username')})
     return jsonify({'logged_in': False})
 
-# Posts
 @app.route('/api/posts', methods=['GET'])
 def get_posts():
     posts = Post.query.order_by(Post.timestamp.desc()).all()
@@ -124,29 +114,17 @@ def get_posts():
 def create_post():
     if 'user_id' not in session:
         return jsonify({'status': 'error', 'message': 'Unauthorized'}), 401
-
     data = request.get_json()
     link = data.get('link')
     description = data.get('description')
     image = data.get('image')
     post_type = data.get('type')
-
     if not all([link, description, image, post_type]):
         return jsonify({'status': 'error', 'message': 'Missing data'}), 400
-
-    new_post = Post(
-        link=link,
-        description=description,
-        image=image,
-        post_type=post_type,
-        user_id=session['user_id']
-    )
+    new_post = Post(link=link, description=description, image=image, post_type=post_type, user_id=session['user_id'])
     db.session.add(new_post)
     db.session.commit()
-    
-    # Notify all connected clients about the new post
     socketio.emit('new_post', new_post.to_dict())
-    
     return jsonify({'status': 'success', 'message': 'Post created', 'post': new_post.to_dict()}), 201
 
 # --- Utility to create tables ---
@@ -155,35 +133,26 @@ def init_db():
         print("Creating database tables...")
         db.create_all()
         print("Database tables created.")
-        
-        # Optional: Create a default user and a few posts if the DB is empty
         if not User.query.first():
             print("Creating default data...")
             default_user = User(username='admin', email='admin@todus.links')
             default_user.set_password('admin')
             db.session.add(default_user)
             db.session.commit()
-
             posts_data = [
-                 {
-                    'link': "#", 'description': "Canal oficial de noticias y actualizaciones de la comunidad de desarrolladores de Cuba. ¡Únete para estar al día!",
-                    # CORREGIDO: Se cambiaron las comillas invertidas por comillas dobles
-                    'image': "https://placehold.co/100x100/1f2937/9ca3af?text=DevCU", 'post_type': "Canal", 'user_id': default_user.id
-                },
-                {
-                    'link': "#", 'description': "Grupo para los amantes de la fotografía. Comparte tus mejores capturas, aprende nuevas técnicas y participa en retos.",
-                    # CORREGIDO: Se cambiaron las comillas invertidas por comillas dobles
-                    'image': "https://placehold.co/100x100/1f2937/9ca3af?text=Foto", 'post_type': "Grupo", 'user_id': default_user.id
-                },
+                 {'link': "#", 'description': "Canal de noticias de Devs de Cuba.", 'image': "https://placehold.co/100x100/1f2937/9ca3af?text=DevCU", 'post_type': "Canal", 'user_id': default_user.id},
+                 {'link': "#", 'description': "Grupo para amantes de la fotografía.", 'image': "https://placehold.co/100x100/1f2937/9ca3af?text=Foto", 'post_type': "Grupo", 'user_id': default_user.id},
             ]
             for p in posts_data:
-                post = Post(**p)
-                db.session.add(post)
+                db.session.add(Post(**p))
             db.session.commit()
             print("Default data created.")
 
+# --- CORRECCIÓN CLAVE ---
+# Esta sección se usará para desarrollo local. El comando de Gunicorn en Render
+# ignorará este bloque y ejecutará la app directamente.
 if __name__ == '__main__':
-    # This is for local development
-    # To initialize the database, run in your terminal:
-    # python -c "from app import init_db; init_db()"
-    socketio.run(app, debug=True)
+    # Obtener el puerto de la variable de entorno PORT, con 10000 como valor por defecto.
+    port = int(os.environ.get('PORT', 10000))
+    # Ejecutar la app escuchando en TODAS las interfaces de red (0.0.0.0)
+    socketio.run(app, host='0.0.0.0', port=port, debug=False)
