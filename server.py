@@ -167,11 +167,13 @@ def init_db():
             posts_data = [
                  {
                     'link': "#", 'description': "Canal oficial de noticias y actualizaciones de la comunidad de desarrolladores de Cuba. ¡Únete para estar al día!",
-                    'image': `https://placehold.co/100x100/1f2937/9ca3af?text=DevCU`, 'post_type': "Canal", 'user_id': default_user.id
+                    # CORREGIDO: Se cambiaron las comillas invertidas por comillas dobles
+                    'image': "https://placehold.co/100x100/1f2937/9ca3af?text=DevCU", 'post_type': "Canal", 'user_id': default_user.id
                 },
                 {
                     'link': "#", 'description': "Grupo para los amantes de la fotografía. Comparte tus mejores capturas, aprende nuevas técnicas y participa en retos.",
-                    'image': `https://placehold.co/100x100/1f2937/9ca3af?text=Foto`, 'post_type': "Grupo", 'user_id': default_user.id
+                    # CORREGIDO: Se cambiaron las comillas invertidas por comillas dobles
+                    'image': "https://placehold.co/100x100/1f2937/9ca3af?text=Foto", 'post_type': "Grupo", 'user_id': default_user.id
                 },
             ]
             for p in posts_data:
