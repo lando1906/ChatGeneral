@@ -6,6 +6,7 @@ import os
 import threading
 import time
 import re
+import urllib.parse
 from datetime import datetime, timedelta
 
 # Configuración para yt-dlp: prioriza 720p, luego 480p, luego 360p
@@ -103,8 +104,9 @@ def start_download(sid, data):
                 original_path = d['filename']
                 new_path = os.path.join('downloads', sanitized_filename)
                 
-                if original_path != new_path:
+                if original_path != new_path and os.path.exists(original_path):
                     os.rename(original_path, new_path)
+                    print(f"📝 Archivo renombrado: {sanitized_filename}")
                 
                 # Registrar archivo para eliminación en 15 minutos
                 expiry_time = datetime.now() + timedelta(minutes=15)
@@ -147,8 +149,15 @@ def serve_application(environ, start_response):
     
     # Servir archivos de descarga
     if path.startswith('/downloads/'):
-        filename = path[11:]  # Remover '/downloads/'
+        # DECODIFICAR el nombre del archivo de la URL
+        filename_encoded = path[11:]  # Remover '/downloads/'
+        filename = urllib.parse.unquote(filename_encoded)
+        
         file_path = os.path.join('downloads', filename)
+        
+        print(f"📥 Solicitud de descarga: {filename}")  # Log para debugging
+        print(f"📁 Ruta del archivo: {file_path}")      # Log para debugging
+        print(f"📋 Archivos en downloads: {os.listdir('downloads')}")  # Listar archivos disponibles
         
         if os.path.exists(file_path) and os.path.isfile(file_path):
             # Verificar si el archivo no ha expirado
@@ -159,18 +168,21 @@ def serve_application(environ, start_response):
                     ('Cache-Control', 'no-cache, must-revalidate')
                 ]
                 start_response('200 OK', headers)
+                print(f"✅ Sirviendo archivo: {filename}")  # Log de éxito
                 
                 # Enviar el archivo
                 with open(file_path, 'rb') as f:
                     return [f.read()]
             else:
+                print(f"❌ Archivo expirado: {filename}")  # Log de expiración
                 start_response('410 Gone', [('Content-Type', 'text/plain')])
                 return [b'Archivo expirado o no disponible']
         else:
+            print(f"❌ Archivo no encontrado: {file_path}")  # Log de error
             start_response('404 Not Found', [('Content-Type', 'text/plain')])
             return [b'Archivo no encontrado']
     
-    # Servir el archivo HTML principal (PAGINA DE INICIO)
+    # Servir el archivo HTML principal
     if path == '/' or path == '':
         try:
             with open('static/index.html', 'rb') as f:
@@ -189,6 +201,8 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     print(f"🚀 Servidor ejecutándose en 0.0.0.0:{port}")
     print(f"⏰ Los archivos se eliminarán automáticamente después de 15 minutos")
+    print(f"📁 Directorio de trabajo: {os.getcwd()}")
+    print(f"📁 Contenido del directorio: {os.listdir('.')}")
     
     # Usar el servidor WSGI de eventlet con nuestra aplicación combinada
     eventlet.wsgi.server(eventlet.listen(('0.0.0.0', port)), serve_application)
