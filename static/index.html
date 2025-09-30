@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Descargador de Videos Premium</title>
+    <title>Descargador de Videos</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
@@ -13,198 +13,145 @@
             padding: 0; 
             box-sizing: border-box; 
         }
+        
         body {
             font-family: 'Poppins', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
-            -webkit-font-smoothing: antialiased;
-            text-rendering: optimizeLegibility;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        .container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            padding: 40px;
-            max-width: 600px;
-            width: 100%;
-            margin: 0 auto;
+
+        .glass-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 24px;
             border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 50px;
+            max-width: 700px;
+            width: 100%;
+            color: white;
         }
+
         .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
         }
+
         .logo {
-            font-size: 3rem;
-            margin-bottom: 10px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            font-size: 4rem;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #ff6b6b, #feca57);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            animation: float 3s ease-in-out infinite;
         }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
         h1 {
-            color: #2d3748;
-            margin-bottom: 10px;
+            font-size: 2.8rem;
             font-weight: 700;
-            font-size: 2.2rem;
+            margin-bottom: 15px;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
+
         .subtitle {
-            color: #718096;
-            font-size: 1.1rem;
-            font-weight: 400;
+            font-size: 1.2rem;
+            opacity: 0.9;
+            font-weight: 300;
         }
+
+        .input-section {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
         .input-group {
             display: flex;
-            flex-direction: column;
             gap: 15px;
-            margin-bottom: 30px;
+            margin-bottom: 0;
         }
+
         .url-input {
-            width: 100%;
-            padding: 16px 20px;
-            border: 2px solid #e2e8f0;
+            flex: 1;
+            padding: 18px 24px;
+            border: none;
             border-radius: 12px;
             font-family: 'Poppins', sans-serif;
             font-size: 16px;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
-            background: #fff;
         }
+
         .url-input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
             transform: translateY(-2px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
         }
+
         .download-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #ff6b6b, #feca57);
             border: none;
             color: white;
-            padding: 16px 30px;
+            padding: 18px 35px;
             border-radius: 12px;
             cursor: pointer;
             font-family: 'Poppins', sans-serif;
             font-size: 16px;
             font-weight: 600;
             transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
         }
+
         .download-btn:hover {
             transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 12px 25px rgba(255, 107, 107, 0.4);
         }
+
         .downloads-section {
-            margin-top: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
+
         .section-title {
-            color: #2d3748;
-            margin-bottom: 20px;
+            font-size: 1.5rem;
             font-weight: 600;
-            font-size: 1.3rem;
+            margin-bottom: 25px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
+
         .downloads-list {
             display: flex;
             flex-direction: column;
-            gap: 15px;
-            max-height: 400px;
+            gap: 20px;
+            max-height: 500px;
             overflow-y: auto;
         }
+
         .download-item {
-            background: #f7fafc;
-            border-radius: 12px;
-            padding: 20px;
-            border-left: 4px solid #667eea;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 14px;
+            padding: 25px;
+            border-left: 5px solid #ff6b6b;
             transition: all 0.3s ease;
-            animation: slideIn 0.3s ease-out;
+            animation: slideIn 0.4s ease-out;
         }
-        .download-item.completed {
-            border-left-color: #48bb78;
-            background: #f0fff4;
-        }
-        .download-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        .download-title {
-            font-weight: 600;
-            color: #2d3748;
-            font-size: 0.95rem;
-        }
-        .download-status {
-            font-size: 0.85rem;
-            padding: 4px 8px;
-            border-radius: 20px;
-            background: #edf2f7;
-            color: #4a5568;
-        }
-        .progress-container {
-            background: #e2e8f0;
-            border-radius: 10px;
-            height: 8px;
-            margin: 12px 0;
-            overflow: hidden;
-        }
-        .progress-bar {
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            height: 100%;
-            width: 0%;
-            transition: width 0.4s ease;
-            border-radius: 10px;
-        }
-        .progress-text {
-            font-size: 0.9rem;
-            color: #718096;
-            margin-bottom: 8px;
-        }
-        .download-completed {
-            margin-top: 12px;
-            padding: 12px;
-            background: #48bb78;
-            color: white;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .download-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: white;
-            color: #48bb78;
-            text-decoration: none;
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            border: 2px solid #48bb78;
-        }
-        .download-link:hover {
-            background: #48bb78;
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
-        }
-        .expiry-info {
-            font-size: 0.8rem;
-            color: #a0aec0;
-            margin-top: 8px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .file-info {
-            font-size: 0.8rem;
-            color: #718096;
-            margin-top: 5px;
-            font-style: italic;
-        }
+
         @keyframes slideIn {
             from {
                 opacity: 0;
@@ -215,49 +162,172 @@
                 transform: translateY(0);
             }
         }
+
+        .download-item.completed {
+            border-left-color: #1dd1a1;
+            background: rgba(29, 209, 161, 0.15);
+        }
+
+        .download-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .download-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .download-status {
+            font-size: 0.85rem;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .progress-container {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            height: 10px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #ff6b6b, #feca57);
+            height: 100%;
+            width: 0%;
+            transition: width 0.4s ease;
+            border-radius: 10px;
+        }
+
+        .progress-text {
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .link-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .link-label {
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            opacity: 0.8;
+            font-weight: 500;
+        }
+
+        .link-container {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .download-link {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 14px 18px;
+            border-radius: 10px;
+            font-family: 'Poppins', monospace;
+            font-size: 0.9rem;
+            border: 2px solid transparent;
+            word-break: break-all;
+            cursor: text;
+        }
+
+        .copy-btn {
+            background: linear-gradient(135deg, #48dbfb, #0abde3);
+            border: none;
+            color: white;
+            padding: 14px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .copy-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(72, 219, 251, 0.4);
+        }
+
+        .copy-btn.copied {
+            background: linear-gradient(135deg, #1dd1a1, #10ac84);
+        }
+
+        .expiry-info {
+            font-size: 0.8rem;
+            margin-top: 12px;
+            opacity: 0.7;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
         @media (max-width: 768px) {
-            .container {
+            .glass-container {
                 padding: 30px 25px;
-                margin: 10px;
+                margin: 15px;
             }
+            
+            .input-group {
+                flex-direction: column;
+            }
+            
             h1 {
-                font-size: 1.8rem;
+                font-size: 2.2rem;
             }
+            
             .logo {
-                font-size: 2.5rem;
+                font-size: 3rem;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="glass-container">
         <div class="header">
             <div class="logo">
-                <i class="fas fa-file-video"></i>
+                <i class="fas fa-cloud-download-alt"></i>
             </div>
-            <h1>Descargador de Videos</h1>
-            <p class="subtitle">Descarga videos en calidad 720p con enlaces directos</p>
+            <h1>Descargador</h1>
+            <p class="subtitle">Descarga videos en máxima calidad con enlaces directos</p>
         </div>
 
-        <div class="input-group">
-            <input type="url" class="url-input" id="urlInput" 
-                   placeholder="https://ejemplo.com/video" required>
-            <button class="download-btn" onclick="startDownload()">
-                <i class="fas fa-download"></i>
-                Descargar Video
-            </button>
+        <div class="input-section">
+            <div class="input-group">
+                <input type="url" class="url-input" id="urlInput" 
+                       placeholder="https://ejemplo.com/video" required>
+                <button class="download-btn" onclick="startDownload()">
+                    <i class="fas fa-download"></i>
+                    Descargar Video
+                </button>
+            </div>
         </div>
 
         <div class="downloads-section">
             <h2 class="section-title">
                 <i class="fas fa-list"></i>
-                Descargas
+                Descargas en Progreso
             </h2>
             <div class="downloads-list" id="downloadsList">
-                <div style="text-align: center; color: #a0aec0; padding: 40px;">
-                    <i class="fas fa-cloud-download-alt" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5;"></i>
+                <div style="text-align: center; padding: 40px; opacity: 0.7;">
+                    <i class="fas fa-cloud-download-alt" style="font-size: 3rem; margin-bottom: 15px;"></i>
                     <p>No hay descargas activas</p>
-                    <p style="font-size: 0.9rem; margin-top: 5px;">Ingresa una URL arriba para comenzar</p>
+                    <p style="font-size: 0.9rem; margin-top: 5px;">Ingresa una URL para comenzar</p>
                 </div>
             </div>
         </div>
@@ -272,7 +342,8 @@
         });
         
         socket.on('progress_update', (data) => {
-            updateDownloadProgress(data.download_id, data.progress, data.status, data.filename, data.download_url, data.expires_at);
+            updateDownloadProgress(data.download_id, data.progress, data.status, 
+                                 data.filename, data.download_url, data.expires_at);
         });
         
         function startDownload() {
@@ -290,8 +361,8 @@
         }
         
         function addDownloadItem(downloadId) {
-            // Limpiar mensaje de "no hay descargas"
-            if (downloadsList.children.length === 1 && downloadsList.children[0].querySelector('.fa-cloud-download-alt')) {
+            if (downloadsList.children.length === 1 && 
+                downloadsList.children[0].querySelector('.fa-cloud-download-alt')) {
                 downloadsList.innerHTML = '';
             }
             
@@ -312,7 +383,8 @@
             downloadsList.prepend(downloadItem);
         }
         
-        function updateDownloadProgress(downloadId, progress, status, filename = null, downloadUrl = null, expiresAt = null) {
+        function updateDownloadProgress(downloadId, progress, status, filename = null, 
+                                      downloadUrl = null, expiresAt = null) {
             const downloadItem = document.getElementById(`download-${downloadId}`);
             const progressBar = document.getElementById(`progress-${downloadId}`);
             const progressText = document.getElementById(`progressText-${downloadId}`);
@@ -325,26 +397,26 @@
             
             if (statusElement) {
                 if (downloadUrl && progress === 100) {
-                    // Descarga completada - MOSTRAR ENLACE DIRECTO
                     downloadItem.classList.add('completed');
                     downloadItem.querySelector('.download-status').textContent = 'Completado';
-                    downloadItem.querySelector('.download-status').style.background = '#c6f6d5';
-                    downloadItem.querySelector('.download-status').style.color = '#22543d';
+                    downloadItem.querySelector('.download-status').style.background = 'rgba(29, 209, 161, 0.3)';
                     
                     downloadItem.querySelector('.download-title').textContent = `Archivo: ${filename}`;
                     
-                    // Crear enlace de descarga directa
+                    // Mostrar enlace copiable en lugar de botón de descarga
+                    const fullDownloadUrl = window.location.origin + downloadUrl;
                     statusElement.innerHTML = `
-                        <div style="margin-bottom: 12px;">✅ ${status}</div>
-                        <div class="download-completed">
-                            <a href="${downloadUrl}" class="download-link" download="${filename}" target="_blank">
-                                <i class="fas fa-download"></i>
-                                DESCARGAR ARCHIVO DIRECTAMENTE
-                            </a>
-                        </div>
-                        <div class="file-info">
-                            <i class="fas fa-info-circle"></i>
-                            El archivo se renombró a: ${filename}
+                        <div style="margin-bottom: 15px;">✅ ${status}</div>
+                        <div class="link-section">
+                            <div class="link-label">Enlace de descarga directa:</div>
+                            <div class="link-container">
+                                <input type="text" class="download-link" id="link-${downloadId}" 
+                                       value="${fullDownloadUrl}" readonly>
+                                <button class="copy-btn" onclick="copyToClipboard('${downloadId}')">
+                                    <i class="far fa-copy"></i>
+                                    Copiar
+                                </button>
+                            </div>
                         </div>
                     `;
                     
@@ -357,20 +429,39 @@
                     }
                     
                 } else {
-                    // Descarga en progreso
                     statusElement.textContent = status;
                 }
             }
         }
 
-        // Enter para iniciar descarga
+        function copyToClipboard(downloadId) {
+            const linkInput = document.getElementById(`link-${downloadId}`);
+            const copyBtn = linkInput.nextElementSibling;
+            
+            linkInput.select();
+            linkInput.setSelectionRange(0, 99999);
+            
+            navigator.clipboard.writeText(linkInput.value).then(() => {
+                const originalHtml = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+                copyBtn.classList.add('copied');
+                
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalHtml;
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Error al copiar: ', err);
+                alert('Error al copiar el enlace. Por favor, cópialo manualmente.');
+            });
+        }
+
         document.getElementById('urlInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 startDownload();
             }
         });
 
-        // Focus en el input al cargar la página
         document.getElementById('urlInput').focus();
     </script>
 </body>
