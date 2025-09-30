@@ -2,10 +2,10 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <!-- Viewport para vista móvil -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Descargador de Videos</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <title>Descargador de Videos Premium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
         * { 
@@ -17,164 +17,282 @@
             font-family: 'Poppins', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             padding: 20px;
             -webkit-font-smoothing: antialiased;
             text-rendering: optimizeLegibility;
         }
         .container {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            padding: 30px;
-            max-width: 500px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 600px;
             width: 100%;
-            box-sizing: border-box;
+            margin: 0 auto;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
         h1 {
-            color: #42446E;
-            text-align: center;
-            margin-bottom: 25px;
-            font-weight: 600;
-            font-size: clamp(1.5rem, 5vw, 2rem);
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-weight: 700;
+            font-size: 2.2rem;
+        }
+        .subtitle {
+            color: #718096;
+            font-size: 1.1rem;
+            font-weight: 400;
         }
         .input-group {
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            margin-bottom: 25px;
+            gap: 15px;
+            margin-bottom: 30px;
         }
         .url-input {
             width: 100%;
-            padding: 14px 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
+            padding: 16px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
             font-family: 'Poppins', sans-serif;
             font-size: 16px;
             transition: all 0.3s ease;
-            box-sizing: border-box;
+            background: #fff;
         }
         .url-input:focus {
             outline: none;
-            border-color: #13B0F5;
-            box-shadow: 0 0 0 3px rgba(19, 176, 245, 0.1);
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
         }
         .download-btn {
-            background: linear-gradient(90deg, #13B0F5 0%, #E70FAA 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
             color: white;
-            padding: 14px 20px;
-            border-radius: 8px;
+            padding: 16px 30px;
+            border-radius: 12px;
             cursor: pointer;
             font-family: 'Poppins', sans-serif;
             font-size: 16px;
-            font-weight: 500;
+            font-weight: 600;
             transition: all 0.3s ease;
-            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
         .download-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(19, 176, 245, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        .download-btn:active {
+            transform: translateY(-1px);
+        }
+        .downloads-section {
+            margin-top: 30px;
+        }
+        .section-title {
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-weight: 600;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .downloads-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-height: 400px;
+            overflow-y: auto;
         }
         .download-item {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 18px;
-            margin-bottom: 15px;
-            border-left: 4px solid #13B0F5;
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+            animation: slideIn 0.3s ease-out;
+        }
+        .download-item.completed {
+            border-left-color: #48bb78;
+            background: #f0fff4;
+        }
+        .download-item.error {
+            border-left-color: #f56565;
+            background: #fed7d7;
+        }
+        .download-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .download-title {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 0.95rem;
+        }
+        .download-status {
+            font-size: 0.85rem;
+            padding: 4px 8px;
+            border-radius: 20px;
+            background: #edf2f7;
+            color: #4a5568;
         }
         .progress-container {
-            background: #e0e0e0;
+            background: #e2e8f0;
             border-radius: 10px;
-            height: 10px;
+            height: 8px;
             margin: 12px 0;
             overflow: hidden;
+            position: relative;
         }
         .progress-bar {
-            background: linear-gradient(90deg, #13B0F5, #E70FAA);
+            background: linear-gradient(90deg, #667eea, #764ba2);
             height: 100%;
             width: 0%;
-            transition: width 0.3s ease;
+            transition: width 0.4s ease;
+            border-radius: 10px;
         }
-        .status {
-            font-size: 14px;
-            color: #666;
-            margin-top: 5px;
-            line-height: 1.4;
+        .progress-text {
+            font-size: 0.9rem;
+            color: #718096;
+            margin-bottom: 8px;
         }
         .download-link {
-            display: inline-block;
-            background: linear-gradient(90deg, #13B0F5 0%, #E70FAA 100%);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #48bb78, #38a169);
             color: white;
             text-decoration: none;
             padding: 10px 16px;
-            border-radius: 6px;
+            border-radius: 8px;
             margin-top: 8px;
             font-weight: 500;
             transition: all 0.3s ease;
+            font-size: 0.9rem;
         }
         .download-link:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(19, 176, 245, 0.4);
+            box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
         }
         .expiry-info {
-            font-size: 12px;
-            color: #888;
-            margin-top: 5px;
-            font-style: italic;
+            font-size: 0.8rem;
+            color: #a0aec0;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
-        .completed-item {
-            border-left-color: #4CAF50;
-            background: #f1f8e9;
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #a0aec0;
         }
-
-        /* Media Query para pantallas más grandes */
-        @media (min-width: 768px) {
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        @media (max-width: 768px) {
             .container {
-                padding: 40px;
+                padding: 30px 25px;
+                margin: 10px;
             }
-            .input-group {
-                flex-direction: row;
+            h1 {
+                font-size: 1.8rem;
             }
-            .download-btn {
-                width: auto;
-                white-space: nowrap;
+            .logo {
+                font-size: 2.5rem;
             }
         }
-
-        /* Media Query para pantallas muy pequeñas */
         @media (max-width: 480px) {
-            body {
-                padding: 15px;
-            }
             .container {
                 padding: 25px 20px;
-                border-radius: 12px;
             }
-            .download-item {
-                padding: 15px;
+            h1 {
+                font-size: 1.6rem;
+            }
+            .download-btn {
+                padding: 14px 20px;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Descargador de Videos</h1>
-        <div class="input-group">
-            <input type="url" class="url-input" id="urlInput" placeholder="Pega el enlace del video aquí..." required>
-            <button class="download-btn" onclick="startDownload()">Descargar</button>
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-file-video"></i>
+            </div>
+            <h1>Descargador de Videos</h1>
+            <p class="subtitle">Descarga videos en calidad 720p de forma rápida y sencilla</p>
         </div>
-        <div id="downloadsList"></div>
+
+        <div class="input-group">
+            <input type="url" class="url-input" id="urlInput" 
+                   placeholder="https://ejemplo.com/video" required>
+            <button class="download-btn" onclick="startDownload()">
+                <i class="fas fa-download"></i>
+                Descargar Video
+            </button>
+        </div>
+
+        <div class="downloads-section">
+            <h2 class="section-title">
+                <i class="fas fa-list"></i>
+                Descargas Activas
+            </h2>
+            <div class="downloads-list" id="downloadsList">
+                <div class="empty-state" id="emptyState">
+                    <i class="fas fa-cloud-download-alt"></i>
+                    <p>No hay descargas activas</p>
+                    <p style="font-size: 0.9rem; margin-top: 5px;">Ingresa una URL arriba para comenzar</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
         const socket = io();
         const downloadsList = document.getElementById('downloadsList');
+        const emptyState = document.getElementById('emptyState');
+        let activeDownloads = new Set();
         
         socket.on('connect', () => {
-            console.log('Conectado al servidor');
+            console.log('✅ Conectado al servidor');
         });
         
         socket.on('progress_update', (data) => {
@@ -190,70 +308,112 @@
                 addDownloadItem(downloadId);
                 socket.emit('start_download', { url: url, download_id: downloadId });
                 urlInput.value = '';
+                
+                // Ocultar estado vacío
+                if (emptyState) {
+                    emptyState.style.display = 'none';
+                }
             } else {
                 alert('Por favor, ingresa una URL válida');
             }
         }
         
         function addDownloadItem(downloadId) {
+            // Eliminar descargas completadas anteriores (mantener solo las activas)
+            document.querySelectorAll('.download-item.completed').forEach(item => {
+                item.remove();
+            });
+            
             const downloadItem = document.createElement('div');
             downloadItem.className = 'download-item';
             downloadItem.id = `download-${downloadId}`;
             downloadItem.innerHTML = `
-                <div><strong>Descarga en progreso...</strong></div>
+                <div class="download-header">
+                    <div class="download-title">Preparando descarga...</div>
+                    <div class="download-status">Iniciando</div>
+                </div>
+                <div class="progress-text" id="progressText-${downloadId}">0%</div>
                 <div class="progress-container">
                     <div class="progress-bar" id="progress-${downloadId}"></div>
                 </div>
-                <div class="status" id="status-${downloadId}">Conectando...</div>
+                <div class="status" id="status-${downloadId}">Conectando con el servidor...</div>
             `;
             downloadsList.prepend(downloadItem);
+            activeDownloads.add(downloadId);
         }
         
         function updateDownloadProgress(downloadId, progress, status, filename = null, downloadUrl = null, expiresAt = null) {
             const downloadItem = document.getElementById(`download-${downloadId}`);
             const progressBar = document.getElementById(`progress-${downloadId}`);
+            const progressText = document.getElementById(`progressText-${downloadId}`);
             const statusElement = document.getElementById(`status-${downloadId}`);
+            const downloadStatus = downloadItem?.querySelector('.download-status');
             
-            if (progressBar) {
+            if (progressBar && progressText) {
                 progressBar.style.width = `${progress}%`;
+                progressText.textContent = `${progress.toFixed(1)}%`;
             }
             
-            if (statusElement) {
-                let statusText = `${status} - ${progress.toFixed(1)}%`;
-                
+            if (statusElement && downloadStatus) {
                 if (downloadUrl && progress === 100) {
-                    // Mostrar enlace de descarga cuando esté completo
-                    statusText = `✅ Descarga completada - ${progress.toFixed(1)}%`;
+                    // Descarga completada
+                    downloadItem.classList.add('completed');
+                    downloadStatus.textContent = 'Completado';
+                    downloadStatus.style.background = '#c6f6d5';
+                    downloadStatus.style.color = '#22543d';
                     
-                    // Agregar enlace de descarga
-                    const downloadLink = document.createElement('a');
-                    downloadLink.href = downloadUrl;
-                    downloadLink.className = 'download-link';
-                    downloadLink.textContent = `📥 Descargar: ${filename}`;
-                    downloadLink.target = '_blank';
-                    downloadLink.download = filename;
+                    const displayName = filename && filename.length > 30 ? 
+                        filename.substring(0, 30) + '...' : filename;
                     
-                    // Agregar información de expiración
-                    const expiryInfo = document.createElement('div');
-                    expiryInfo.className = 'expiry-info';
+                    downloadItem.querySelector('.download-title').textContent = displayName;
+                    statusElement.innerHTML = `
+                        <div style="margin-bottom: 8px;">✅ ${status}</div>
+                        <a href="${downloadUrl}" class="download-link" download="${filename}">
+                            <i class="fas fa-download"></i>
+                            Descargar Archivo
+                        </a>
+                    `;
+                    
                     if (expiresAt) {
                         const expiryTime = new Date(expiresAt);
-                        expiryInfo.textContent = `⏰ Este archivo se eliminará el ${expiryTime.toLocaleString()}`;
+                        const expiryElement = document.createElement('div');
+                        expiryElement.className = 'expiry-info';
+                        expiryElement.innerHTML = `<i class="fas fa-clock"></i> Se elimina: ${expiryTime.toLocaleString()}`;
+                        statusElement.appendChild(expiryElement);
                     }
                     
-                    // Limpiar y agregar nuevos elementos
-                    statusElement.innerHTML = statusText;
-                    statusElement.appendChild(document.createElement('br'));
-                    statusElement.appendChild(downloadLink);
-                    statusElement.appendChild(expiryInfo);
+                    // Remover de descargas activas después de 10 segundos
+                    setTimeout(() => {
+                        if (downloadItem.parentNode) {
+                            downloadItem.style.opacity = '0.7';
+                        }
+                    }, 10000);
                     
-                    // Cambiar estilo a completado
-                    if (downloadItem) {
-                        downloadItem.classList.add('completed-item');
-                    }
+                } else if (status.includes('Error')) {
+                    // Error en la descarga
+                    downloadItem.classList.add('error');
+                    downloadStatus.textContent = 'Error';
+                    downloadStatus.style.background = '#fed7d7';
+                    downloadStatus.style.color = '#c53030';
+                    statusElement.innerHTML = `❌ ${status}`;
                 } else {
-                    statusElement.innerHTML = statusText;
+                    // Descarga en progreso
+                    downloadStatus.textContent = 'Descargando';
+                    downloadStatus.style.background = '#bee3f8';
+                    downloadStatus.style.color = '#2c5282';
+                    statusElement.textContent = status;
+                    
+                    if (filename && !downloadItem.querySelector('.download-title').textContent.includes('...')) {
+                        const displayName = filename.length > 30 ? 
+                            filename.substring(0, 30) + '...' : filename;
+                        downloadItem.querySelector('.download-title').textContent = displayName;
+                    }
                 }
+            }
+            
+            // Mostrar estado vacío si no hay descargas activas
+            if (activeDownloads.size === 0 && emptyState) {
+                emptyState.style.display = 'block';
             }
         }
 
@@ -263,6 +423,9 @@
                 startDownload();
             }
         });
+
+        // Focus en el input al cargar la página
+        document.getElementById('urlInput').focus();
     </script>
 </body>
 </html>
