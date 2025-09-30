@@ -85,15 +85,13 @@ def start_download(sid, data):
     try:
         sio.emit('progress_update', {
             'download_id': download_id, 
-            'progress': 0, 
-            'status': '🔄 Procesando...'
+            'status': '🔄 Conectando...'
         })
 
         def progress_hook(d):
             if d['status'] == 'downloading':
                 sio.emit('progress_update', {
                     'download_id': download_id, 
-                    'progress': 50, 
                     'status': '📥 Descargando...'
                 })
             elif d['status'] == 'finished':
@@ -117,7 +115,6 @@ def start_download(sid, data):
                 
                 sio.emit('progress_update', {
                     'download_id': download_id, 
-                    'progress': 100, 
                     'status': '✅ Completo',
                     'filename': sanitized_filename,
                     'download_url': download_url,
@@ -131,7 +128,6 @@ def start_download(sid, data):
         with yt_dlp.YoutubeDL(ydl_opts_with_progress) as ydl:
             sio.emit('progress_update', {
                 'download_id': download_id, 
-                'progress': 25, 
                 'status': '🚀 Iniciando...'
             })
             ydl.download([url])
@@ -141,7 +137,6 @@ def start_download(sid, data):
         print(f"❌ {error_message}")
         sio.emit('progress_update', {
             'download_id': download_id, 
-            'progress': 0, 
             'status': f'❌ {error_message}'
         })
 
@@ -198,6 +193,6 @@ if __name__ == '__main__':
     print(f"🚀 Servidor ejecutándose en 0.0.0.0:{port}")
     print(f"📁 Directorio actual: {os.getcwd()}")
     print(f"⏰ Los archivos se eliminarán automáticamente después de 15 minutos")
-    print(f"🎯 Sistema de estados: Procesando → Iniciando → Descargando → Completo")
+    print(f"🎯 Sistema de estados simplificado: Conectando → Iniciando → Descargando → Completo")
     
     eventlet.wsgi.server(eventlet.listen(('0.0.0.0', port)), serve_application)
