@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Descargador de Videos</title>
+    <title>Descargador Premium</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
@@ -14,140 +14,179 @@
             box-sizing: border-box; 
         }
         
+        :root {
+            --primary-blue: #0066ff;
+            --dark-blue: #191654;
+            --light-blue: #43c6ac;
+            --accent-blue: #2bbfe4;
+            --gradient: linear-gradient(135deg, var(--dark-blue) 0%, var(--primary-blue) 50%, var(--light-blue) 100%);
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.12);
+        }
+        
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient);
             min-height: 100vh;
-            padding: 20px;
+            padding: 12px;
             display: flex;
             justify-content: center;
             align-items: center;
+            background-size: 400% 400%;
+            animation: gradientShift 8s ease infinite;
         }
 
-        .glass-container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(15px);
-            border-radius: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            padding: 50px;
-            max-width: 700px;
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .mobile-container {
             width: 100%;
+            max-width: 400px;
+            min-height: 95vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            padding: 25px;
+            margin-bottom: 15px;
             color: white;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .header {
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
         }
 
         .logo {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            background: linear-gradient(135deg, #ff6b6b, #feca57);
+            font-size: 2.8rem;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #48dbfb, #0abde3);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            animation: float 3s ease-in-out infinite;
+            animation: bounce 2s ease-in-out infinite;
         }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
         }
 
         h1 {
-            font-size: 2.8rem;
+            font-size: 1.6rem;
             font-weight: 700;
-            margin-bottom: 15px;
-            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
         .subtitle {
-            font-size: 1.2rem;
+            font-size: 0.85rem;
             opacity: 0.9;
             font-weight: 300;
+            line-height: 1.4;
         }
 
         .input-section {
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 16px;
-            padding: 30px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 15px;
         }
 
         .input-group {
             display: flex;
-            gap: 15px;
-            margin-bottom: 0;
+            flex-direction: column;
+            gap: 12px;
         }
 
         .url-input {
-            flex: 1;
-            padding: 18px 24px;
+            width: 100%;
+            padding: 14px 16px;
             border: none;
             border-radius: 12px;
             font-family: 'Poppins', sans-serif;
-            font-size: 16px;
+            font-size: 14px;
             background: rgba(255, 255, 255, 0.95);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
         }
 
         .url-input:focus {
             outline: none;
-            transform: translateY(-2px);
-            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+            transform: scale(1.02);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
         }
 
         .download-btn {
-            background: linear-gradient(135deg, #ff6b6b, #feca57);
+            background: linear-gradient(135deg, #48dbfb, #0abde3);
             border: none;
             color: white;
-            padding: 18px 35px;
+            padding: 14px 20px;
             border-radius: 12px;
             cursor: pointer;
             font-family: 'Poppins', sans-serif;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
             transition: all 0.3s ease;
-            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+            box-shadow: 0 4px 15px rgba(72, 219, 251, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
         }
 
         .download-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 25px rgba(255, 107, 107, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(72, 219, 251, 0.4);
         }
 
         .downloads-section {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
 
         .section-title {
-            font-size: 1.5rem;
+            font-size: 1.1rem;
             font-weight: 600;
-            margin-bottom: 25px;
+            margin-bottom: 15px;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
         }
 
         .downloads-list {
+            flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 20px;
-            max-height: 500px;
+            gap: 12px;
             overflow-y: auto;
+            max-height: 50vh;
         }
 
         .download-item {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 14px;
-            padding: 25px;
-            border-left: 5px solid #ff6b6b;
+            padding: 18px;
+            border-left: 4px solid #48dbfb;
             transition: all 0.3s ease;
             animation: slideIn 0.4s ease-out;
         }
@@ -155,11 +194,11 @@
         @keyframes slideIn {
             from {
                 opacity: 0;
-                transform: translateY(20px);
+                transform: translateX(-20px);
             }
             to {
                 opacity: 1;
-                transform: translateY(0);
+                transform: translateX(0);
             }
         }
 
@@ -172,61 +211,74 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
 
         .download-title {
             font-weight: 600;
-            font-size: 1.1rem;
+            font-size: 0.9rem;
         }
 
         .download-status {
-            font-size: 0.85rem;
-            padding: 6px 12px;
-            border-radius: 20px;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 12px;
             background: rgba(255, 255, 255, 0.2);
         }
 
         .progress-container {
             background: rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            height: 10px;
-            margin: 15px 0;
+            border-radius: 8px;
+            height: 6px;
+            margin: 10px 0;
             overflow: hidden;
         }
 
         .progress-bar {
-            background: linear-gradient(90deg, #ff6b6b, #feca57);
+            background: linear-gradient(90deg, #48dbfb, #0abde3);
             height: 100%;
             width: 0%;
             transition: width 0.4s ease;
-            border-radius: 10px;
+            border-radius: 8px;
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
         }
 
         .progress-text {
-            font-size: 0.95rem;
-            margin-bottom: 10px;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
             font-weight: 500;
         }
 
         .link-section {
-            margin-top: 20px;
-            padding: 20px;
+            margin-top: 12px;
+            padding: 15px;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         .link-label {
-            font-size: 0.9rem;
-            margin-bottom: 10px;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
             opacity: 0.8;
             font-weight: 500;
         }
 
         .link-container {
             display: flex;
-            gap: 12px;
+            gap: 8px;
             align-items: center;
         }
 
@@ -234,11 +286,11 @@
             flex: 1;
             background: rgba(255, 255, 255, 0.95);
             color: #333;
-            padding: 14px 18px;
-            border-radius: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
             font-family: 'Poppins', monospace;
-            font-size: 0.9rem;
-            border: 2px solid transparent;
+            font-size: 0.75rem;
+            border: 1px solid transparent;
             word-break: break-all;
             cursor: text;
         }
@@ -247,21 +299,22 @@
             background: linear-gradient(135deg, #48dbfb, #0abde3);
             border: none;
             color: white;
-            padding: 14px 20px;
-            border-radius: 10px;
+            padding: 10px 14px;
+            border-radius: 8px;
             cursor: pointer;
             font-family: 'Poppins', sans-serif;
             font-weight: 600;
+            font-size: 0.75rem;
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             white-space: nowrap;
         }
 
         .copy-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(72, 219, 251, 0.4);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(72, 219, 251, 0.4);
         }
 
         .copy-btn.copied {
@@ -269,65 +322,118 @@
         }
 
         .expiry-info {
-            font-size: 0.8rem;
-            margin-top: 12px;
+            font-size: 0.7rem;
+            margin-top: 8px;
             opacity: 0.7;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
         }
 
-        @media (max-width: 768px) {
-            .glass-container {
-                padding: 30px 25px;
-                margin: 15px;
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            opacity: 0.7;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .empty-state i {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+        }
+
+        /* Optimizaciones para móviles pequeños */
+        @media (max-width: 380px) {
+            .mobile-container {
+                min-height: 92vh;
             }
             
-            .input-group {
-                flex-direction: column;
-            }
-            
-            h1 {
-                font-size: 2.2rem;
+            .glass-card {
+                padding: 20px;
+                margin-bottom: 12px;
             }
             
             .logo {
-                font-size: 3rem;
+                font-size: 2.4rem;
             }
+            
+            h1 {
+                font-size: 1.4rem;
+            }
+            
+            .subtitle {
+                font-size: 0.8rem;
+            }
+            
+            .url-input, .download-btn {
+                padding: 12px 14px;
+                font-size: 13px;
+            }
+            
+            .download-item {
+                padding: 15px;
+            }
+        }
+
+        @media (max-height: 700px) {
+            .downloads-list {
+                max-height: 40vh;
+            }
+        }
+
+        /* Scroll personalizado */
+        .downloads-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .downloads-list::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+
+        .downloads-list::-webkit-scrollbar-thumb {
+            background: #48dbfb;
+            border-radius: 2px;
         }
     </style>
 </head>
 <body>
-    <div class="glass-container">
-        <div class="header">
-            <div class="logo">
-                <i class="fas fa-cloud-download-alt"></i>
+    <div class="mobile-container">
+        <div class="glass-card">
+            <div class="header">
+                <div class="logo">
+                    <i class="fas fa-cloud-download-alt"></i>
+                </div>
+                <h1>Descargador Premium</h1>
+                <p class="subtitle">Descarga videos en máxima calidad con enlaces directos y seguros</p>
             </div>
-            <h1>Descargador</h1>
-            <p class="subtitle">Descarga videos en máxima calidad con enlaces directos</p>
+
+            <div class="input-section">
+                <div class="input-group">
+                    <input type="url" class="url-input" id="urlInput" 
+                           placeholder="https://ejemplo.com/video" required>
+                    <button class="download-btn" onclick="startDownload()">
+                        <i class="fas fa-download"></i>
+                        Descargar Video
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <div class="input-section">
-            <div class="input-group">
-                <input type="url" class="url-input" id="urlInput" 
-                       placeholder="https://ejemplo.com/video" required>
-                <button class="download-btn" onclick="startDownload()">
-                    <i class="fas fa-download"></i>
-                    Descargar Video
-                </button>
-            </div>
-        </div>
-
-        <div class="downloads-section">
+        <div class="glass-card downloads-section">
             <h2 class="section-title">
                 <i class="fas fa-list"></i>
-                Descargas en Progreso
+                Descargas
             </h2>
             <div class="downloads-list" id="downloadsList">
-                <div style="text-align: center; padding: 40px; opacity: 0.7;">
-                    <i class="fas fa-cloud-download-alt" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                <div class="empty-state">
+                    <i class="fas fa-cloud-download-alt"></i>
                     <p>No hay descargas activas</p>
-                    <p style="font-size: 0.9rem; margin-top: 5px;">Ingresa una URL para comenzar</p>
+                    <p style="font-size: 0.75rem; margin-top: 5px;">Ingresa una URL para comenzar</p>
                 </div>
             </div>
         </div>
@@ -362,7 +468,7 @@
         
         function addDownloadItem(downloadId) {
             if (downloadsList.children.length === 1 && 
-                downloadsList.children[0].querySelector('.fa-cloud-download-alt')) {
+                downloadsList.children[0].classList.contains('empty-state')) {
                 downloadsList.innerHTML = '';
             }
             
@@ -403,10 +509,10 @@
                     
                     downloadItem.querySelector('.download-title').textContent = `Archivo: ${filename}`;
                     
-                    // Mostrar enlace copiable en lugar de botón de descarga
+                    // Mostrar enlace copiable
                     const fullDownloadUrl = window.location.origin + downloadUrl;
                     statusElement.innerHTML = `
-                        <div style="margin-bottom: 15px;">✅ ${status}</div>
+                        <div style="margin-bottom: 12px;">✅ ${status}</div>
                         <div class="link-section">
                             <div class="link-label">Enlace de descarga directa:</div>
                             <div class="link-container">
@@ -424,7 +530,7 @@
                         const expiryTime = new Date(expiresAt);
                         const expiryElement = document.createElement('div');
                         expiryElement.className = 'expiry-info';
-                        expiryElement.innerHTML = `<i class="fas fa-clock"></i> Enlace válido hasta: ${expiryTime.toLocaleString()}`;
+                        expiryElement.innerHTML = `<i class="fas fa-clock"></i> Válido hasta: ${expiryTime.toLocaleString()}`;
                         statusElement.appendChild(expiryElement);
                     }
                     
@@ -452,7 +558,7 @@
                 }, 2000);
             }).catch(err => {
                 console.error('Error al copiar: ', err);
-                alert('Error al copiar el enlace. Por favor, cópialo manualmente.');
+                alert('Error al copiar. Cópialo manualmente.');
             });
         }
 
