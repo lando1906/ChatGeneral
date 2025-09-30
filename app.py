@@ -11,10 +11,11 @@ import random
 import string
 from datetime import datetime, timedelta
 
-# Configuración para yt-dlp: prioriza 480p, luego mejores formatos compatibles
+# Configuración para yt-dlp con cookies
 ydl_opts = {
     'format': 'best[height<=480]/best[ext=mp4]/best[ext=webm]/best',
     'outtmpl': 'downloads/%(title)s.%(ext)s',
+    'cookies': 'cookies.txt',  # Añade esta línea
 }
 
 sio = socketio.Server(cors_allowed_origins='*')
