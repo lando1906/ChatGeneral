@@ -145,15 +145,17 @@
             font-weight: 600;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(72, 219, 251, 0.3);
-            animation: pulse 2s infinite;
         }
 
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.02); }
+        .download-btn:disabled {
+            background: linear-gradient(135deg, #666, #999);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            opacity: 0.7;
         }
 
-        .download-btn:hover {
+        .download-btn:not(:disabled):hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(72, 219, 251, 0.4);
         }
@@ -226,6 +228,21 @@
             background: rgba(255, 255, 255, 0.2);
         }
 
+        .status-processing {
+            background: rgba(72, 219, 251, 0.3);
+            color: #48dbfb;
+        }
+
+        .status-downloading {
+            background: rgba(255, 193, 7, 0.3);
+            color: #ffc107;
+        }
+
+        .status-complete {
+            background: rgba(29, 209, 161, 0.3);
+            color: #1dd1a1;
+        }
+
         .progress-container {
             background: rgba(255, 255, 255, 0.2);
             border-radius: 8px;
@@ -240,13 +257,6 @@
             width: 0%;
             transition: width 0.4s ease;
             border-radius: 8px;
-            animation: shimmer 2s infinite;
-        }
-
-        @keyframes shimmer {
-            0% { opacity: 1; }
-            50% { opacity: 0.8; }
-            100% { opacity: 1; }
         }
 
         .progress-text {
@@ -255,7 +265,7 @@
             font-weight: 500;
         }
 
-        .auto-download-section {
+        .completed-section {
             margin-top: 15px;
             padding: 15px;
             background: rgba(29, 209, 161, 0.2);
@@ -270,29 +280,14 @@
             to { opacity: 1; }
         }
 
-        .auto-download-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: linear-gradient(135deg, #1dd1a1, #10ac84);
-            color: white;
-            text-decoration: none;
-            padding: 12px 20px;
-            border-radius: 10px;
-            font-weight: 600;
+        .completed-message {
             font-size: 0.9rem;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(29, 209, 161, 0.3);
+            margin-bottom: 10px;
+            font-weight: 500;
         }
 
-        .auto-download-link:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(29, 209, 161, 0.4);
-        }
-
-        .download-info {
+        .auto-download-info {
             font-size: 0.75rem;
-            margin-top: 8px;
             opacity: 0.8;
             display: flex;
             align-items: center;
@@ -326,7 +321,6 @@
             margin-bottom: 12px;
         }
 
-        /* Optimizaciones para móviles pequeños */
         @media (max-width: 380px) {
             .mobile-container {
                 min-height: 92vh;
@@ -357,11 +351,6 @@
             .download-item {
                 padding: 15px;
             }
-            
-            .auto-download-link {
-                padding: 10px 16px;
-                font-size: 0.85rem;
-            }
         }
 
         @media (max-height: 700px) {
@@ -370,7 +359,6 @@
             }
         }
 
-        /* Scroll personalizado */
         .downloads-list::-webkit-scrollbar {
             width: 4px;
         }
@@ -394,16 +382,16 @@
                     <i class="fas fa-cloud-download-alt"></i>
                 </div>
                 <h1>Descargador Premium</h1>
-                <p class="subtitle">Descarga videos en máxima calidad con enlaces directos y seguros</p>
+                <p class="subtitle">Descarga videos automáticamente al completarse</p>
             </div>
 
             <div class="input-section">
                 <div class="input-group">
                     <input type="url" class="url-input" id="urlInput" 
                            placeholder="https://ejemplo.com/video" required>
-                    <button class="download-btn" onclick="startDownload()">
+                    <button class="download-btn" id="downloadBtn" onclick="startDownload()">
                         <i class="fas fa-download"></i>
-                        Descargar Video
+                        Descargar
                     </button>
                 </div>
             </div>
@@ -412,13 +400,13 @@
         <div class="glass-card downloads-section">
             <h2 class="section-title">
                 <i class="fas fa-list"></i>
-                Descargas
+                Progreso
             </h2>
             <div class="downloads-list" id="downloadsList">
                 <div class="empty-state">
                     <i class="fas fa-cloud-download-alt"></i>
                     <p>No hay descargas activas</p>
-                    <p style="font-size: 0.75rem; margin-top: 5px;">Ingresa una URL para comenzar</p>
+                    <p style="font-size: 0.75rem; margin-top: 5px;">Pega una URL para comenzar</p>
                 </div>
             </div>
         </div>
@@ -427,6 +415,8 @@
     <script>
         const socket = io();
         const downloadsList = document.getElementById('downloadsList');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const urlInput = document.getElementById('urlInput');
         
         socket.on('connect', () => {
             console.log('✅ Conectado al servidor');
@@ -437,15 +427,24 @@
                                  data.filename, data.download_url, data.expires_at);
         });
         
+        // Reiniciar botón cuando se escribe en el input
+        urlInput.addEventListener('input', function() {
+            downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar';
+            downloadBtn.disabled = false;
+        });
+        
         function startDownload() {
-            const urlInput = document.getElementById('urlInput');
             const url = urlInput.value.trim();
             
             if (url) {
                 const downloadId = 'download_' + Date.now();
                 addDownloadItem(downloadId);
                 socket.emit('start_download', { url: url, download_id: downloadId });
-                urlInput.value = '';
+                
+                // Deshabilitar botón durante la descarga
+                downloadBtn.disabled = true;
+                downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+                
             } else {
                 alert('Por favor, ingresa una URL válida');
             }
@@ -463,13 +462,13 @@
             downloadItem.innerHTML = `
                 <div class="download-header">
                     <div class="download-title">Preparando descarga...</div>
-                    <div class="download-status">Iniciando</div>
+                    <div class="download-status status-processing">🔄 Procesando</div>
                 </div>
                 <div class="progress-text" id="progressText-${downloadId}">0%</div>
                 <div class="progress-container">
                     <div class="progress-bar" id="progress-${downloadId}"></div>
                 </div>
-                <div class="status" id="status-${downloadId}">Conectando con el servidor...</div>
+                <div class="status" id="status-${downloadId}">Iniciando proceso...</div>
             `;
             downloadsList.prepend(downloadItem);
         }
@@ -480,32 +479,38 @@
             const progressBar = document.getElementById(`progress-${downloadId}`);
             const progressText = document.getElementById(`progressText-${downloadId}`);
             const statusElement = document.getElementById(`status-${downloadId}`);
+            const statusElementIcon = downloadItem.querySelector('.download-status');
             
             if (progressBar && progressText) {
                 progressBar.style.width = `${progress}%`;
-                progressText.textContent = `${progress.toFixed(1)}%`;
+                progressText.textContent = `${progress}%`;
             }
             
-            if (statusElement) {
-                if (downloadUrl && progress === 100) {
-                    downloadItem.classList.add('completed');
-                    downloadItem.querySelector('.download-status').textContent = 'Completado';
-                    downloadItem.querySelector('.download-status').style.background = 'rgba(29, 209, 161, 0.3)';
+            if (statusElement && statusElementIcon) {
+                // Actualizar estado visual
+                if (status.includes('Procesando')) {
+                    statusElementIcon.className = 'download-status status-processing';
+                    statusElementIcon.textContent = '🔄 Procesando';
+                } else if (status.includes('Iniciando')) {
+                    statusElementIcon.className = 'download-status status-processing';
+                    statusElementIcon.textContent = '🚀 Iniciando';
+                } else if (status.includes('Descargando')) {
+                    statusElementIcon.className = 'download-status status-downloading';
+                    statusElementIcon.textContent = '📥 Descargando';
+                } else if (status.includes('Completo') || status.includes('✅')) {
+                    statusElementIcon.className = 'download-status status-complete';
+                    statusElementIcon.textContent = '✅ Completo';
                     
+                    downloadItem.classList.add('completed');
                     downloadItem.querySelector('.download-title').textContent = `Archivo: ${filename}`;
                     
-                    // Enlace de descarga automática
-                    const fullDownloadUrl = window.location.origin + downloadUrl;
+                    // Mostrar sección de completado
                     statusElement.innerHTML = `
-                        <div style="margin-bottom: 12px;">✅ ${status}</div>
-                        <div class="auto-download-section">
-                            <a href="${fullDownloadUrl}" class="auto-download-link" download="${filename}">
-                                <i class="fas fa-download"></i>
-                                DESCARGAR AHORA
-                            </a>
-                            <div class="download-info">
+                        <div class="completed-section">
+                            <div class="completed-message">${status}</div>
+                            <div class="auto-download-info">
                                 <i class="fas fa-info-circle"></i>
-                                El archivo se descargará automáticamente
+                                El video se descargará automáticamente...
                             </div>
                         </div>
                     `;
@@ -518,15 +523,30 @@
                         statusElement.appendChild(expiryElement);
                     }
                     
-                    // Intentar descarga automática después de un breve retraso
+                    // Iniciar descarga automática después de 1 segundo
                     setTimeout(() => {
+                        const fullDownloadUrl = window.location.origin + downloadUrl;
                         const downloadLink = document.createElement('a');
                         downloadLink.href = fullDownloadUrl;
                         downloadLink.download = filename;
                         document.body.appendChild(downloadLink);
                         downloadLink.click();
                         document.body.removeChild(downloadLink);
+                        
+                        // Rehabilitar botón principal
+                        downloadBtn.disabled = false;
+                        downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar';
+                        
                     }, 1000);
+                    
+                } else if (status.includes('❌')) {
+                    statusElementIcon.className = 'download-status';
+                    statusElementIcon.textContent = '❌ Error';
+                    statusElement.textContent = status;
+                    
+                    // Rehabilitar botón en caso de error
+                    downloadBtn.disabled = false;
+                    downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar';
                     
                 } else {
                     statusElement.textContent = status;
@@ -534,13 +554,14 @@
             }
         }
 
-        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+        // Enter para iniciar descarga
+        urlInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 startDownload();
             }
         });
 
-        document.getElementById('urlInput').focus();
+        urlInput.focus();
     </script>
 </body>
 </html>
