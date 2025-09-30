@@ -11,9 +11,9 @@ import random
 import string
 from datetime import datetime, timedelta
 
-# Configuración para yt-dlp: prioriza 480p como máximo
+# Configuración para yt-dlp: prioriza 480p, luego mejores formatos compatibles
 ydl_opts = {
-    'format': 'best[height<=480]',
+    'format': 'best[height<=480]/best[ext=mp4]/best[ext=webm]/best',
     'outtmpl': 'downloads/%(title)s.%(ext)s',
 }
 
@@ -55,18 +55,14 @@ cleanup_thread.start()
 
 def generar_nombre_aleatorio(longitud=12):
     """Genera un nombre de archivo aleatorio"""
-    caracteres = string.ascii_letters + string.digits  # Letras (mayúsculas y minúsculas) + números
+    caracteres = string.ascii_letters + string.digits
     return ''.join(random.choice(caracteres) for _ in range(longitud))
 
 def sanitize_filename(filename):
     """Reemplaza el nombre original por uno aleatorio manteniendo la extensión"""
-    # Obtener la extensión del archivo original
     nombre_base, extension = os.path.splitext(filename)
-    
-    # Generar nuevo nombre aleatorio
     nuevo_nombre = generar_nombre_aleatorio(12) + extension.lower()
     
-    # Verificar que no exista un archivo con ese nombre (muy improbable pero seguro)
     downloads_path = 'downloads/'
     while os.path.exists(os.path.join(downloads_path, nuevo_nombre)):
         nuevo_nombre = generar_nombre_aleatorio(12) + extension.lower()
@@ -106,11 +102,9 @@ def start_download(sid, data):
                     'status': 'Descargando...'
                 })
             elif d['status'] == 'finished':
-                # Obtener y sanitizar el nombre del archivo
                 original_filename = os.path.basename(d['filename'])
                 sanitized_filename = sanitize_filename(original_filename)
                 
-                # Renombrar el archivo
                 original_path = d['filename']
                 new_path = os.path.join('downloads', sanitized_filename)
                 
@@ -118,11 +112,9 @@ def start_download(sid, data):
                     os.rename(original_path, new_path)
                     print(f"📝 Archivo renombrado: {original_filename} -> {sanitized_filename}")
                 
-                # Registrar archivo para eliminación en 15 minutos
                 expiry_time = datetime.now() + timedelta(minutes=15)
                 file_expirations[sanitized_filename] = expiry_time
 
-                # Generar enlace de descarga directa
                 download_url = f"/downloads/{urllib.parse.quote(sanitized_filename)}"
                 
                 sio.emit('progress_update', {
@@ -159,24 +151,20 @@ def serve_application(environ, start_response):
     """Middleware WSGI para manejar archivos estáticos y la aplicación Socket.IO"""
     path = environ['PATH_INFO']
     
-    # Servir archivos de descarga directa
     if path.startswith('/downloads/'):
-        # Decodificar el nombre del archivo de la URL
-        filename_encoded = path[11:]  # Remover '/downloads/'
+        filename_encoded = path[11:]
         filename = urllib.parse.unquote(filename_encoded)
         
         file_path = os.path.join('downloads', filename)
         
         print(f"📥 Solicitud de descarga directa: {filename}")
         
-        # Verificar si el archivo existe y no ha expirado
         if os.path.exists(file_path) and os.path.isfile(file_path):
             if filename in file_expirations and datetime.now() < file_expirations[filename]:
-                # Configurar headers para descarga directa
                 headers = [
                     ('Content-Type', 'application/octet-stream'),
                     ('Content-Disposition', f'attachment; filename="{filename}"'),
-                    ('Cache-Control', 'no-cache, no-store, must-revalidate'),
+                    ('Cache-Control', 'no-cache, must-revalidate'),
                     ('Pragma', 'no-cache'),
                     ('Expires', '0'),
                     ('Content-Length', str(os.path.getsize(file_path)))
@@ -184,10 +172,8 @@ def serve_application(environ, start_response):
                 start_response('200 OK', headers)
                 print(f"✅ Sirviendo archivo para descarga: {filename}")
                 
-                # Leer y enviar el archivo completo
                 with open(file_path, 'rb') as f:
-                    file_content = f.read()
-                return [file_content]
+                    return [f.read()]
             else:
                 print(f"⏰ Archivo expirado: {filename}")
                 start_response('410 Gone', [('Content-Type', 'text/plain')])
@@ -197,7 +183,6 @@ def serve_application(environ, start_response):
             start_response('404 Not Found', [('Content-Type', 'text/plain')])
             return [b'Archivo no encontrado']
     
-    # Servir el archivo HTML principal
     if path == '/' or path == '':
         try:
             with open('static/index.html', 'rb') as f:
@@ -208,16 +193,13 @@ def serve_application(environ, start_response):
             start_response('404 Not Found', [('Content-Type', 'text/plain')])
             return [b'Archivo HTML no encontrado']
     
-    # Para todas las demás rutas, pasar a la aplicación Socket.IO
     return app(environ, start_response)
 
 if __name__ == '__main__':
-    # ¡IMPORTANTE! Usar el puerto 10000 para Render
     port = int(os.environ.get('PORT', 10000))
     print(f"🚀 Servidor ejecutándose en 0.0.0.0:{port}")
     print(f"📁 Directorio actual: {os.getcwd()}")
     print(f"⏰ Los archivos se eliminarán automáticamente después de 15 minutos")
-    print(f"🎯 Los archivos se renombrarán a 12 caracteres aleatorios")
+    print(f"🎯 Calidad máxima configurada: 480p")
     
-    # Usar el servidor WSGI de eventlet con nuestra aplicación combinada
     eventlet.wsgi.server(eventlet.listen(('0.0.0.0', port)), serve_application)
