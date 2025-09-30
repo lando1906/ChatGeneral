@@ -199,6 +199,12 @@
             align-items: center;
             gap: 5px;
         }
+        .file-info {
+            font-size: 0.8rem;
+            color: #718096;
+            margin-top: 5px;
+            font-style: italic;
+        }
         @keyframes slideIn {
             from {
                 opacity: 0;
@@ -325,10 +331,7 @@
                     downloadItem.querySelector('.download-status').style.background = '#c6f6d5';
                     downloadItem.querySelector('.download-status').style.color = '#22543d';
                     
-                    const displayName = filename && filename.length > 30 ? 
-                        filename.substring(0, 30) + '...' : filename;
-                    
-                    downloadItem.querySelector('.download-title').textContent = displayName;
+                    downloadItem.querySelector('.download-title').textContent = `Archivo: ${filename}`;
                     
                     // Crear enlace de descarga directa
                     statusElement.innerHTML = `
@@ -338,6 +341,10 @@
                                 <i class="fas fa-download"></i>
                                 DESCARGAR ARCHIVO DIRECTAMENTE
                             </a>
+                        </div>
+                        <div class="file-info">
+                            <i class="fas fa-info-circle"></i>
+                            El archivo se renombró a: ${filename}
                         </div>
                     `;
                     
@@ -352,11 +359,6 @@
                 } else {
                     // Descarga en progreso
                     statusElement.textContent = status;
-                    if (filename) {
-                        const displayName = filename.length > 30 ? 
-                            filename.substring(0, 30) + '...' : filename;
-                        downloadItem.querySelector('.download-title').textContent = displayName;
-                    }
                 }
             }
         }
