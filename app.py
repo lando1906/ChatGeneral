@@ -11,9 +11,9 @@ import random
 import string
 from datetime import datetime, timedelta
 
-# Configuración para yt-dlp: prioriza 720p, luego 480p, luego 360p
+# Configuración para yt-dlp: prioriza 480p como máximo
 ydl_opts = {
-    'format': 'best[height<=720]/best[height<=480]/best[height<=360]/best',
+    'format': 'best[height<=480]',
     'outtmpl': 'downloads/%(title)s.%(ext)s',
 }
 
