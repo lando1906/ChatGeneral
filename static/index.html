@@ -184,6 +184,16 @@
             max-height: 50vh;
         }
 
+        /* Ocultar scrollbar pero mantener funcionalidad */
+        .downloads-list::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .downloads-list {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
         .download-item {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 14px;
@@ -243,26 +253,11 @@
             color: #1dd1a1;
         }
 
-        .progress-container {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            height: 6px;
-            margin: 10px 0;
-            overflow: hidden;
-        }
-
-        .progress-bar {
-            background: linear-gradient(90deg, #48dbfb, #0abde3);
-            height: 100%;
-            width: 0%;
-            transition: width 0.4s ease;
-            border-radius: 8px;
-        }
-
-        .progress-text {
+        .status-text {
             font-size: 0.8rem;
-            margin-bottom: 8px;
+            margin: 8px 0;
             font-weight: 500;
+            min-height: 20px;
         }
 
         .completed-section {
@@ -358,20 +353,6 @@
                 max-height: 40vh;
             }
         }
-
-        .downloads-list::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .downloads-list::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 2px;
-        }
-
-        .downloads-list::-webkit-scrollbar-thumb {
-            background: #48dbfb;
-            border-radius: 2px;
-        }
     </style>
 </head>
 <body>
@@ -423,8 +404,7 @@
         });
         
         socket.on('progress_update', (data) => {
-            updateDownloadProgress(data.download_id, data.progress, data.status, 
-                                 data.filename, data.download_url, data.expires_at);
+            updateDownloadProgress(data.download_id, data.status, data.filename, data.download_url, data.expires_at);
         });
         
         // Reiniciar botón cuando se escribe en el input
@@ -462,41 +442,32 @@
             downloadItem.innerHTML = `
                 <div class="download-header">
                     <div class="download-title">Preparando descarga...</div>
-                    <div class="download-status status-processing">🔄 Procesando</div>
+                    <div class="download-status status-processing">🔄 Conectando</div>
                 </div>
-                <div class="progress-text" id="progressText-${downloadId}">0%</div>
-                <div class="progress-container">
-                    <div class="progress-bar" id="progress-${downloadId}"></div>
-                </div>
-                <div class="status" id="status-${downloadId}">Iniciando proceso...</div>
+                <div class="status-text" id="status-${downloadId}">Iniciando proceso...</div>
             `;
             downloadsList.prepend(downloadItem);
         }
         
-        function updateDownloadProgress(downloadId, progress, status, filename = null, 
-                                      downloadUrl = null, expiresAt = null) {
+        function updateDownloadProgress(downloadId, status, filename = null, downloadUrl = null, expiresAt = null) {
             const downloadItem = document.getElementById(`download-${downloadId}`);
-            const progressBar = document.getElementById(`progress-${downloadId}`);
-            const progressText = document.getElementById(`progressText-${downloadId}`);
             const statusElement = document.getElementById(`status-${downloadId}`);
-            const statusElementIcon = downloadItem.querySelector('.download-status');
-            
-            if (progressBar && progressText) {
-                progressBar.style.width = `${progress}%`;
-                progressText.textContent = `${progress}%`;
-            }
+            const statusElementIcon = downloadItem?.querySelector('.download-status');
             
             if (statusElement && statusElementIcon) {
                 // Actualizar estado visual
-                if (status.includes('Procesando')) {
+                if (status.includes('Conectando')) {
                     statusElementIcon.className = 'download-status status-processing';
-                    statusElementIcon.textContent = '🔄 Procesando';
+                    statusElementIcon.textContent = '🔄 Conectando';
+                    statusElement.textContent = 'Estableciendo conexión con el servidor...';
                 } else if (status.includes('Iniciando')) {
                     statusElementIcon.className = 'download-status status-processing';
                     statusElementIcon.textContent = '🚀 Iniciando';
+                    statusElement.textContent = 'Preparando la descarga del video...';
                 } else if (status.includes('Descargando')) {
                     statusElementIcon.className = 'download-status status-downloading';
                     statusElementIcon.textContent = '📥 Descargando';
+                    statusElement.textContent = 'Descargando el video...';
                 } else if (status.includes('Completo') || status.includes('✅')) {
                     statusElementIcon.className = 'download-status status-complete';
                     statusElementIcon.textContent = '✅ Completo';
