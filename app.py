@@ -112,8 +112,10 @@ def start_download(sid, data):
                 expiry_time = datetime.now() + timedelta(minutes=15)
                 file_expirations[sanitized_filename] = expiry_time
 
-                # Emitir información de descarga completada con enlace
-                download_url = f"/downloads/{sanitized_filename}"
+                # Generar enlace de descarga directa
+                # En Render, la URL sería: https://tudominio.render.com/downloads/nombre_archivo.mp4
+                download_url = f"/downloads/{urllib.parse.quote(sanitized_filename)}"
+                
                 sio.emit('progress_update', {
                     'download_id': download_id, 
                     'progress': 100, 
@@ -123,6 +125,7 @@ def start_download(sid, data):
                     'expires_at': expiry_time.isoformat()
                 })
                 print(f"✅ Descarga completada: {sanitized_filename}")
+                print(f"🔗 Enlace de descarga: {download_url}")
 
         ydl_opts_with_progress = {**ydl_opts, 'progress_hooks': [progress_hook]}
 
@@ -147,38 +150,43 @@ def serve_application(environ, start_response):
     """Middleware WSGI para manejar archivos estáticos y la aplicación Socket.IO"""
     path = environ['PATH_INFO']
     
-    # Servir archivos de descarga
+    # Servir archivos de descarga directa
     if path.startswith('/downloads/'):
-        # DECODIFICAR el nombre del archivo de la URL
+        # Decodificar el nombre del archivo de la URL
         filename_encoded = path[11:]  # Remover '/downloads/'
         filename = urllib.parse.unquote(filename_encoded)
         
         file_path = os.path.join('downloads', filename)
         
-        print(f"📥 Solicitud de descarga: {filename}")  # Log para debugging
-        print(f"📁 Ruta del archivo: {file_path}")      # Log para debugging
-        print(f"📋 Archivos en downloads: {os.listdir('downloads')}")  # Listar archivos disponibles
+        print(f"📥 Solicitud de descarga directa: {filename}")
+        print(f"📁 Buscando archivo en: {file_path}")
         
+        # Verificar si el archivo existe y no ha expirado
         if os.path.exists(file_path) and os.path.isfile(file_path):
-            # Verificar si el archivo no ha expirado
             if filename in file_expirations and datetime.now() < file_expirations[filename]:
+                # Configurar headers para descarga directa
                 headers = [
                     ('Content-Type', 'application/octet-stream'),
                     ('Content-Disposition', f'attachment; filename="{filename}"'),
-                    ('Cache-Control', 'no-cache, must-revalidate')
+                    ('Cache-Control', 'no-cache, no-store, must-revalidate'),
+                    ('Pragma', 'no-cache'),
+                    ('Expires', '0'),
+                    ('Content-Length', str(os.path.getsize(file_path)))
                 ]
                 start_response('200 OK', headers)
-                print(f"✅ Sirviendo archivo: {filename}")  # Log de éxito
+                print(f"✅ Sirviendo archivo para descarga: {filename}")
                 
-                # Enviar el archivo
+                # Leer y enviar el archivo completo
                 with open(file_path, 'rb') as f:
-                    return [f.read()]
+                    file_content = f.read()
+                return [file_content]
             else:
-                print(f"❌ Archivo expirado: {filename}")  # Log de expiración
+                print(f"⏰ Archivo expirado: {filename}")
                 start_response('410 Gone', [('Content-Type', 'text/plain')])
                 return [b'Archivo expirado o no disponible']
         else:
-            print(f"❌ Archivo no encontrado: {file_path}")  # Log de error
+            print(f"❌ Archivo no encontrado: {filename}")
+            print(f"📂 Archivos disponibles: {os.listdir('downloads')}")
             start_response('404 Not Found', [('Content-Type', 'text/plain')])
             return [b'Archivo no encontrado']
     
@@ -200,9 +208,10 @@ if __name__ == '__main__':
     # ¡IMPORTANTE! Usar el puerto 10000 para Render
     port = int(os.environ.get('PORT', 10000))
     print(f"🚀 Servidor ejecutándose en 0.0.0.0:{port}")
+    print(f"📁 Directorio actual: {os.getcwd()}")
+    print(f"📂 Archivos en downloads: {os.listdir('downloads')}")
     print(f"⏰ Los archivos se eliminarán automáticamente después de 15 minutos")
-    print(f"📁 Directorio de trabajo: {os.getcwd()}")
-    print(f"📁 Contenido del directorio: {os.listdir('.')}")
+    print(f"🔗 Los enlaces de descarga estarán en: /downloads/nombre_archivo.mp4")
     
     # Usar el servidor WSGI de eventlet con nuestra aplicación combinada
     eventlet.wsgi.server(eventlet.listen(('0.0.0.0', port)), serve_application)
