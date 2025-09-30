@@ -118,7 +118,6 @@ def start_download(sid, data):
 
 # Servir archivos estáticos para descargas
 import eventlet.wsgi
-from eventlet.green import web
 
 def serve_static(environ, start_response):
     """Servir archivos estáticos desde la carpeta downloads"""
