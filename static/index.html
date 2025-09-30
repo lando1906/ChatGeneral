@@ -96,9 +96,6 @@
             transform: translateY(-3px);
             box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
         }
-        .download-btn:active {
-            transform: translateY(-1px);
-        }
         .downloads-section {
             margin-top: 30px;
         }
@@ -130,13 +127,9 @@
             border-left-color: #48bb78;
             background: #f0fff4;
         }
-        .download-item.error {
-            border-left-color: #f56565;
-            background: #fed7d7;
-        }
         .download-header {
             display: flex;
-            justify-content: between;
+            justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
         }
@@ -158,7 +151,6 @@
             height: 8px;
             margin: 12px 0;
             overflow: hidden;
-            position: relative;
         }
         .progress-bar {
             background: linear-gradient(90deg, #667eea, #764ba2);
@@ -172,21 +164,30 @@
             color: #718096;
             margin-bottom: 8px;
         }
+        .download-completed {
+            margin-top: 12px;
+            padding: 12px;
+            background: #48bb78;
+            color: white;
+            border-radius: 8px;
+            text-align: center;
+        }
         .download-link {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: linear-gradient(135deg, #48bb78, #38a169);
-            color: white;
+            background: white;
+            color: #48bb78;
             text-decoration: none;
             padding: 10px 16px;
             border-radius: 8px;
-            margin-top: 8px;
-            font-weight: 500;
+            font-weight: 600;
             transition: all 0.3s ease;
-            font-size: 0.9rem;
+            border: 2px solid #48bb78;
         }
         .download-link:hover {
+            background: #48bb78;
+            color: white;
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
         }
@@ -198,16 +199,6 @@
             align-items: center;
             gap: 5px;
         }
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: #a0aec0;
-        }
-        .empty-state i {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            opacity: 0.5;
-        }
         @keyframes slideIn {
             from {
                 opacity: 0;
@@ -217,14 +208,6 @@
                 opacity: 1;
                 transform: translateY(0);
             }
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-        .pulse {
-            animation: pulse 2s infinite;
         }
         @media (max-width: 768px) {
             .container {
@@ -238,17 +221,6 @@
                 font-size: 2.5rem;
             }
         }
-        @media (max-width: 480px) {
-            .container {
-                padding: 25px 20px;
-            }
-            h1 {
-                font-size: 1.6rem;
-            }
-            .download-btn {
-                padding: 14px 20px;
-            }
-        }
     </style>
 </head>
 <body>
@@ -258,7 +230,7 @@
                 <i class="fas fa-file-video"></i>
             </div>
             <h1>Descargador de Videos</h1>
-            <p class="subtitle">Descarga videos en calidad 720p de forma rápida y sencilla</p>
+            <p class="subtitle">Descarga videos en calidad 720p con enlaces directos</p>
         </div>
 
         <div class="input-group">
@@ -273,11 +245,11 @@
         <div class="downloads-section">
             <h2 class="section-title">
                 <i class="fas fa-list"></i>
-                Descargas Activas
+                Descargas
             </h2>
             <div class="downloads-list" id="downloadsList">
-                <div class="empty-state" id="emptyState">
-                    <i class="fas fa-cloud-download-alt"></i>
+                <div style="text-align: center; color: #a0aec0; padding: 40px;">
+                    <i class="fas fa-cloud-download-alt" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5;"></i>
                     <p>No hay descargas activas</p>
                     <p style="font-size: 0.9rem; margin-top: 5px;">Ingresa una URL arriba para comenzar</p>
                 </div>
@@ -288,8 +260,6 @@
     <script>
         const socket = io();
         const downloadsList = document.getElementById('downloadsList');
-        const emptyState = document.getElementById('emptyState');
-        let activeDownloads = new Set();
         
         socket.on('connect', () => {
             console.log('✅ Conectado al servidor');
@@ -308,21 +278,16 @@
                 addDownloadItem(downloadId);
                 socket.emit('start_download', { url: url, download_id: downloadId });
                 urlInput.value = '';
-                
-                // Ocultar estado vacío
-                if (emptyState) {
-                    emptyState.style.display = 'none';
-                }
             } else {
                 alert('Por favor, ingresa una URL válida');
             }
         }
         
         function addDownloadItem(downloadId) {
-            // Eliminar descargas completadas anteriores (mantener solo las activas)
-            document.querySelectorAll('.download-item.completed').forEach(item => {
-                item.remove();
-            });
+            // Limpiar mensaje de "no hay descargas"
+            if (downloadsList.children.length === 1 && downloadsList.children[0].querySelector('.fa-cloud-download-alt')) {
+                downloadsList.innerHTML = '';
+            }
             
             const downloadItem = document.createElement('div');
             downloadItem.className = 'download-item';
@@ -339,7 +304,6 @@
                 <div class="status" id="status-${downloadId}">Conectando con el servidor...</div>
             `;
             downloadsList.prepend(downloadItem);
-            activeDownloads.add(downloadId);
         }
         
         function updateDownloadProgress(downloadId, progress, status, filename = null, downloadUrl = null, expiresAt = null) {
@@ -347,73 +311,53 @@
             const progressBar = document.getElementById(`progress-${downloadId}`);
             const progressText = document.getElementById(`progressText-${downloadId}`);
             const statusElement = document.getElementById(`status-${downloadId}`);
-            const downloadStatus = downloadItem?.querySelector('.download-status');
             
             if (progressBar && progressText) {
                 progressBar.style.width = `${progress}%`;
                 progressText.textContent = `${progress.toFixed(1)}%`;
             }
             
-            if (statusElement && downloadStatus) {
+            if (statusElement) {
                 if (downloadUrl && progress === 100) {
-                    // Descarga completada
+                    // Descarga completada - MOSTRAR ENLACE DIRECTO
                     downloadItem.classList.add('completed');
-                    downloadStatus.textContent = 'Completado';
-                    downloadStatus.style.background = '#c6f6d5';
-                    downloadStatus.style.color = '#22543d';
+                    downloadItem.querySelector('.download-status').textContent = 'Completado';
+                    downloadItem.querySelector('.download-status').style.background = '#c6f6d5';
+                    downloadItem.querySelector('.download-status').style.color = '#22543d';
                     
                     const displayName = filename && filename.length > 30 ? 
                         filename.substring(0, 30) + '...' : filename;
                     
                     downloadItem.querySelector('.download-title').textContent = displayName;
+                    
+                    // Crear enlace de descarga directa
                     statusElement.innerHTML = `
-                        <div style="margin-bottom: 8px;">✅ ${status}</div>
-                        <a href="${downloadUrl}" class="download-link" download="${filename}">
-                            <i class="fas fa-download"></i>
-                            Descargar Archivo
-                        </a>
+                        <div style="margin-bottom: 12px;">✅ ${status}</div>
+                        <div class="download-completed">
+                            <a href="${downloadUrl}" class="download-link" download="${filename}" target="_blank">
+                                <i class="fas fa-download"></i>
+                                DESCARGAR ARCHIVO DIRECTAMENTE
+                            </a>
+                        </div>
                     `;
                     
                     if (expiresAt) {
                         const expiryTime = new Date(expiresAt);
                         const expiryElement = document.createElement('div');
                         expiryElement.className = 'expiry-info';
-                        expiryElement.innerHTML = `<i class="fas fa-clock"></i> Se elimina: ${expiryTime.toLocaleString()}`;
+                        expiryElement.innerHTML = `<i class="fas fa-clock"></i> Enlace válido hasta: ${expiryTime.toLocaleString()}`;
                         statusElement.appendChild(expiryElement);
                     }
                     
-                    // Remover de descargas activas después de 10 segundos
-                    setTimeout(() => {
-                        if (downloadItem.parentNode) {
-                            downloadItem.style.opacity = '0.7';
-                        }
-                    }, 10000);
-                    
-                } else if (status.includes('Error')) {
-                    // Error en la descarga
-                    downloadItem.classList.add('error');
-                    downloadStatus.textContent = 'Error';
-                    downloadStatus.style.background = '#fed7d7';
-                    downloadStatus.style.color = '#c53030';
-                    statusElement.innerHTML = `❌ ${status}`;
                 } else {
                     // Descarga en progreso
-                    downloadStatus.textContent = 'Descargando';
-                    downloadStatus.style.background = '#bee3f8';
-                    downloadStatus.style.color = '#2c5282';
                     statusElement.textContent = status;
-                    
-                    if (filename && !downloadItem.querySelector('.download-title').textContent.includes('...')) {
+                    if (filename) {
                         const displayName = filename.length > 30 ? 
                             filename.substring(0, 30) + '...' : filename;
                         downloadItem.querySelector('.download-title').textContent = displayName;
                     }
                 }
-            }
-            
-            // Mostrar estado vacío si no hay descargas activas
-            if (activeDownloads.size === 0 && emptyState) {
-                emptyState.style.display = 'block';
             }
         }
 
