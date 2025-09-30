@@ -5,6 +5,7 @@ import yt_dlp
 import os
 import threading
 import time
+import re
 from datetime import datetime, timedelta
 
 # Configuración para yt-dlp: prioriza 720p, luego 480p, luego 360p
@@ -49,6 +50,18 @@ def cleanup_expired_files():
 cleanup_thread = threading.Thread(target=cleanup_expired_files, daemon=True)
 cleanup_thread.start()
 
+def sanitize_filename(filename):
+    """Limpia el nombre del archivo reemplazando espacios y caracteres especiales"""
+    # Reemplazar espacios por guiones bajos
+    filename = filename.replace(' ', '_')
+    # Eliminar caracteres no permitidos en nombres de archivo
+    filename = re.sub(r'[<>:"/\\|?*]', '', filename)
+    # Limitar longitud del nombre
+    if len(filename) > 100:
+        name, ext = os.path.splitext(filename)
+        filename = name[:100-len(ext)] + ext
+    return filename
+
 @sio.event
 def connect(sid, environ):
     print('✅ Cliente conectado:', sid)
@@ -82,22 +95,32 @@ def start_download(sid, data):
                     'status': 'Descargando...'
                 })
             elif d['status'] == 'finished':
+                # Obtener y sanitizar el nombre del archivo
+                original_filename = os.path.basename(d['filename'])
+                sanitized_filename = sanitize_filename(original_filename)
+                
+                # Renombrar el archivo si es necesario
+                original_path = d['filename']
+                new_path = os.path.join('downloads', sanitized_filename)
+                
+                if original_path != new_path:
+                    os.rename(original_path, new_path)
+                
                 # Registrar archivo para eliminación en 15 minutos
-                filename = os.path.basename(d['filename'])
                 expiry_time = datetime.now() + timedelta(minutes=15)
-                file_expirations[filename] = expiry_time
+                file_expirations[sanitized_filename] = expiry_time
 
                 # Emitir información de descarga completada con enlace
-                download_url = f"/downloads/{filename}"
+                download_url = f"/downloads/{sanitized_filename}"
                 sio.emit('progress_update', {
                     'download_id': download_id, 
                     'progress': 100, 
                     'status': 'Descarga completada',
-                    'filename': filename,
+                    'filename': sanitized_filename,
                     'download_url': download_url,
                     'expires_at': expiry_time.isoformat()
                 })
-                print(f"✅ Descarga completada: {filename}")
+                print(f"✅ Descarga completada: {sanitized_filename}")
 
         ydl_opts_with_progress = {**ydl_opts, 'progress_hooks': [progress_hook]}
 
