@@ -7,6 +7,8 @@ import threading
 import time
 import re
 import urllib.parse
+import random
+import string
 from datetime import datetime, timedelta
 
 # Configuración para yt-dlp: prioriza 720p, luego 480p, luego 360p
@@ -51,17 +53,25 @@ def cleanup_expired_files():
 cleanup_thread = threading.Thread(target=cleanup_expired_files, daemon=True)
 cleanup_thread.start()
 
+def generar_nombre_aleatorio(longitud=12):
+    """Genera un nombre de archivo aleatorio"""
+    caracteres = string.ascii_letters + string.digits  # Letras (mayúsculas y minúsculas) + números
+    return ''.join(random.choice(caracteres) for _ in range(longitud))
+
 def sanitize_filename(filename):
-    """Limpia el nombre del archivo reemplazando espacios y caracteres especiales"""
-    # Reemplazar espacios por guiones bajos
-    filename = filename.replace(' ', '_')
-    # Eliminar caracteres no permitidos en nombres de archivo
-    filename = re.sub(r'[<>:"/\\|?*]', '', filename)
-    # Limitar longitud del nombre
-    if len(filename) > 100:
-        name, ext = os.path.splitext(filename)
-        filename = name[:100-len(ext)] + ext
-    return filename
+    """Reemplaza el nombre original por uno aleatorio manteniendo la extensión"""
+    # Obtener la extensión del archivo original
+    nombre_base, extension = os.path.splitext(filename)
+    
+    # Generar nuevo nombre aleatorio
+    nuevo_nombre = generar_nombre_aleatorio(12) + extension.lower()
+    
+    # Verificar que no exista un archivo con ese nombre (muy improbable pero seguro)
+    downloads_path = 'downloads/'
+    while os.path.exists(os.path.join(downloads_path, nuevo_nombre)):
+        nuevo_nombre = generar_nombre_aleatorio(12) + extension.lower()
+    
+    return nuevo_nombre
 
 @sio.event
 def connect(sid, environ):
@@ -100,20 +110,19 @@ def start_download(sid, data):
                 original_filename = os.path.basename(d['filename'])
                 sanitized_filename = sanitize_filename(original_filename)
                 
-                # Renombrar el archivo si es necesario
+                # Renombrar el archivo
                 original_path = d['filename']
                 new_path = os.path.join('downloads', sanitized_filename)
                 
                 if original_path != new_path and os.path.exists(original_path):
                     os.rename(original_path, new_path)
-                    print(f"📝 Archivo renombrado: {sanitized_filename}")
+                    print(f"📝 Archivo renombrado: {original_filename} -> {sanitized_filename}")
                 
                 # Registrar archivo para eliminación en 15 minutos
                 expiry_time = datetime.now() + timedelta(minutes=15)
                 file_expirations[sanitized_filename] = expiry_time
 
                 # Generar enlace de descarga directa
-                # En Render, la URL sería: https://tudominio.render.com/downloads/nombre_archivo.mp4
                 download_url = f"/downloads/{urllib.parse.quote(sanitized_filename)}"
                 
                 sio.emit('progress_update', {
@@ -159,7 +168,6 @@ def serve_application(environ, start_response):
         file_path = os.path.join('downloads', filename)
         
         print(f"📥 Solicitud de descarga directa: {filename}")
-        print(f"📁 Buscando archivo en: {file_path}")
         
         # Verificar si el archivo existe y no ha expirado
         if os.path.exists(file_path) and os.path.isfile(file_path):
@@ -186,7 +194,6 @@ def serve_application(environ, start_response):
                 return [b'Archivo expirado o no disponible']
         else:
             print(f"❌ Archivo no encontrado: {filename}")
-            print(f"📂 Archivos disponibles: {os.listdir('downloads')}")
             start_response('404 Not Found', [('Content-Type', 'text/plain')])
             return [b'Archivo no encontrado']
     
@@ -209,9 +216,8 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     print(f"🚀 Servidor ejecutándose en 0.0.0.0:{port}")
     print(f"📁 Directorio actual: {os.getcwd()}")
-    print(f"📂 Archivos en downloads: {os.listdir('downloads')}")
     print(f"⏰ Los archivos se eliminarán automáticamente después de 15 minutos")
-    print(f"🔗 Los enlaces de descarga estarán en: /downloads/nombre_archivo.mp4")
+    print(f"🎯 Los archivos se renombrarán a 12 caracteres aleatorios")
     
     # Usar el servidor WSGI de eventlet con nuestra aplicación combinada
     eventlet.wsgi.server(eventlet.listen(('0.0.0.0', port)), serve_application)
