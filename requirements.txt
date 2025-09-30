@@ -7,3 +7,4 @@ eventlet
 Flask-SQLAlchemy
 gunicorn
 python-dotenv
+yt-dlp
