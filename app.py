@@ -86,25 +86,22 @@ def start_download(sid, data):
         sio.emit('progress_update', {
             'download_id': download_id, 
             'progress': 0, 
-            'status': 'Obteniendo información del video...'
+            'status': '🔄 Procesando...'
         })
 
         def progress_hook(d):
             if d['status'] == 'downloading':
-                percent = d.get('_percent_str', '0%').strip().replace('%', '')
-                try:
-                    progress = float(percent)
-                except ValueError:
-                    progress = 0
                 sio.emit('progress_update', {
                     'download_id': download_id, 
-                    'progress': progress, 
-                    'status': 'Descargando...'
+                    'progress': 50, 
+                    'status': '📥 Descargando...'
                 })
             elif d['status'] == 'finished':
+                # Obtener y sanitizar el nombre del archivo
                 original_filename = os.path.basename(d['filename'])
                 sanitized_filename = sanitize_filename(original_filename)
                 
+                # Renombrar el archivo
                 original_path = d['filename']
                 new_path = os.path.join('downloads', sanitized_filename)
                 
@@ -112,6 +109,7 @@ def start_download(sid, data):
                     os.rename(original_path, new_path)
                     print(f"📝 Archivo renombrado: {original_filename} -> {sanitized_filename}")
                 
+                # Registrar archivo para eliminación en 15 minutos
                 expiry_time = datetime.now() + timedelta(minutes=15)
                 file_expirations[sanitized_filename] = expiry_time
 
@@ -120,7 +118,7 @@ def start_download(sid, data):
                 sio.emit('progress_update', {
                     'download_id': download_id, 
                     'progress': 100, 
-                    'status': 'Descarga completada',
+                    'status': '✅ Completo',
                     'filename': sanitized_filename,
                     'download_url': download_url,
                     'expires_at': expiry_time.isoformat()
@@ -133,8 +131,8 @@ def start_download(sid, data):
         with yt_dlp.YoutubeDL(ydl_opts_with_progress) as ydl:
             sio.emit('progress_update', {
                 'download_id': download_id, 
-                'progress': 0, 
-                'status': 'Iniciando descarga...'
+                'progress': 25, 
+                'status': '🚀 Iniciando...'
             })
             ydl.download([url])
 
@@ -144,7 +142,7 @@ def start_download(sid, data):
         sio.emit('progress_update', {
             'download_id': download_id, 
             'progress': 0, 
-            'status': error_message
+            'status': f'❌ {error_message}'
         })
 
 def serve_application(environ, start_response):
@@ -200,6 +198,6 @@ if __name__ == '__main__':
     print(f"🚀 Servidor ejecutándose en 0.0.0.0:{port}")
     print(f"📁 Directorio actual: {os.getcwd()}")
     print(f"⏰ Los archivos se eliminarán automáticamente después de 15 minutos")
-    print(f"🎯 Calidad máxima configurada: 480p")
+    print(f"🎯 Sistema de estados: Procesando → Iniciando → Descargando → Completo")
     
     eventlet.wsgi.server(eventlet.listen(('0.0.0.0', port)), serve_application)
