@@ -11,17 +11,18 @@ import random
 import string
 from datetime import datetime, timedelta
 
-# Configuraciones para yt-dlp
+# Configuraciones actualizadas para yt-dlp
 ydl_opts_video = {
-    'format': 'best[height<=480]/best[ext=mp4]/best[ext=webm]/best',
+    'format': 'best[height<=720]/best[height<=480]/best/bestvideo+bestaudio',
     'outtmpl': 'downloads/%(title)s.%(ext)s',
-    'cookies': 'cookies.txt',  # Usar cookies para YouTube
+    'cookies': 'cookies.txt',
+    'merge_output_format': 'mp4',  # Forzar formato de salida
 }
 
 ydl_opts_audio = {
     'format': 'bestaudio/best',
     'outtmpl': 'downloads/%(title)s.%(ext)s',
-    'cookies': 'cookies.txt',  # Usar cookies para YouTube
+    'cookies': 'cookies.txt',
     'postprocessors': [{
         'key': 'FFmpegExtractAudio',
         'preferredcodec': 'mp3',
