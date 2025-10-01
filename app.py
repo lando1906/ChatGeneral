@@ -10,14 +10,15 @@ import urllib.parse
 import random
 import string
 from datetime import datetime, timedelta
+import json
 
 # Configuraciones actualizadas para yt-dlp
 ydl_opts_video = {
     'format': 'best[height<=720]/best[height<=480]/best/bestvideo+bestaudio',
     'outtmpl': 'downloads/%(title)s.%(ext)s',
     'cookies': 'cookies.txt',
-    'merge_output_format': 'mp4',  # Forzar formato de salida
-    'ignoreerrors': True,  # Ignorar errores de formato
+    'merge_output_format': 'mp4',
+    'ignoreerrors': True,
 }
 
 ydl_opts_audio = {
@@ -29,17 +30,19 @@ ydl_opts_audio = {
         'preferredcodec': 'mp3',
         'preferredquality': '192',
     }],
-    'ignoreerrors': True,  # Ignorar errores de formato
+    'ignoreerrors': True,
 }
 
-sio = socketio.Server(cors_allowed_origins='*')
+sio = socketio.Server(cors_allowed_origins='*', async_mode='eventlet')
 app = socketio.WSGIApp(sio)
 
 # Asegurar que existe el directorio de descargas
 os.makedirs('downloads', exist_ok=True)
 
-# Diccionario para trackear archivos y su tiempo de expiración
+# Diccionarios para gestión de descargas
 file_expirations = {}
+active_downloads = {}
+download_progress = {}
 
 def cleanup_expired_files():
     """Elimina archivos expirados cada minuto"""
@@ -62,7 +65,7 @@ def cleanup_expired_files():
         except Exception as e:
             print(f"❌ Error en cleanup: {e}")
 
-        time.sleep(60)  # Revisar cada minuto
+        time.sleep(60)
 
 # Iniciar hilo de limpieza en segundo plano
 cleanup_thread = threading.Thread(target=cleanup_expired_files, daemon=True)
@@ -94,7 +97,7 @@ def get_ydl_opts_for_url(url, download_type):
     # Configuración específica para Pinterest
     if any(domain in url.lower() for domain in ['pinterest.', 'pin.it']):
         base_opts.update({
-            'format': 'best',  # Formato más simple para Pinterest
+            'format': 'best',
             'ignoreerrors': True,
         })
     
@@ -107,27 +110,49 @@ def connect(sid, environ):
 @sio.event
 def disconnect(sid):
     print('❌ Cliente desconectado:', sid)
+    # Limpiar descargas activas del cliente desconectado
+    for download_id in list(active_downloads.keys()):
+        if active_downloads[download_id].get('sid') == sid:
+            del active_downloads[download_id]
 
 @sio.event
 def start_download(sid, data):
     url = data['url']
-    download_type = data.get('download_type', 'video')  # 'video' o 'audio'
+    download_type = data.get('download_type', 'video')
     download_id = data.get('download_id', 'default_id')
+
+    # Si ya existe una descarga con este ID, no hacer nada
+    if download_id in active_downloads:
+        return
 
     try:
         sio.emit('progress_update', {
             'download_id': download_id, 
-            'status': '🔄 Conectando...',
-            'type': download_type
-        })
+            'status': 'Procesando',
+            'type': download_type,
+            'progress': 0
+        }, room=sid)
 
         def progress_hook(d):
             if d['status'] == 'downloading':
+                # Calcular progreso aproximado
+                progress = 0
+                if '_percent_str' in d and d['_percent_str']:
+                    percent_str = d['_percent_str'].replace('%', '')
+                    try:
+                        progress = float(percent_str)
+                    except:
+                        progress = 50  # Valor por defecto si no se puede parsear
+                
+                download_progress[download_id] = progress
+                
                 sio.emit('progress_update', {
                     'download_id': download_id, 
-                    'status': '📥 Descargando...',
-                    'type': download_type
-                })
+                    'status': 'Descargando',
+                    'type': download_type,
+                    'progress': progress
+                }, room=sid)
+                
             elif d['status'] == 'finished':
                 # Obtener y sanitizar el nombre del archivo
                 original_filename = os.path.basename(d['filename'])
@@ -141,33 +166,49 @@ def start_download(sid, data):
                     os.rename(original_path, new_path)
                     print(f"📝 Archivo renombrado: {original_filename} -> {sanitized_filename}")
 
-                # Registrar archivo para eliminación en 15 minutos
-                expiry_time = datetime.now() + timedelta(minutes=15)
+                # Registrar archivo para eliminación en 5 minutos (reducido)
+                expiry_time = datetime.now() + timedelta(minutes=5)
                 file_expirations[sanitized_filename] = expiry_time
 
                 download_url = f"/downloads/{urllib.parse.quote(sanitized_filename)}"
 
                 sio.emit('progress_update', {
                     'download_id': download_id, 
-                    'status': '✅ Completo',
+                    'status': 'Completado',
                     'filename': sanitized_filename,
                     'download_url': download_url,
                     'expires_at': expiry_time.isoformat(),
-                    'type': download_type
-                })
+                    'type': download_type,
+                    'progress': 100
+                }, room=sid)
+                
+                # Limpiar de descargas activas
+                if download_id in active_downloads:
+                    del active_downloads[download_id]
+                if download_id in download_progress:
+                    del download_progress[download_id]
+                    
                 print(f"✅ Descarga completada: {sanitized_filename}")
-                print(f"🔗 Enlace de descarga: {download_url}")
 
         # Obtener configuración optimizada según la URL
         ydl_opts = get_ydl_opts_for_url(url, download_type)
         ydl_opts_with_progress = {**ydl_opts, 'progress_hooks': [progress_hook]}
 
+        # Registrar descarga activa
+        active_downloads[download_id] = {
+            'sid': sid,
+            'url': url,
+            'type': download_type,
+            'start_time': datetime.now()
+        }
+
         with yt_dlp.YoutubeDL(ydl_opts_with_progress) as ydl:
             sio.emit('progress_update', {
                 'download_id': download_id, 
-                'status': '🚀 Iniciando...',
-                'type': download_type
-            })
+                'status': 'Procesando',
+                'type': download_type,
+                'progress': 0
+            }, room=sid)
             ydl.download([url])
 
     except Exception as e:
@@ -175,18 +216,47 @@ def start_download(sid, data):
         
         # Manejar errores específicos de Pinterest
         if 'pinterest' in url.lower() and 'format' in error_str.lower():
-            error_message = 'Pinterest: Formato no disponible. Intenta con otro video o verifica que sea público.'
+            error_message = 'Pinterest: Formato no disponible. Intenta con otro video.'
         elif 'pinterest' in url.lower():
-            error_message = 'Pinterest: No se pudo descargar el video. Verifica la URL.'
+            error_message = 'Pinterest: No se pudo descargar el video.'
         else:
             error_message = f'Error: {error_str}'
         
         print(f"❌ {error_message}")
         sio.emit('progress_update', {
             'download_id': download_id, 
-            'status': f'❌ {error_message}',
-            'type': download_type
-        })
+            'status': f'Error: {error_message}',
+            'type': download_type,
+            'progress': 0
+        }, room=sid)
+        
+        # Limpiar en caso de error
+        if download_id in active_downloads:
+            del active_downloads[download_id]
+
+@sio.event
+def cancel_download(sid, data):
+    """Cancelar una descarga en progreso"""
+    download_id = data.get('download_id')
+    if download_id in active_downloads:
+        # En una implementación real, aquí se interrumpiría el proceso yt-dlp
+        # Por ahora, solo limpiamos el registro
+        del active_downloads[download_id]
+        if download_id in download_progress:
+            del download_progress[download_id]
+        
+        sio.emit('progress_update', {
+            'download_id': download_id,
+            'status': 'Cancelado',
+            'progress': 0
+        }, room=sid)
+
+def mark_file_for_immediate_removal(filename):
+    """Marca un archivo para eliminación inmediata después de la descarga"""
+    # Reducir tiempo de expiración a 1 minuto después de descargado
+    expiry_time = datetime.now() + timedelta(minutes=1)
+    file_expirations[filename] = expiry_time
+    print(f"⏰ Archivo marcado para eliminación: {filename}")
 
 def serve_application(environ, start_response):
     """Middleware WSGI para manejar archivos estáticos y la aplicación Socket.IO"""
@@ -201,7 +271,7 @@ def serve_application(environ, start_response):
         print(f"📥 Solicitud de descarga directa: {filename}")
 
         if os.path.exists(file_path) and os.path.isfile(file_path):
-            if filename in file_expirations and datetime.now() < file_expirations[filename]:
+            if filename in file_expirations:
                 headers = [
                     ('Content-Type', 'application/octet-stream'),
                     ('Content-Disposition', f'attachment; filename="{filename}"'),
@@ -213,8 +283,18 @@ def serve_application(environ, start_response):
                 start_response('200 OK', headers)
                 print(f"✅ Sirviendo archivo para descarga: {filename}")
 
-                with open(file_path, 'rb') as f:
-                    return [f.read()]
+                # Marcar para eliminación inmediata después de servir
+                mark_file_for_immediate_removal(filename)
+
+                def file_iterator(file_path):
+                    with open(file_path, 'rb') as f:
+                        while True:
+                            data = f.read(4096)
+                            if not data:
+                                break
+                            yield data
+
+                return file_iterator(file_path)
             else:
                 print(f"⏰ Archivo expirado: {filename}")
                 start_response('410 Gone', [('Content-Type', 'text/plain')])
@@ -240,15 +320,13 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     print(f"🚀 Servidor ejecutándose en 0.0.0.0:{port}")
     print(f"📁 Directorio actual: {os.getcwd()}")
-    print(f"⏰ Los archivos se eliminarán automáticamente después de 15 minutos")
-    print(f"🎯 Sistema de estados: Conectando → Iniciando → Descargando → Completo")
-    print(f"🔧 Funcionalidades: Descarga de video/audio + cookies para YouTube")
-    print(f"📌 Soporte mejorado para Pinterest")
+    print(f"⏰ Los archivos se eliminarán automáticamente 1 minuto después de descargarse")
+    print(f"🎯 Sistema de estados: Procesando → Descargando → Completado")
+    print(f"🔧 Funcionalidades: Descarga de video/audio + Soporte Pinterest")
 
-    # Verificar si existe el archivo de cookies
     if os.path.exists('cookies.txt'):
         print(f"✅ Archivo de cookies encontrado")
     else:
-        print(f"⚠️  Archivo de cookies no encontrado - algunas descargas pueden fallar")
+        print(f"⚠️  Archivo de cookies no encontrado")
 
     eventlet.wsgi.server(eventlet.listen(('0.0.0.0', port)), serve_application)
