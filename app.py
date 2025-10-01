@@ -11,11 +11,22 @@ import random
 import string
 from datetime import datetime, timedelta
 
-# Configuración para yt-dlp con cookies
-ydl_opts = {
+# Configuraciones para yt-dlp
+ydl_opts_video = {
     'format': 'best[height<=480]/best[ext=mp4]/best[ext=webm]/best',
     'outtmpl': 'downloads/%(title)s.%(ext)s',
-    'cookies': 'cookies.txt',  # Añade esta línea
+    'cookies': 'cookies.txt',  # Usar cookies para YouTube
+}
+
+ydl_opts_audio = {
+    'format': 'bestaudio/best',
+    'outtmpl': 'downloads/%(title)s.%(ext)s',
+    'cookies': 'cookies.txt',  # Usar cookies para YouTube
+    'postprocessors': [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'mp3',
+        'preferredquality': '192',
+    }],
 }
 
 sio = socketio.Server(cors_allowed_origins='*')
@@ -81,19 +92,22 @@ def disconnect(sid):
 @sio.event
 def start_download(sid, data):
     url = data['url']
+    download_type = data.get('download_type', 'video')  # 'video' o 'audio'
     download_id = data.get('download_id', 'default_id')
 
     try:
         sio.emit('progress_update', {
             'download_id': download_id, 
-            'status': '🔄 Conectando...'
+            'status': '🔄 Conectando...',
+            'type': download_type
         })
 
         def progress_hook(d):
             if d['status'] == 'downloading':
                 sio.emit('progress_update', {
                     'download_id': download_id, 
-                    'status': '📥 Descargando...'
+                    'status': '📥 Descargando...',
+                    'type': download_type
                 })
             elif d['status'] == 'finished':
                 # Obtener y sanitizar el nombre del archivo
@@ -119,17 +133,25 @@ def start_download(sid, data):
                     'status': '✅ Completo',
                     'filename': sanitized_filename,
                     'download_url': download_url,
-                    'expires_at': expiry_time.isoformat()
+                    'expires_at': expiry_time.isoformat(),
+                    'type': download_type
                 })
                 print(f"✅ Descarga completada: {sanitized_filename}")
                 print(f"🔗 Enlace de descarga: {download_url}")
 
+        # Seleccionar configuración según el tipo de descarga
+        if download_type == 'audio':
+            ydl_opts = ydl_opts_audio.copy()
+        else:
+            ydl_opts = ydl_opts_video.copy()
+            
         ydl_opts_with_progress = {**ydl_opts, 'progress_hooks': [progress_hook]}
 
         with yt_dlp.YoutubeDL(ydl_opts_with_progress) as ydl:
             sio.emit('progress_update', {
                 'download_id': download_id, 
-                'status': '🚀 Iniciando...'
+                'status': '🚀 Iniciando...',
+                'type': download_type
             })
             ydl.download([url])
 
@@ -138,7 +160,8 @@ def start_download(sid, data):
         print(f"❌ {error_message}")
         sio.emit('progress_update', {
             'download_id': download_id, 
-            'status': f'❌ {error_message}'
+            'status': f'❌ {error_message}',
+            'type': download_type
         })
 
 def serve_application(environ, start_response):
@@ -194,6 +217,13 @@ if __name__ == '__main__':
     print(f"🚀 Servidor ejecutándose en 0.0.0.0:{port}")
     print(f"📁 Directorio actual: {os.getcwd()}")
     print(f"⏰ Los archivos se eliminarán automáticamente después de 15 minutos")
-    print(f"🎯 Sistema de estados simplificado: Conectando → Iniciando → Descargando → Completo")
+    print(f"🎯 Sistema de estados: Conectando → Iniciando → Descargando → Completo")
+    print(f"🔧 Funcionalidades: Descarga de video/audio + cookies para YouTube")
+    
+    # Verificar si existe el archivo de cookies
+    if os.path.exists('cookies.txt'):
+        print(f"✅ Archivo de cookies encontrado")
+    else:
+        print(f"⚠️  Archivo de cookies no encontrado - algunas descargas pueden fallar")
     
     eventlet.wsgi.server(eventlet.listen(('0.0.0.0', port)), serve_application)
