@@ -6,7 +6,7 @@
     <title>Descargador Premium</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <style>
         * { 
             margin: 0; 
@@ -173,6 +173,29 @@
             opacity: 0.7;
         }
 
+        .status-indicator {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 12px;
+            border: 1px solid var(--dark-border);
+            text-align: center;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .status-processing { color: #f59e0b; }
+        .status-downloading { color: #f59e0b; }
+        .status-complete { color: #10b981; }
+        .status-error { color: #ef4444; }
+
+        .hidden {
+            display: none;
+        }
+
         @media (max-width: 480px) {
             .container {
                 margin: 10px;
@@ -225,6 +248,10 @@
                     <i class="fas fa-download"></i>
                     Descargar
                 </button>
+                
+                <div class="status-indicator hidden" id="statusIndicator">
+                    <span id="statusText">Estado de la descarga...</span>
+                </div>
             </div>
         </div>
     </div>
@@ -235,14 +262,35 @@
         const urlInput = document.getElementById('urlInput');
         const videoBtn = document.getElementById('videoBtn');
         const audioBtn = document.getElementById('audioBtn');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
         
         let selectedType = 'video';
+        let currentDownloadId = null;
         
+        // Configurar Socket.IO para recibir actualizaciones
         socket.on('connect', () => {
             console.log('✅ Conectado al servidor');
+            updateStatus('Conectado al servidor', 'complete');
         });
         
-        // Eliminamos el listener de progress_update ya que no mostraremos estado
+        socket.on('progress_update', (data) => {
+            console.log('📨 Actualización recibida:', data);
+            
+            if (data.download_id === currentDownloadId) {
+                updateButtonState(data.status, data.download_url, data.filename);
+                updateStatus(data.status, getStatusType(data.status));
+                
+                // Iniciar descarga automática cuando esté completo
+                if (data.status.includes('Completo') && data.download_url) {
+                    initiateDownload(data.download_url, data.filename);
+                }
+            }
+        });
+        
+        socket.on('disconnect', () => {
+            updateStatus('Desconectado del servidor', 'error');
+        });
         
         function selectType(type) {
             selectedType = type;
@@ -253,37 +301,109 @@
                 audioBtn.classList.add('active');
                 videoBtn.classList.remove('active');
             }
-            downloadBtn.disabled = false;
-            downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar';
+            resetButton();
         }
         
         urlInput.addEventListener('input', function() {
-            downloadBtn.disabled = false;
-            downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar';
+            resetButton();
         });
         
         function startDownload() {
             const url = urlInput.value.trim();
             
             if (url) {
+                currentDownloadId = 'download_' + Date.now();
+                
                 socket.emit('start_download', { 
                     url: url, 
-                    download_id: 'download_' + Date.now(),
+                    download_id: currentDownloadId,
                     download_type: selectedType 
                 });
                 
                 downloadBtn.disabled = true;
                 downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
-                
-                // Restablecer después de 5 segundos como fallback
-                setTimeout(() => {
-                    downloadBtn.disabled = false;
-                    downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar';
-                }, 5000);
+                statusIndicator.classList.remove('hidden');
+                updateStatus('🔄 Conectando...', 'processing');
                 
             } else {
                 alert('Por favor, ingresa una URL válida');
             }
+        }
+        
+        function updateButtonState(status, downloadUrl = null, filename = null) {
+            if (status.includes('Conectando') || status.includes('Iniciando')) {
+                downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+            } else if (status.includes('Descargando')) {
+                downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Descargando...';
+            } else if (status.includes('Completo')) {
+                downloadBtn.innerHTML = '<i class="fas fa-check"></i> ¡Completado!';
+                downloadBtn.disabled = false;
+                
+                // Restablecer después de 3 segundos
+                setTimeout(() => {
+                    if (downloadBtn.innerHTML.includes('check')) {
+                        resetButton();
+                    }
+                }, 3000);
+            } else if (status.includes('Error')) {
+                downloadBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
+                downloadBtn.disabled = false;
+                
+                setTimeout(() => {
+                    resetButton();
+                }, 3000);
+            }
+        }
+        
+        function updateStatus(message, type) {
+            statusText.innerHTML = message;
+            statusIndicator.className = 'status-indicator';
+            
+            // Remover todas las clases de estado anteriores
+            statusIndicator.classList.remove('status-processing', 'status-downloading', 'status-complete', 'status-error');
+            
+            // Añadir la clase correspondiente
+            if (type === 'processing' || type === 'downloading') {
+                statusIndicator.classList.add('status-processing');
+            } else if (type === 'complete') {
+                statusIndicator.classList.add('status-complete');
+            } else if (type === 'error') {
+                statusIndicator.classList.add('status-error');
+            }
+            
+            statusIndicator.classList.remove('hidden');
+        }
+        
+        function getStatusType(status) {
+            if (status.includes('Conectando') || status.includes('Iniciando') || status.includes('Descargando')) {
+                return 'processing';
+            } else if (status.includes('Completo')) {
+                return 'complete';
+            } else if (status.includes('Error')) {
+                return 'error';
+            }
+            return 'processing';
+        }
+        
+        function initiateDownload(downloadUrl, filename) {
+            const fullDownloadUrl = window.location.origin + downloadUrl;
+            const downloadLink = document.createElement('a');
+            downloadLink.href = fullDownloadUrl;
+            downloadLink.download = filename;
+            downloadLink.style.display = 'none';
+            
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            
+            console.log('📥 Descarga automática iniciada:', filename);
+        }
+        
+        function resetButton() {
+            downloadBtn.disabled = false;
+            downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar';
+            statusIndicator.classList.add('hidden');
+            currentDownloadId = null;
         }
 
         // Enter para iniciar descarga
