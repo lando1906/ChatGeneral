@@ -27,7 +27,6 @@
             --warning: #f59e0b;
             --error: #ef4444;
             --gradient: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
-            --gradient-purple: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #c084fc 100%);
         }
 
         body {
@@ -35,149 +34,86 @@
             background: var(--dark-bg);
             color: var(--dark-text);
             min-height: 100vh;
-            padding: 20px;
+            padding: 15px;
             display: flex;
             justify-content: center;
             align-items: center;
-            line-height: 1.6;
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 20%),
-                radial-gradient(circle at 90% 80%, rgba(124, 58, 237, 0.1) 0%, transparent 20%);
+            line-height: 1.5;
         }
 
         .container {
             width: 100%;
-            max-width: 500px;
+            max-width: 420px;
             background: var(--dark-card);
-            border-radius: 24px;
+            border-radius: 20px;
             border: 1px solid var(--dark-border);
-            box-shadow: 
-                0 25px 50px -12px rgba(0, 0, 0, 0.5),
-                0 0 0 1px rgba(255, 255, 255, 0.05);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
             overflow: hidden;
-            backdrop-filter: blur(10px);
-            animation: fadeInUp 0.6s ease-out;
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
 
         .header {
             background: var(--gradient);
-            padding: 50px 30px;
+            padding: 35px 25px;
             text-align: center;
             position: relative;
-            overflow: hidden;
-        }
-
-        .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
-            opacity: 0.3;
         }
 
         .logo {
-            font-size: 4rem;
-            margin-bottom: 20px;
+            font-size: 3rem;
+            margin-bottom: 15px;
             color: white;
-            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
-            position: relative;
-            z-index: 1;
-            animation: float 3s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
+            filter: drop-shadow(0 3px 8px rgba(0,0,0,0.2));
         }
 
         h1 {
-            font-size: 2.5rem;
+            font-size: 1.8rem;
             font-weight: 700;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             color: white;
-            position: relative;
-            z-index: 1;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
         .subtitle {
-            font-size: 1.1rem;
+            font-size: 0.9rem;
             opacity: 0.9;
             font-weight: 300;
-            position: relative;
-            z-index: 1;
         }
 
         .content {
-            padding: 40px 30px;
+            padding: 30px 25px;
         }
 
         .download-type-selector {
             display: flex;
-            gap: 12px;
-            margin-bottom: 25px;
+            gap: 10px;
+            margin-bottom: 20px;
             background: rgba(30, 41, 59, 0.8);
-            padding: 8px;
-            border-radius: 16px;
+            padding: 6px;
+            border-radius: 14px;
             border: 1px solid var(--dark-border);
-            backdrop-filter: blur(10px);
         }
 
         .type-btn {
             flex: 1;
-            padding: 16px 20px;
+            padding: 14px 16px;
             border: none;
-            border-radius: 12px;
+            border-radius: 10px;
             background: transparent;
             color: var(--dark-text-secondary);
             font-family: 'Poppins', sans-serif;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .type-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: var(--gradient);
-            transition: left 0.3s ease;
-            z-index: -1;
+            gap: 6px;
         }
 
         .type-btn.active {
             background: var(--primary-blue);
             color: white;
-            box-shadow: 0 4px 15px var(--blue-glow);
-            transform: translateY(-2px);
-        }
-
-        .type-btn.active::before {
-            left: 0;
+            box-shadow: 0 3px 10px var(--blue-glow);
         }
 
         .type-btn:hover:not(.active) {
@@ -188,27 +124,25 @@
         .input-group {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 15px;
         }
 
         .url-input {
             width: 100%;
-            padding: 18px 22px;
+            padding: 16px 18px;
             border: 2px solid var(--dark-border);
-            border-radius: 16px;
+            border-radius: 14px;
             font-family: 'Poppins', sans-serif;
-            font-size: 16px;
+            font-size: 14px;
             background: rgba(30, 41, 59, 0.8);
             color: var(--dark-text);
             transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
         }
 
         .url-input:focus {
             outline: none;
             border-color: var(--primary-blue);
-            box-shadow: 0 0 0 4px var(--blue-glow);
-            transform: translateY(-2px);
+            box-shadow: 0 0 0 3px var(--blue-glow);
         }
 
         .url-input::placeholder {
@@ -219,44 +153,23 @@
             background: var(--gradient);
             border: none;
             color: white;
-            padding: 18px 24px;
-            border-radius: 16px;
+            padding: 16px 20px;
+            border-radius: 14px;
             cursor: pointer;
             font-family: 'Poppins', sans-serif;
-            font-size: 17px;
+            font-size: 15px;
             font-weight: 600;
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-            box-shadow: 0 4px 15px var(--blue-glow);
-            position: relative;
-            overflow: hidden;
+            gap: 8px;
+            box-shadow: 0 3px 12px var(--blue-glow);
         }
 
-        .download-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .download-btn:hover::before {
-            left: 100%;
-        }
-
-        .download-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px var(--blue-glow);
-        }
-
-        .download-btn:active {
-            transform: translateY(-1px);
+        .download-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 18px var(--blue-glow);
         }
 
         .download-btn:disabled {
@@ -267,108 +180,103 @@
             opacity: 0.7;
         }
 
-        .download-btn:disabled::before {
-            display: none;
-        }
-
-        .status-indicator {
-            margin-top: 20px;
-            padding: 20px;
-            background: rgba(30, 41, 59, 0.8);
-            border-radius: 16px;
-            border: 1px solid var(--dark-border);
-            text-align: center;
-            min-height: 80px;
+        .cancel-btn {
+            background: #ef4444;
+            border: none;
+            color: white;
+            padding: 12px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
+            gap: 6px;
+        }
+
+        .cancel-btn:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .button-group .download-btn {
+            flex: 2;
+        }
+
+        .button-group .cancel-btn {
+            flex: 1;
+        }
+
+        .progress-container {
+            margin-top: 15px;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 14px;
+            border: 1px solid var(--dark-border);
+            padding: 18px;
             transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-            position: relative;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .status-processing { color: var(--warning); }
+        .status-downloading { color: var(--warning); }
+        .status-complete { color: var(--success); }
+        .status-error { color: var(--error); }
+
+        .progress-percent {
+            font-size: 14px;
+            color: var(--dark-text-secondary);
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
             overflow: hidden;
         }
 
-        .status-indicator::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
+        .progress-fill {
+            height: 100%;
             background: var(--gradient);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-
-        .status-processing { 
-            color: var(--warning);
-            border-color: var(--warning);
-        }
-
-        .status-downloading { 
-            color: var(--warning);
-            border-color: var(--warning);
-        }
-
-        .status-complete { 
-            color: var(--success);
-            border-color: var(--success);
-        }
-
-        .status-error { 
-            color: var(--error);
-            border-color: var(--error);
-        }
-
-        .status-processing::before,
-        .status-downloading::before {
-            background: var(--warning);
-            transform: scaleX(1);
-            animation: pulse 2s infinite;
-        }
-
-        .status-complete::before {
-            background: var(--success);
-            transform: scaleX(1);
-        }
-
-        .status-error::before {
-            background: var(--error);
-            transform: scaleX(1);
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .status-content {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: 500;
-        }
-
-        .status-icon {
-            font-size: 1.5rem;
-        }
-
-        .hidden {
-            display: none;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
         }
 
         .file-info {
-            margin-top: 15px;
-            padding: 15px;
+            margin-top: 12px;
+            padding: 12px;
             background: rgba(30, 41, 59, 0.6);
-            border-radius: 12px;
+            border-radius: 10px;
             border: 1px solid var(--dark-border);
-            font-size: 14px;
-            text-align: left;
+            font-size: 12px;
         }
 
         .file-info div {
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             display: flex;
             justify-content: space-between;
         }
@@ -388,110 +296,75 @@
         }
 
         .supported-platforms {
-            margin-top: 25px;
+            margin-top: 20px;
             text-align: center;
             color: var(--dark-text-secondary);
-            font-size: 14px;
+            font-size: 12px;
         }
 
         .platforms-grid {
             display: flex;
             justify-content: center;
-            gap: 15px;
-            margin-top: 10px;
+            gap: 12px;
+            margin-top: 8px;
             flex-wrap: wrap;
         }
 
         .platform-icon {
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             opacity: 0.7;
             transition: all 0.3s ease;
         }
 
-        .platform-icon:hover {
-            opacity: 1;
-            transform: scale(1.1);
-        }
-
         .footer {
-            margin-top: 30px;
+            margin-top: 20px;
             text-align: center;
             color: var(--dark-text-secondary);
-            font-size: 12px;
-            padding-top: 20px;
+            font-size: 11px;
+            padding-top: 15px;
             border-top: 1px solid var(--dark-border);
+        }
+
+        .hidden {
+            display: none;
         }
 
         @media (max-width: 480px) {
             .container {
-                margin: 10px;
-                border-radius: 20px;
+                margin: 5px;
+                border-radius: 18px;
             }
 
             .header {
-                padding: 40px 25px;
+                padding: 30px 20px;
             }
 
             .logo {
-                font-size: 3.5rem;
+                font-size: 2.5rem;
             }
 
             h1 {
-                font-size: 2.2rem;
+                font-size: 1.6rem;
             }
 
             .content {
-                padding: 30px 25px;
+                padding: 25px 20px;
             }
 
             .download-type-selector {
                 flex-direction: column;
             }
-
-            .type-btn {
-                padding: 14px 18px;
-            }
-        }
-
-        /* Efectos de partículas para el fondo */
-        .particles {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
-        }
-
-        .particle {
-            position: absolute;
-            background: var(--primary-blue);
-            border-radius: 50%;
-            opacity: 0.1;
-            animation: float-particle 20s infinite linear;
-        }
-
-        @keyframes float-particle {
-            0% {
-                transform: translateY(0) translateX(0) rotate(0deg);
-            }
-            100% {
-                transform: translateY(-100vh) translateX(100px) rotate(360deg);
-            }
         }
     </style>
 </head>
 <body>
-    <div class="particles" id="particles"></div>
-    
     <div class="container">
         <div class="header">
             <div class="logo">
                 <i class="fas fa-cloud-download-alt"></i>
             </div>
             <h1>VideoDown</h1>
-            <p class="subtitle">Descarga videos y audio de múltiples plataformas</p>
+            <p class="subtitle">Descarga videos y audio fácilmente</p>
         </div>
 
         <div class="content">
@@ -510,26 +383,39 @@
                 <input type="url" class="url-input" id="urlInput" 
                        placeholder="https://youtube.com/watch?v=..." required
                        autocomplete="off">
-                <button class="download-btn" id="downloadBtn" onclick="startDownload()">
-                    <i class="fas fa-download"></i>
-                    Descargar
-                </button>
-
-                <div class="status-indicator hidden" id="statusIndicator">
-                    <div class="status-content">
-                        <i class="status-icon fas fa-info-circle"></i>
-                        <span id="statusText">Estado de la descarga...</span>
-                    </div>
+                
+                <div class="button-group">
+                    <button class="download-btn" id="downloadBtn" onclick="startDownload()">
+                        <i class="fas fa-download"></i>
+                        Descargar
+                    </button>
+                    <button class="cancel-btn hidden" id="cancelBtn" onclick="cancelDownload()">
+                        <i class="fas fa-times"></i>
+                        Cancelar
+                    </button>
                 </div>
 
-                <div class="file-info hidden" id="fileInfo">
-                    <div>
-                        <span class="info-label">Archivo:</span>
-                        <span class="info-value" id="fileName">-</span>
+                <div class="progress-container hidden" id="progressContainer">
+                    <div class="progress-header">
+                        <div class="status-indicator" id="statusIndicator">
+                            <i class="fas fa-info-circle"></i>
+                            <span id="statusText">Procesando</span>
+                        </div>
+                        <div class="progress-percent" id="progressPercent">0%</div>
                     </div>
-                    <div>
-                        <span class="info-label">Expira en:</span>
-                        <span class="info-value" id="fileExpiry">-</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    
+                    <div class="file-info hidden" id="fileInfo">
+                        <div>
+                            <span class="info-label">Archivo:</span>
+                            <span class="info-value" id="fileName">-</span>
+                        </div>
+                        <div>
+                            <span class="info-label">Expira en:</span>
+                            <span class="info-value" id="fileExpiry">-</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -542,12 +428,11 @@
                     <i class="platform-icon fab fa-tiktok" title="TikTok"></i>
                     <i class="platform-icon fab fa-twitter" title="Twitter"></i>
                     <i class="platform-icon fab fa-instagram" title="Instagram"></i>
-                    <i class="platform-icon fas fa-globe" title="Y más..."></i>
                 </div>
             </div>
 
             <div class="footer">
-                <p>Los archivos se eliminan automáticamente después de 15 minutos</p>
+                <p>Los archivos se eliminan automáticamente 1 minuto después de descargarse</p>
             </div>
         </div>
     </div>
@@ -555,80 +440,61 @@
     <script>
         const socket = io();
         const downloadBtn = document.getElementById('downloadBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
         const urlInput = document.getElementById('urlInput');
         const videoBtn = document.getElementById('videoBtn');
         const audioBtn = document.getElementById('audioBtn');
+        const progressContainer = document.getElementById('progressContainer');
         const statusIndicator = document.getElementById('statusIndicator');
         const statusText = document.getElementById('statusText');
+        const progressPercent = document.getElementById('progressPercent');
+        const progressFill = document.getElementById('progressFill');
         const fileInfo = document.getElementById('fileInfo');
         const fileName = document.getElementById('fileName');
         const fileExpiry = document.getElementById('fileExpiry');
 
         let selectedType = 'video';
         let currentDownloadId = null;
+        let expiryInterval = null;
 
-        // Crear partículas de fondo
-        function createParticles() {
-            const particlesContainer = document.getElementById('particles');
-            const particleCount = 15;
-            
-            for (let i = 0; i < particleCount; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'particle';
-                
-                const size = Math.random() * 60 + 10;
-                const posX = Math.random() * 100;
-                const posY = Math.random() * 100;
-                const delay = Math.random() * 20;
-                const duration = Math.random() * 10 + 20;
-                
-                particle.style.width = `${size}px`;
-                particle.style.height = `${size}px`;
-                particle.style.left = `${posX}vw`;
-                particle.style.top = `${posY}vh`;
-                particle.style.animationDelay = `${delay}s`;
-                particle.style.animationDuration = `${duration}s`;
-                particle.style.background = `radial-gradient(circle, var(--primary-blue) 0%, transparent 70%)`;
-                particle.style.opacity = Math.random() * 0.1 + 0.05;
-                
-                particlesContainer.appendChild(particle);
-            }
-        }
-
-        // Configurar Socket.IO para recibir actualizaciones
         socket.on('connect', () => {
             console.log('✅ Conectado al servidor');
-            updateStatus('Conectado al servidor ✅', 'complete');
+            updateStatus('Conectado', 'complete', 100);
         });
 
         socket.on('progress_update', (data) => {
             console.log('📨 Actualización recibida:', data);
 
             if (data.download_id === currentDownloadId) {
-                updateButtonState(data.status, data.download_url, data.filename);
-                updateStatus(data.status, getStatusType(data.status));
+                updateProgress(data.status, data.progress, data.download_type);
 
-                // Mostrar información del archivo cuando esté completo
-                if (data.status.includes('Completo') && data.filename && data.expires_at) {
+                if (data.status === 'Completado' && data.filename && data.expires_at) {
                     showFileInfo(data.filename, data.expires_at);
+                    showCancelButton(false);
                     
-                    // Iniciar descarga automática cuando esté completo
                     if (data.download_url) {
                         setTimeout(() => {
                             initiateDownload(data.download_url, data.filename);
-                        }, 1000);
+                        }, 500);
                     }
+                    
+                    // Limpiar URL después de descarga completada
+                    setTimeout(() => {
+                        urlInput.value = '';
+                    }, 1000);
                 }
 
-                // Ocultar información del archivo en caso de error
                 if (data.status.includes('Error')) {
                     hideFileInfo();
+                    showCancelButton(false);
+                    setTimeout(resetUI, 3000);
                 }
             }
         });
 
         socket.on('disconnect', () => {
-            updateStatus('Desconectado del servidor ❌', 'error');
+            updateStatus('Desconectado', 'error', 0);
+            showCancelButton(false);
         });
 
         function selectType(type) {
@@ -640,12 +506,7 @@
                 audioBtn.classList.add('active');
                 videoBtn.classList.remove('active');
             }
-            resetButton();
         }
-
-        urlInput.addEventListener('input', function() {
-            resetButton();
-        });
 
         function startDownload() {
             const url = urlInput.value.trim();
@@ -660,114 +521,104 @@
                 });
 
                 downloadBtn.disabled = true;
-                downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
-                statusIndicator.classList.remove('hidden');
-                updateStatus('🔄 Conectando con la plataforma...', 'processing');
+                downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando...';
+                progressContainer.classList.remove('hidden');
+                showCancelButton(true);
+                updateStatus('Procesando', 'processing', 0);
                 hideFileInfo();
 
+                // Limpiar URL inmediatamente al iniciar descarga
+                urlInput.value = '';
+
             } else {
-                showTemporaryStatus('⚠️ Por favor, ingresa una URL válida', 'error', 3000);
+                showTemporaryStatus('Ingresa una URL válida', 'error', 2000);
             }
         }
 
-        function updateButtonState(status, downloadUrl = null, filename = null) {
-            if (status.includes('Conectando') || status.includes('Iniciando')) {
+        function cancelDownload() {
+            if (currentDownloadId) {
+                socket.emit('cancel_download', { download_id: currentDownloadId });
+                updateStatus('Cancelado', 'error', 0);
+                showCancelButton(false);
+                setTimeout(resetUI, 2000);
+            }
+        }
+
+        function updateProgress(status, progress, type) {
+            updateStatus(status, getStatusType(status), progress);
+            
+            if (status === 'Procesando') {
                 downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
-            } else if (status.includes('Descargando')) {
+            } else if (status === 'Descargando') {
                 downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Descargando...';
-            } else if (status.includes('Completo')) {
-                downloadBtn.innerHTML = '<i class="fas fa-check"></i> ¡Completado!';
+            } else if (status === 'Completado') {
+                downloadBtn.innerHTML = '<i class="fas fa-check"></i> Completado';
                 downloadBtn.disabled = false;
-
-                // Restablecer después de 5 segundos
-                setTimeout(() => {
-                    if (downloadBtn.innerHTML.includes('check')) {
-                        resetButton();
-                    }
-                }, 5000);
-            } else if (status.includes('Error')) {
-                downloadBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
-                downloadBtn.disabled = false;
-
-                setTimeout(() => {
-                    resetButton();
-                }, 5000);
             }
         }
 
-        function updateStatus(message, type) {
-            statusText.innerHTML = message;
-            statusIndicator.className = 'status-indicator';
+        function updateStatus(message, type, progress) {
+            statusText.textContent = message;
+            progressPercent.textContent = progress + '%';
+            progressFill.style.width = progress + '%';
 
-            // Remover todas las clases de estado anteriores
-            statusIndicator.classList.remove('status-processing', 'status-downloading', 'status-complete', 'status-error');
-
-            // Añadir la clase correspondiente
-            if (type === 'processing' || type === 'downloading') {
-                statusIndicator.classList.add('status-processing');
-                statusIndicator.querySelector('.status-icon').className = 'status-icon fas fa-sync-alt fa-spin';
-            } else if (type === 'complete') {
-                statusIndicator.classList.add('status-complete');
-                statusIndicator.querySelector('.status-icon').className = 'status-icon fas fa-check-circle';
-            } else if (type === 'error') {
-                statusIndicator.classList.add('status-error');
-                statusIndicator.querySelector('.status-icon').className = 'status-icon fas fa-exclamation-triangle';
-            }
-
-            statusIndicator.classList.remove('hidden');
-        }
-
-        function showTemporaryStatus(message, type, duration) {
-            const originalStatus = statusText.innerHTML;
-            const originalType = getStatusType(originalStatus);
-            
-            updateStatus(message, type);
-            
-            setTimeout(() => {
-                if (currentDownloadId) {
-                    updateStatus(originalStatus, originalType);
-                } else {
-                    resetButton();
-                }
-            }, duration);
+            // Actualizar clases de estado
+            statusIndicator.className = 'status-indicator ' + 'status-' + type;
         }
 
         function getStatusType(status) {
-            if (status.includes('Conectando') || status.includes('Iniciando') || status.includes('Descargando')) {
+            if (status === 'Procesando' || status === 'Descargando') {
                 return 'processing';
-            } else if (status.includes('Completo') || status.includes('Conectado')) {
+            } else if (status === 'Completado' || status === 'Conectado') {
                 return 'complete';
-            } else if (status.includes('Error') || status.includes('Desconectado')) {
+            } else if (status.includes('Error') || status === 'Cancelado' || status === 'Desconectado') {
                 return 'error';
             }
             return 'processing';
+        }
+
+        function showCancelButton(show) {
+            if (show) {
+                cancelBtn.classList.remove('hidden');
+                downloadBtn.style.flex = '2';
+            } else {
+                cancelBtn.classList.add('hidden');
+                downloadBtn.style.flex = '1';
+            }
         }
 
         function showFileInfo(filename, expiresAt) {
             fileName.textContent = filename;
             
             const expiryDate = new Date(expiresAt);
-            const now = new Date();
-            const minutesLeft = Math.max(0, Math.round((expiryDate - now) / (1000 * 60)));
-            fileExpiry.textContent = `${minutesLeft} minutos`;
+            updateExpiryCounter(expiryDate);
             
             fileInfo.classList.remove('hidden');
             
-            // Actualizar el contador cada minuto
-            const expiryInterval = setInterval(() => {
-                const now = new Date();
-                const minutesLeft = Math.max(0, Math.round((expiryDate - now) / (1000 * 60)));
-                fileExpiry.textContent = `${minutesLeft} minutos`;
-                
-                if (minutesLeft === 0) {
-                    clearInterval(expiryInterval);
-                    fileInfo.classList.add('hidden');
-                }
-            }, 60000);
+            if (expiryInterval) clearInterval(expiryInterval);
+            expiryInterval = setInterval(() => updateExpiryCounter(expiryDate), 1000);
+        }
+
+        function updateExpiryCounter(expiryDate) {
+            const now = new Date();
+            const secondsLeft = Math.max(0, Math.round((expiryDate - now) / 1000));
+            const minutes = Math.floor(secondsLeft / 60);
+            const seconds = secondsLeft % 60;
+            
+            if (secondsLeft === 0) {
+                fileExpiry.textContent = 'Expirado';
+                clearInterval(expiryInterval);
+            } else {
+                fileExpiry.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
         }
 
         function hideFileInfo() {
             fileInfo.classList.add('hidden');
+            if (expiryInterval) {
+                clearInterval(expiryInterval);
+                expiryInterval = null;
+            }
         }
 
         function initiateDownload(downloadUrl, filename) {
@@ -782,15 +633,31 @@
             document.body.removeChild(downloadLink);
 
             console.log('📥 Descarga automática iniciada:', filename);
-            showTemporaryStatus('📥 Descarga iniciada automáticamente', 'complete', 3000);
         }
 
-        function resetButton() {
+        function resetUI() {
             downloadBtn.disabled = false;
             downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar';
-            statusIndicator.classList.add('hidden');
+            progressContainer.classList.add('hidden');
+            showCancelButton(false);
             hideFileInfo();
             currentDownloadId = null;
+        }
+
+        function showTemporaryStatus(message, type, duration) {
+            const originalContent = statusText.textContent;
+            const originalProgress = parseInt(progressPercent.textContent);
+            
+            progressContainer.classList.remove('hidden');
+            updateStatus(message, type, originalProgress);
+            
+            setTimeout(() => {
+                if (currentDownloadId) {
+                    updateStatus(originalContent, getStatusType(originalContent), originalProgress);
+                } else {
+                    resetUI();
+                }
+            }, duration);
         }
 
         // Enter para iniciar descarga
@@ -800,13 +667,10 @@
             }
         });
 
-        // Efecto de foco automático en la URL
+        // Foco automático
         setTimeout(() => {
             urlInput.focus();
-        }, 1000);
-
-        // Inicializar partículas
-        createParticles();
+        }, 500);
     </script>
 </body>
 </html>
