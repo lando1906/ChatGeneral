@@ -1,254 +1,812 @@
-import socketio
-import eventlet
-import eventlet.wsgi
-import yt_dlp
-import os
-import threading
-import time
-import re
-import urllib.parse
-import random
-import string
-from datetime import datetime, timedelta
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoDown - Descarga Videos y Audio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <style>
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
 
-# Configuraciones actualizadas para yt-dlp
-ydl_opts_video = {
-    'format': 'best[height<=720]/best[height<=480]/best/bestvideo+bestaudio',
-    'outtmpl': 'downloads/%(title)s.%(ext)s',
-    'cookies': 'cookies.txt',
-    'merge_output_format': 'mp4',  # Forzar formato de salida
-    'ignoreerrors': True,  # Ignorar errores de formato
-}
+        :root {
+            --dark-bg: #0f172a;
+            --dark-card: #1e293b;
+            --dark-border: #334155;
+            --dark-text: #f1f5f9;
+            --dark-text-secondary: #94a3b8;
+            --primary-blue: #3b82f6;
+            --blue-hover: #2563eb;
+            --blue-glow: rgba(59, 130, 246, 0.3);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --gradient: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+            --gradient-purple: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #c084fc 100%);
+        }
 
-ydl_opts_audio = {
-    'format': 'bestaudio/best',
-    'outtmpl': 'downloads/%(title)s.%(ext)s',
-    'cookies': 'cookies.txt',
-    'postprocessors': [{
-        'key': 'FFmpegExtractAudio',
-        'preferredcodec': 'mp3',
-        'preferredquality': '192',
-    }],
-    'ignoreerrors': True,  # Ignorar errores de formato
-}
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            line-height: 1.6;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(124, 58, 237, 0.1) 0%, transparent 20%);
+        }
 
-sio = socketio.Server(cors_allowed_origins='*')
-app = socketio.WSGIApp(sio)
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--dark-card);
+            border-radius: 24px;
+            border: 1px solid var(--dark-border);
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            animation: fadeInUp 0.6s ease-out;
+        }
 
-# Asegurar que existe el directorio de descargas
-os.makedirs('downloads', exist_ok=True)
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
-# Diccionario para trackear archivos y su tiempo de expiración
-file_expirations = {}
+        .header {
+            background: var(--gradient);
+            padding: 50px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
 
-def cleanup_expired_files():
-    """Elimina archivos expirados cada minuto"""
-    while True:
-        try:
-            current_time = datetime.now()
-            expired_files = []
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
 
-            for filename, expiry_time in list(file_expirations.items()):
-                if current_time >= expiry_time:
-                    expired_files.append(filename)
+        .logo {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: white;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+            position: relative;
+            z-index: 1;
+            animation: float 3s ease-in-out infinite;
+        }
 
-            for filename in expired_files:
-                file_path = os.path.join('downloads', filename)
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                    print(f"🗑️ Archivo eliminado: {filename}")
-                del file_expirations[filename]
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
 
-        except Exception as e:
-            print(f"❌ Error en cleanup: {e}")
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: white;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
 
-        time.sleep(60)  # Revisar cada minuto
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            font-weight: 300;
+            position: relative;
+            z-index: 1;
+        }
 
-# Iniciar hilo de limpieza en segundo plano
-cleanup_thread = threading.Thread(target=cleanup_expired_files, daemon=True)
-cleanup_thread.start()
+        .content {
+            padding: 40px 30px;
+        }
 
-def generar_nombre_aleatorio(longitud=12):
-    """Genera un nombre de archivo aleatorio"""
-    caracteres = string.ascii_letters + string.digits
-    return ''.join(random.choice(caracteres) for _ in range(longitud))
+        .download-type-selector {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 25px;
+            background: rgba(30, 41, 59, 0.8);
+            padding: 8px;
+            border-radius: 16px;
+            border: 1px solid var(--dark-border);
+            backdrop-filter: blur(10px);
+        }
 
-def sanitize_filename(filename):
-    """Reemplaza el nombre original por uno aleatorio manteniendo la extensión"""
-    nombre_base, extension = os.path.splitext(filename)
-    nuevo_nombre = generar_nombre_aleatorio(12) + extension.lower()
+        .type-btn {
+            flex: 1;
+            padding: 16px 20px;
+            border: none;
+            border-radius: 12px;
+            background: transparent;
+            color: var(--dark-text-secondary);
+            font-family: 'Poppins', sans-serif;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
 
-    downloads_path = 'downloads/'
-    while os.path.exists(os.path.join(downloads_path, nuevo_nombre)):
-        nuevo_nombre = generar_nombre_aleatorio(12) + extension.lower()
+        .type-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--gradient);
+            transition: left 0.3s ease;
+            z-index: -1;
+        }
 
-    return nuevo_nombre
+        .type-btn.active {
+            background: var(--primary-blue);
+            color: white;
+            box-shadow: 0 4px 15px var(--blue-glow);
+            transform: translateY(-2px);
+        }
 
-def get_ydl_opts_for_url(url, download_type):
-    """Obtiene configuración optimizada según la URL"""
-    if download_type == 'audio':
-        base_opts = ydl_opts_audio.copy()
-    else:
-        base_opts = ydl_opts_video.copy()
+        .type-btn.active::before {
+            left: 0;
+        }
+
+        .type-btn:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--dark-text);
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .url-input {
+            width: 100%;
+            padding: 18px 22px;
+            border: 2px solid var(--dark-border);
+            border-radius: 16px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 16px;
+            background: rgba(30, 41, 59, 0.8);
+            color: var(--dark-text);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .url-input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 4px var(--blue-glow);
+            transform: translateY(-2px);
+        }
+
+        .url-input::placeholder {
+            color: var(--dark-text-secondary);
+        }
+
+        .download-btn {
+            background: var(--gradient);
+            border: none;
+            color: white;
+            padding: 18px 24px;
+            border-radius: 16px;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px var(--blue-glow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .download-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .download-btn:hover::before {
+            left: 100%;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px var(--blue-glow);
+        }
+
+        .download-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .download-btn:disabled {
+            background: #475569;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            opacity: 0.7;
+        }
+
+        .download-btn:disabled::before {
+            display: none;
+        }
+
+        .status-indicator {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 16px;
+            border: 1px solid var(--dark-border);
+            text-align: center;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-indicator::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .status-processing { 
+            color: var(--warning);
+            border-color: var(--warning);
+        }
+
+        .status-downloading { 
+            color: var(--warning);
+            border-color: var(--warning);
+        }
+
+        .status-complete { 
+            color: var(--success);
+            border-color: var(--success);
+        }
+
+        .status-error { 
+            color: var(--error);
+            border-color: var(--error);
+        }
+
+        .status-processing::before,
+        .status-downloading::before {
+            background: var(--warning);
+            transform: scaleX(1);
+            animation: pulse 2s infinite;
+        }
+
+        .status-complete::before {
+            background: var(--success);
+            transform: scaleX(1);
+        }
+
+        .status-error::before {
+            background: var(--error);
+            transform: scaleX(1);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+        }
+
+        .status-icon {
+            font-size: 1.5rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .file-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(30, 41, 59, 0.6);
+            border-radius: 12px;
+            border: 1px solid var(--dark-border);
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .file-info div {
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .file-info div:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            color: var(--dark-text-secondary);
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: var(--dark-text);
+            font-weight: 400;
+        }
+
+        .supported-platforms {
+            margin-top: 25px;
+            text-align: center;
+            color: var(--dark-text-secondary);
+            font-size: 14px;
+        }
+
+        .platforms-grid {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .platform-icon {
+            font-size: 1.5rem;
+            opacity: 0.7;
+            transition: all 0.3s ease;
+        }
+
+        .platform-icon:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: var(--dark-text-secondary);
+            font-size: 12px;
+            padding-top: 20px;
+            border-top: 1px solid var(--dark-border);
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                margin: 10px;
+                border-radius: 20px;
+            }
+
+            .header {
+                padding: 40px 25px;
+            }
+
+            .logo {
+                font-size: 3.5rem;
+            }
+
+            h1 {
+                font-size: 2.2rem;
+            }
+
+            .content {
+                padding: 30px 25px;
+            }
+
+            .download-type-selector {
+                flex-direction: column;
+            }
+
+            .type-btn {
+                padding: 14px 18px;
+            }
+        }
+
+        /* Efectos de partículas para el fondo */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .particle {
+            position: absolute;
+            background: var(--primary-blue);
+            border-radius: 50%;
+            opacity: 0.1;
+            animation: float-particle 20s infinite linear;
+        }
+
+        @keyframes float-particle {
+            0% {
+                transform: translateY(0) translateX(0) rotate(0deg);
+            }
+            100% {
+                transform: translateY(-100vh) translateX(100px) rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
     
-    # Configuración específica para Pinterest
-    if any(domain in url.lower() for domain in ['pinterest.', 'pin.it']):
-        base_opts.update({
-            'format': 'best',  # Formato más simple para Pinterest
-            'ignoreerrors': True,
-        })
-    
-    return base_opts
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-cloud-download-alt"></i>
+            </div>
+            <h1>VideoDown</h1>
+            <p class="subtitle">Descarga videos y audio de múltiples plataformas</p>
+        </div>
 
-@sio.event
-def connect(sid, environ):
-    print('✅ Cliente conectado:', sid)
+        <div class="content">
+            <div class="download-type-selector">
+                <button class="type-btn active" id="videoBtn" onclick="selectType('video')">
+                    <i class="fas fa-video"></i>
+                    Video
+                </button>
+                <button class="type-btn" id="audioBtn" onclick="selectType('audio')">
+                    <i class="fas fa-music"></i>
+                    Audio
+                </button>
+            </div>
 
-@sio.event
-def disconnect(sid):
-    print('❌ Cliente desconectado:', sid)
+            <div class="input-group">
+                <input type="url" class="url-input" id="urlInput" 
+                       placeholder="https://youtube.com/watch?v=..." required
+                       autocomplete="off">
+                <button class="download-btn" id="downloadBtn" onclick="startDownload()">
+                    <i class="fas fa-download"></i>
+                    Descargar
+                </button>
 
-@sio.event
-def start_download(sid, data):
-    url = data['url']
-    download_type = data.get('download_type', 'video')  # 'video' o 'audio'
-    download_id = data.get('download_id', 'default_id')
+                <div class="status-indicator hidden" id="statusIndicator">
+                    <div class="status-content">
+                        <i class="status-icon fas fa-info-circle"></i>
+                        <span id="statusText">Estado de la descarga...</span>
+                    </div>
+                </div>
 
-    try:
-        sio.emit('progress_update', {
-            'download_id': download_id, 
-            'status': '🔄 Conectando...',
-            'type': download_type
-        })
+                <div class="file-info hidden" id="fileInfo">
+                    <div>
+                        <span class="info-label">Archivo:</span>
+                        <span class="info-value" id="fileName">-</span>
+                    </div>
+                    <div>
+                        <span class="info-label">Expira en:</span>
+                        <span class="info-value" id="fileExpiry">-</span>
+                    </div>
+                </div>
+            </div>
 
-        def progress_hook(d):
-            if d['status'] == 'downloading':
-                sio.emit('progress_update', {
-                    'download_id': download_id, 
-                    'status': '📥 Descargando...',
-                    'type': download_type
-                })
-            elif d['status'] == 'finished':
-                # Obtener y sanitizar el nombre del archivo
-                original_filename = os.path.basename(d['filename'])
-                sanitized_filename = sanitize_filename(original_filename)
+            <div class="supported-platforms">
+                <p>Plataformas compatibles:</p>
+                <div class="platforms-grid">
+                    <i class="platform-icon fab fa-youtube" title="YouTube"></i>
+                    <i class="platform-icon fab fa-pinterest" title="Pinterest"></i>
+                    <i class="platform-icon fab fa-tiktok" title="TikTok"></i>
+                    <i class="platform-icon fab fa-twitter" title="Twitter"></i>
+                    <i class="platform-icon fab fa-instagram" title="Instagram"></i>
+                    <i class="platform-icon fas fa-globe" title="Y más..."></i>
+                </div>
+            </div>
 
-                # Renombrar el archivo
-                original_path = d['filename']
-                new_path = os.path.join('downloads', sanitized_filename)
+            <div class="footer">
+                <p>Los archivos se eliminan automáticamente después de 15 minutos</p>
+            </div>
+        </div>
+    </div>
 
-                if original_path != new_path and os.path.exists(original_path):
-                    os.rename(original_path, new_path)
-                    print(f"📝 Archivo renombrado: {original_filename} -> {sanitized_filename}")
+    <script>
+        const socket = io();
+        const downloadBtn = document.getElementById('downloadBtn');
+        const urlInput = document.getElementById('urlInput');
+        const videoBtn = document.getElementById('videoBtn');
+        const audioBtn = document.getElementById('audioBtn');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileExpiry = document.getElementById('fileExpiry');
 
-                # Registrar archivo para eliminación en 15 minutos
-                expiry_time = datetime.now() + timedelta(minutes=15)
-                file_expirations[sanitized_filename] = expiry_time
+        let selectedType = 'video';
+        let currentDownloadId = null;
 
-                download_url = f"/downloads/{urllib.parse.quote(sanitized_filename)}"
+        // Crear partículas de fondo
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            const particleCount = 15;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                const size = Math.random() * 60 + 10;
+                const posX = Math.random() * 100;
+                const posY = Math.random() * 100;
+                const delay = Math.random() * 20;
+                const duration = Math.random() * 10 + 20;
+                
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.left = `${posX}vw`;
+                particle.style.top = `${posY}vh`;
+                particle.style.animationDelay = `${delay}s`;
+                particle.style.animationDuration = `${duration}s`;
+                particle.style.background = `radial-gradient(circle, var(--primary-blue) 0%, transparent 70%)`;
+                particle.style.opacity = Math.random() * 0.1 + 0.05;
+                
+                particlesContainer.appendChild(particle);
+            }
+        }
 
-                sio.emit('progress_update', {
-                    'download_id': download_id, 
-                    'status': '✅ Completo',
-                    'filename': sanitized_filename,
-                    'download_url': download_url,
-                    'expires_at': expiry_time.isoformat(),
-                    'type': download_type
-                })
-                print(f"✅ Descarga completada: {sanitized_filename}")
-                print(f"🔗 Enlace de descarga: {download_url}")
+        // Configurar Socket.IO para recibir actualizaciones
+        socket.on('connect', () => {
+            console.log('✅ Conectado al servidor');
+            updateStatus('Conectado al servidor ✅', 'complete');
+        });
 
-        # Obtener configuración optimizada según la URL
-        ydl_opts = get_ydl_opts_for_url(url, download_type)
-        ydl_opts_with_progress = {**ydl_opts, 'progress_hooks': [progress_hook]}
+        socket.on('progress_update', (data) => {
+            console.log('📨 Actualización recibida:', data);
 
-        with yt_dlp.YoutubeDL(ydl_opts_with_progress) as ydl:
-            sio.emit('progress_update', {
-                'download_id': download_id, 
-                'status': '🚀 Iniciando...',
-                'type': download_type
-            })
-            ydl.download([url])
+            if (data.download_id === currentDownloadId) {
+                updateButtonState(data.status, data.download_url, data.filename);
+                updateStatus(data.status, getStatusType(data.status));
 
-    except Exception as e:
-        error_str = str(e)
-        
-        # Manejar errores específicos de Pinterest
-        if 'pinterest' in url.lower() and 'format' in error_str.lower():
-            error_message = 'Pinterest: Formato no disponible. Intenta con otro video o verifica que sea público.'
-        elif 'pinterest' in url.lower():
-            error_message = 'Pinterest: No se pudo descargar el video. Verifica la URL.'
-        else:
-            error_message = f'Error: {error_str}'
-        
-        print(f"❌ {error_message}")
-        sio.emit('progress_update', {
-            'download_id': download_id, 
-            'status': f'❌ {error_message}',
-            'type': download_type
-        })
+                // Mostrar información del archivo cuando esté completo
+                if (data.status.includes('Completo') && data.filename && data.expires_at) {
+                    showFileInfo(data.filename, data.expires_at);
+                    
+                    // Iniciar descarga automática cuando esté completo
+                    if (data.download_url) {
+                        setTimeout(() => {
+                            initiateDownload(data.download_url, data.filename);
+                        }, 1000);
+                    }
+                }
 
-def serve_application(environ, start_response):
-    """Middleware WSGI para manejar archivos estáticos y la aplicación Socket.IO"""
-    path = environ['PATH_INFO']
+                // Ocultar información del archivo en caso de error
+                if (data.status.includes('Error')) {
+                    hideFileInfo();
+                }
+            }
+        });
 
-    if path.startswith('/downloads/'):
-        filename_encoded = path[11:]
-        filename = urllib.parse.unquote(filename_encoded)
+        socket.on('disconnect', () => {
+            updateStatus('Desconectado del servidor ❌', 'error');
+        });
 
-        file_path = os.path.join('downloads', filename)
+        function selectType(type) {
+            selectedType = type;
+            if (type === 'video') {
+                videoBtn.classList.add('active');
+                audioBtn.classList.remove('active');
+            } else {
+                audioBtn.classList.add('active');
+                videoBtn.classList.remove('active');
+            }
+            resetButton();
+        }
 
-        print(f"📥 Solicitud de descarga directa: {filename}")
+        urlInput.addEventListener('input', function() {
+            resetButton();
+        });
 
-        if os.path.exists(file_path) and os.path.isfile(file_path):
-            if filename in file_expirations and datetime.now() < file_expirations[filename]:
-                headers = [
-                    ('Content-Type', 'application/octet-stream'),
-                    ('Content-Disposition', f'attachment; filename="{filename}"'),
-                    ('Cache-Control', 'no-cache, must-revalidate'),
-                    ('Pragma', 'no-cache'),
-                    ('Expires', '0'),
-                    ('Content-Length', str(os.path.getsize(file_path)))
-                ]
-                start_response('200 OK', headers)
-                print(f"✅ Sirviendo archivo para descarga: {filename}")
+        function startDownload() {
+            const url = urlInput.value.trim();
 
-                with open(file_path, 'rb') as f:
-                    return [f.read()]
-            else:
-                print(f"⏰ Archivo expirado: {filename}")
-                start_response('410 Gone', [('Content-Type', 'text/plain')])
-                return [b'Archivo expirado o no disponible']
-        else:
-            print(f"❌ Archivo no encontrado: {filename}")
-            start_response('404 Not Found', [('Content-Type', 'text/plain')])
-            return [b'Archivo no encontrado']
+            if (url) {
+                currentDownloadId = 'download_' + Date.now();
 
-    if path == '/' or path == '':
-        try:
-            with open('static/index.html', 'rb') as f:
-                html_content = f.read()
-            start_response('200 OK', [('Content-Type', 'text/html')])
-            return [html_content]
-        except FileNotFoundError:
-            start_response('404 Not Found', [('Content-Type', 'text/plain')])
-            return [b'Archivo HTML no encontrado']
+                socket.emit('start_download', { 
+                    url: url, 
+                    download_id: currentDownloadId,
+                    download_type: selectedType 
+                });
 
-    return app(environ, start_response)
+                downloadBtn.disabled = true;
+                downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+                statusIndicator.classList.remove('hidden');
+                updateStatus('🔄 Conectando con la plataforma...', 'processing');
+                hideFileInfo();
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 10000))
-    print(f"🚀 Servidor ejecutándose en 0.0.0.0:{port}")
-    print(f"📁 Directorio actual: {os.getcwd()}")
-    print(f"⏰ Los archivos se eliminarán automáticamente después de 15 minutos")
-    print(f"🎯 Sistema de estados: Conectando → Iniciando → Descargando → Completo")
-    print(f"🔧 Funcionalidades: Descarga de video/audio + cookies para YouTube")
-    print(f"📌 Soporte mejorado para Pinterest")
+            } else {
+                showTemporaryStatus('⚠️ Por favor, ingresa una URL válida', 'error', 3000);
+            }
+        }
 
-    # Verificar si existe el archivo de cookies
-    if os.path.exists('cookies.txt'):
-        print(f"✅ Archivo de cookies encontrado")
-    else:
-        print(f"⚠️  Archivo de cookies no encontrado - algunas descargas pueden fallar")
+        function updateButtonState(status, downloadUrl = null, filename = null) {
+            if (status.includes('Conectando') || status.includes('Iniciando')) {
+                downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+            } else if (status.includes('Descargando')) {
+                downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Descargando...';
+            } else if (status.includes('Completo')) {
+                downloadBtn.innerHTML = '<i class="fas fa-check"></i> ¡Completado!';
+                downloadBtn.disabled = false;
 
-    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', port)), serve_application)
+                // Restablecer después de 5 segundos
+                setTimeout(() => {
+                    if (downloadBtn.innerHTML.includes('check')) {
+                        resetButton();
+                    }
+                }, 5000);
+            } else if (status.includes('Error')) {
+                downloadBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
+                downloadBtn.disabled = false;
+
+                setTimeout(() => {
+                    resetButton();
+                }, 5000);
+            }
+        }
+
+        function updateStatus(message, type) {
+            statusText.innerHTML = message;
+            statusIndicator.className = 'status-indicator';
+
+            // Remover todas las clases de estado anteriores
+            statusIndicator.classList.remove('status-processing', 'status-downloading', 'status-complete', 'status-error');
+
+            // Añadir la clase correspondiente
+            if (type === 'processing' || type === 'downloading') {
+                statusIndicator.classList.add('status-processing');
+                statusIndicator.querySelector('.status-icon').className = 'status-icon fas fa-sync-alt fa-spin';
+            } else if (type === 'complete') {
+                statusIndicator.classList.add('status-complete');
+                statusIndicator.querySelector('.status-icon').className = 'status-icon fas fa-check-circle';
+            } else if (type === 'error') {
+                statusIndicator.classList.add('status-error');
+                statusIndicator.querySelector('.status-icon').className = 'status-icon fas fa-exclamation-triangle';
+            }
+
+            statusIndicator.classList.remove('hidden');
+        }
+
+        function showTemporaryStatus(message, type, duration) {
+            const originalStatus = statusText.innerHTML;
+            const originalType = getStatusType(originalStatus);
+            
+            updateStatus(message, type);
+            
+            setTimeout(() => {
+                if (currentDownloadId) {
+                    updateStatus(originalStatus, originalType);
+                } else {
+                    resetButton();
+                }
+            }, duration);
+        }
+
+        function getStatusType(status) {
+            if (status.includes('Conectando') || status.includes('Iniciando') || status.includes('Descargando')) {
+                return 'processing';
+            } else if (status.includes('Completo') || status.includes('Conectado')) {
+                return 'complete';
+            } else if (status.includes('Error') || status.includes('Desconectado')) {
+                return 'error';
+            }
+            return 'processing';
+        }
+
+        function showFileInfo(filename, expiresAt) {
+            fileName.textContent = filename;
+            
+            const expiryDate = new Date(expiresAt);
+            const now = new Date();
+            const minutesLeft = Math.max(0, Math.round((expiryDate - now) / (1000 * 60)));
+            fileExpiry.textContent = `${minutesLeft} minutos`;
+            
+            fileInfo.classList.remove('hidden');
+            
+            // Actualizar el contador cada minuto
+            const expiryInterval = setInterval(() => {
+                const now = new Date();
+                const minutesLeft = Math.max(0, Math.round((expiryDate - now) / (1000 * 60)));
+                fileExpiry.textContent = `${minutesLeft} minutos`;
+                
+                if (minutesLeft === 0) {
+                    clearInterval(expiryInterval);
+                    fileInfo.classList.add('hidden');
+                }
+            }, 60000);
+        }
+
+        function hideFileInfo() {
+            fileInfo.classList.add('hidden');
+        }
+
+        function initiateDownload(downloadUrl, filename) {
+            const fullDownloadUrl = window.location.origin + downloadUrl;
+            const downloadLink = document.createElement('a');
+            downloadLink.href = fullDownloadUrl;
+            downloadLink.download = filename;
+            downloadLink.style.display = 'none';
+
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+
+            console.log('📥 Descarga automática iniciada:', filename);
+            showTemporaryStatus('📥 Descarga iniciada automáticamente', 'complete', 3000);
+        }
+
+        function resetButton() {
+            downloadBtn.disabled = false;
+            downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar';
+            statusIndicator.classList.add('hidden');
+            hideFileInfo();
+            currentDownloadId = null;
+        }
+
+        // Enter para iniciar descarga
+        urlInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                startDownload();
+            }
+        });
+
+        // Efecto de foco automático en la URL
+        setTimeout(() => {
+            urlInput.focus();
+        }, 1000);
+
+        // Inicializar partículas
+        createParticles();
+    </script>
+</body>
+</html>
