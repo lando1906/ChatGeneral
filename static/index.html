@@ -133,6 +133,37 @@
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
         }
 
+        .download-type-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .type-btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-family: 'Poppins', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .type-btn.active {
+            background: linear-gradient(135deg, #48dbfb, #0abde3);
+            border-color: #48dbfb;
+            box-shadow: 0 4px 15px rgba(72, 219, 251, 0.3);
+        }
+
+        .type-btn i {
+            margin-right: 6px;
+        }
+
         .download-btn {
             background: linear-gradient(135deg, #48dbfb, #0abde3);
             border: none;
@@ -145,6 +176,10 @@
             font-weight: 600;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(72, 219, 251, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
         .download-btn:disabled {
@@ -214,6 +249,10 @@
             }
         }
 
+        .download-item.audio {
+            border-left-color: #ff6b6b;
+        }
+
         .download-item.completed {
             border-left-color: #1dd1a1;
             background: rgba(29, 209, 161, 0.15);
@@ -229,6 +268,19 @@
         .download-title {
             font-weight: 600;
             font-size: 0.9rem;
+        }
+
+        .download-type-badge {
+            font-size: 0.7rem;
+            padding: 3px 6px;
+            border-radius: 8px;
+            background: rgba(72, 219, 251, 0.3);
+            color: #48dbfb;
+        }
+
+        .download-type-badge.audio {
+            background: rgba(255, 107, 107, 0.3);
+            color: #ff6b6b;
         }
 
         .download-status {
@@ -346,6 +398,11 @@
             .download-item {
                 padding: 15px;
             }
+            
+            .type-btn {
+                padding: 10px 12px;
+                font-size: 13px;
+            }
         }
 
         @media (max-height: 700px) {
@@ -363,13 +420,23 @@
                     <i class="fas fa-cloud-download-alt"></i>
                 </div>
                 <h1>Descargador Premium</h1>
-                <p class="subtitle">Descarga videos automáticamente al completarse</p>
+                <p class="subtitle">Descarga videos y audio automáticamente</p>
             </div>
 
             <div class="input-section">
+                <div class="download-type-selector">
+                    <button class="type-btn active" id="videoBtn" onclick="selectType('video')">
+                        <i class="fas fa-video"></i>
+                        Video
+                    </button>
+                    <button class="type-btn" id="audioBtn" onclick="selectType('audio')">
+                        <i class="fas fa-music"></i>
+                        Audio
+                    </button>
+                </div>
                 <div class="input-group">
                     <input type="url" class="url-input" id="urlInput" 
-                           placeholder="https://ejemplo.com/video" required>
+                           placeholder="https://youtube.com/watch?v=..." required>
                     <button class="download-btn" id="downloadBtn" onclick="startDownload()">
                         <i class="fas fa-download"></i>
                         Descargar
@@ -398,14 +465,33 @@
         const downloadsList = document.getElementById('downloadsList');
         const downloadBtn = document.getElementById('downloadBtn');
         const urlInput = document.getElementById('urlInput');
+        const videoBtn = document.getElementById('videoBtn');
+        const audioBtn = document.getElementById('audioBtn');
+        
+        let selectedType = 'video';
         
         socket.on('connect', () => {
             console.log('✅ Conectado al servidor');
         });
         
         socket.on('progress_update', (data) => {
-            updateDownloadProgress(data.download_id, data.status, data.filename, data.download_url, data.expires_at);
+            updateDownloadProgress(data.download_id, data.status, data.filename, data.download_url, data.expires_at, data.type);
         });
+        
+        function selectType(type) {
+            selectedType = type;
+            if (type === 'video') {
+                videoBtn.classList.add('active');
+                audioBtn.classList.remove('active');
+            } else {
+                audioBtn.classList.add('active');
+                videoBtn.classList.remove('active');
+            }
+            
+            // Reiniciar botón cuando se cambia el tipo
+            downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar';
+            downloadBtn.disabled = false;
+        }
         
         // Reiniciar botón cuando se escribe en el input
         urlInput.addEventListener('input', function() {
@@ -418,8 +504,12 @@
             
             if (url) {
                 const downloadId = 'download_' + Date.now();
-                addDownloadItem(downloadId);
-                socket.emit('start_download', { url: url, download_id: downloadId });
+                addDownloadItem(downloadId, selectedType);
+                socket.emit('start_download', { 
+                    url: url, 
+                    download_id: downloadId,
+                    download_type: selectedType 
+                });
                 
                 // Deshabilitar botón durante la descarga
                 downloadBtn.disabled = true;
@@ -430,18 +520,27 @@
             }
         }
         
-        function addDownloadItem(downloadId) {
+        function addDownloadItem(downloadId, type) {
             if (downloadsList.children.length === 1 && 
                 downloadsList.children[0].classList.contains('empty-state')) {
                 downloadsList.innerHTML = '';
             }
             
             const downloadItem = document.createElement('div');
-            downloadItem.className = 'download-item';
+            downloadItem.className = `download-item ${type}`;
             downloadItem.id = `download-${downloadId}`;
+            
+            const typeLabel = type === 'video' ? 'Video' : 'Audio';
+            const typeIcon = type === 'video' ? 'fa-video' : 'fa-music';
+            
             downloadItem.innerHTML = `
                 <div class="download-header">
-                    <div class="download-title">Preparando descarga...</div>
+                    <div class="download-title">Preparando descarga de ${typeLabel}...</div>
+                    <div class="download-type-badge ${type}">
+                        <i class="fas ${typeIcon}"></i> ${typeLabel}
+                    </div>
+                </div>
+                <div class="download-header">
                     <div class="download-status status-processing">🔄 Conectando</div>
                 </div>
                 <div class="status-text" id="status-${downloadId}">Iniciando proceso...</div>
@@ -449,7 +548,7 @@
             downloadsList.prepend(downloadItem);
         }
         
-        function updateDownloadProgress(downloadId, status, filename = null, downloadUrl = null, expiresAt = null) {
+        function updateDownloadProgress(downloadId, status, filename = null, downloadUrl = null, expiresAt = null, type = 'video') {
             const downloadItem = document.getElementById(`download-${downloadId}`);
             const statusElement = document.getElementById(`status-${downloadId}`);
             const statusElementIcon = downloadItem?.querySelector('.download-status');
@@ -463,11 +562,11 @@
                 } else if (status.includes('Iniciando')) {
                     statusElementIcon.className = 'download-status status-processing';
                     statusElementIcon.textContent = '🚀 Iniciando';
-                    statusElement.textContent = 'Preparando la descarga del video...';
+                    statusElement.textContent = 'Preparando la descarga...';
                 } else if (status.includes('Descargando')) {
                     statusElementIcon.className = 'download-status status-downloading';
                     statusElementIcon.textContent = '📥 Descargando';
-                    statusElement.textContent = 'Descargando el video...';
+                    statusElement.textContent = 'Descargando contenido...';
                 } else if (status.includes('Completo') || status.includes('✅')) {
                     statusElementIcon.className = 'download-status status-complete';
                     statusElementIcon.textContent = '✅ Completo';
@@ -481,7 +580,7 @@
                             <div class="completed-message">${status}</div>
                             <div class="auto-download-info">
                                 <i class="fas fa-info-circle"></i>
-                                El video se descargará automáticamente...
+                                El archivo se descargará automáticamente...
                             </div>
                         </div>
                     `;
