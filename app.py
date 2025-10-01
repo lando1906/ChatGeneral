@@ -17,6 +17,7 @@ ydl_opts_video = {
     'outtmpl': 'downloads/%(title)s.%(ext)s',
     'cookies': 'cookies.txt',
     'merge_output_format': 'mp4',  # Forzar formato de salida
+    'ignoreerrors': True,  # Ignorar errores de formato
 }
 
 ydl_opts_audio = {
@@ -28,6 +29,7 @@ ydl_opts_audio = {
         'preferredcodec': 'mp3',
         'preferredquality': '192',
     }],
+    'ignoreerrors': True,  # Ignorar errores de formato
 }
 
 sio = socketio.Server(cors_allowed_origins='*')
@@ -75,12 +77,28 @@ def sanitize_filename(filename):
     """Reemplaza el nombre original por uno aleatorio manteniendo la extensión"""
     nombre_base, extension = os.path.splitext(filename)
     nuevo_nombre = generar_nombre_aleatorio(12) + extension.lower()
-    
+
     downloads_path = 'downloads/'
     while os.path.exists(os.path.join(downloads_path, nuevo_nombre)):
         nuevo_nombre = generar_nombre_aleatorio(12) + extension.lower()
-    
+
     return nuevo_nombre
+
+def get_ydl_opts_for_url(url, download_type):
+    """Obtiene configuración optimizada según la URL"""
+    if download_type == 'audio':
+        base_opts = ydl_opts_audio.copy()
+    else:
+        base_opts = ydl_opts_video.copy()
+    
+    # Configuración específica para Pinterest
+    if any(domain in url.lower() for domain in ['pinterest.', 'pin.it']):
+        base_opts.update({
+            'format': 'best',  # Formato más simple para Pinterest
+            'ignoreerrors': True,
+        })
+    
+    return base_opts
 
 @sio.event
 def connect(sid, environ):
@@ -114,21 +132,21 @@ def start_download(sid, data):
                 # Obtener y sanitizar el nombre del archivo
                 original_filename = os.path.basename(d['filename'])
                 sanitized_filename = sanitize_filename(original_filename)
-                
+
                 # Renombrar el archivo
                 original_path = d['filename']
                 new_path = os.path.join('downloads', sanitized_filename)
-                
+
                 if original_path != new_path and os.path.exists(original_path):
                     os.rename(original_path, new_path)
                     print(f"📝 Archivo renombrado: {original_filename} -> {sanitized_filename}")
-                
+
                 # Registrar archivo para eliminación en 15 minutos
                 expiry_time = datetime.now() + timedelta(minutes=15)
                 file_expirations[sanitized_filename] = expiry_time
 
                 download_url = f"/downloads/{urllib.parse.quote(sanitized_filename)}"
-                
+
                 sio.emit('progress_update', {
                     'download_id': download_id, 
                     'status': '✅ Completo',
@@ -140,12 +158,8 @@ def start_download(sid, data):
                 print(f"✅ Descarga completada: {sanitized_filename}")
                 print(f"🔗 Enlace de descarga: {download_url}")
 
-        # Seleccionar configuración según el tipo de descarga
-        if download_type == 'audio':
-            ydl_opts = ydl_opts_audio.copy()
-        else:
-            ydl_opts = ydl_opts_video.copy()
-            
+        # Obtener configuración optimizada según la URL
+        ydl_opts = get_ydl_opts_for_url(url, download_type)
         ydl_opts_with_progress = {**ydl_opts, 'progress_hooks': [progress_hook]}
 
         with yt_dlp.YoutubeDL(ydl_opts_with_progress) as ydl:
@@ -157,7 +171,16 @@ def start_download(sid, data):
             ydl.download([url])
 
     except Exception as e:
-        error_message = f'Error: {str(e)}'
+        error_str = str(e)
+        
+        # Manejar errores específicos de Pinterest
+        if 'pinterest' in url.lower() and 'format' in error_str.lower():
+            error_message = 'Pinterest: Formato no disponible. Intenta con otro video o verifica que sea público.'
+        elif 'pinterest' in url.lower():
+            error_message = 'Pinterest: No se pudo descargar el video. Verifica la URL.'
+        else:
+            error_message = f'Error: {error_str}'
+        
         print(f"❌ {error_message}")
         sio.emit('progress_update', {
             'download_id': download_id, 
@@ -168,15 +191,15 @@ def start_download(sid, data):
 def serve_application(environ, start_response):
     """Middleware WSGI para manejar archivos estáticos y la aplicación Socket.IO"""
     path = environ['PATH_INFO']
-    
+
     if path.startswith('/downloads/'):
         filename_encoded = path[11:]
         filename = urllib.parse.unquote(filename_encoded)
-        
+
         file_path = os.path.join('downloads', filename)
-        
+
         print(f"📥 Solicitud de descarga directa: {filename}")
-        
+
         if os.path.exists(file_path) and os.path.isfile(file_path):
             if filename in file_expirations and datetime.now() < file_expirations[filename]:
                 headers = [
@@ -189,7 +212,7 @@ def serve_application(environ, start_response):
                 ]
                 start_response('200 OK', headers)
                 print(f"✅ Sirviendo archivo para descarga: {filename}")
-                
+
                 with open(file_path, 'rb') as f:
                     return [f.read()]
             else:
@@ -200,7 +223,7 @@ def serve_application(environ, start_response):
             print(f"❌ Archivo no encontrado: {filename}")
             start_response('404 Not Found', [('Content-Type', 'text/plain')])
             return [b'Archivo no encontrado']
-    
+
     if path == '/' or path == '':
         try:
             with open('static/index.html', 'rb') as f:
@@ -210,7 +233,7 @@ def serve_application(environ, start_response):
         except FileNotFoundError:
             start_response('404 Not Found', [('Content-Type', 'text/plain')])
             return [b'Archivo HTML no encontrado']
-    
+
     return app(environ, start_response)
 
 if __name__ == '__main__':
@@ -220,11 +243,12 @@ if __name__ == '__main__':
     print(f"⏰ Los archivos se eliminarán automáticamente después de 15 minutos")
     print(f"🎯 Sistema de estados: Conectando → Iniciando → Descargando → Completo")
     print(f"🔧 Funcionalidades: Descarga de video/audio + cookies para YouTube")
-    
+    print(f"📌 Soporte mejorado para Pinterest")
+
     # Verificar si existe el archivo de cookies
     if os.path.exists('cookies.txt'):
         print(f"✅ Archivo de cookies encontrado")
     else:
         print(f"⚠️  Archivo de cookies no encontrado - algunas descargas pueden fallar")
-    
+
     eventlet.wsgi.server(eventlet.listen(('0.0.0.0', port)), serve_application)
