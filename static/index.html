@@ -1,530 +1,254 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Descargador Premium</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <style>
-        * { 
-            margin: 0; 
-            padding: 0; 
-            box-sizing: border-box; 
-        }
+import socketio
+import eventlet
+import eventlet.wsgi
+import yt_dlp
+import os
+import threading
+import time
+import re
+import urllib.parse
+import random
+import string
+from datetime import datetime, timedelta
+
+# Configuraciones actualizadas para yt-dlp
+ydl_opts_video = {
+    'format': 'best[height<=720]/best[height<=480]/best/bestvideo+bestaudio',
+    'outtmpl': 'downloads/%(title)s.%(ext)s',
+    'cookies': 'cookies.txt',
+    'merge_output_format': 'mp4',  # Forzar formato de salida
+    'ignoreerrors': True,  # Ignorar errores de formato
+}
+
+ydl_opts_audio = {
+    'format': 'bestaudio/best',
+    'outtmpl': 'downloads/%(title)s.%(ext)s',
+    'cookies': 'cookies.txt',
+    'postprocessors': [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'mp3',
+        'preferredquality': '192',
+    }],
+    'ignoreerrors': True,  # Ignorar errores de formato
+}
+
+sio = socketio.Server(cors_allowed_origins='*')
+app = socketio.WSGIApp(sio)
+
+# Asegurar que existe el directorio de descargas
+os.makedirs('downloads', exist_ok=True)
+
+# Diccionario para trackear archivos y su tiempo de expiración
+file_expirations = {}
+
+def cleanup_expired_files():
+    """Elimina archivos expirados cada minuto"""
+    while True:
+        try:
+            current_time = datetime.now()
+            expired_files = []
+
+            for filename, expiry_time in list(file_expirations.items()):
+                if current_time >= expiry_time:
+                    expired_files.append(filename)
+
+            for filename in expired_files:
+                file_path = os.path.join('downloads', filename)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    print(f"🗑️ Archivo eliminado: {filename}")
+                del file_expirations[filename]
+
+        except Exception as e:
+            print(f"❌ Error en cleanup: {e}")
+
+        time.sleep(60)  # Revisar cada minuto
+
+# Iniciar hilo de limpieza en segundo plano
+cleanup_thread = threading.Thread(target=cleanup_expired_files, daemon=True)
+cleanup_thread.start()
+
+def generar_nombre_aleatorio(longitud=12):
+    """Genera un nombre de archivo aleatorio"""
+    caracteres = string.ascii_letters + string.digits
+    return ''.join(random.choice(caracteres) for _ in range(longitud))
+
+def sanitize_filename(filename):
+    """Reemplaza el nombre original por uno aleatorio manteniendo la extensión"""
+    nombre_base, extension = os.path.splitext(filename)
+    nuevo_nombre = generar_nombre_aleatorio(12) + extension.lower()
+
+    downloads_path = 'downloads/'
+    while os.path.exists(os.path.join(downloads_path, nuevo_nombre)):
+        nuevo_nombre = generar_nombre_aleatorio(12) + extension.lower()
+
+    return nuevo_nombre
+
+def get_ydl_opts_for_url(url, download_type):
+    """Obtiene configuración optimizada según la URL"""
+    if download_type == 'audio':
+        base_opts = ydl_opts_audio.copy()
+    else:
+        base_opts = ydl_opts_video.copy()
+    
+    # Configuración específica para Pinterest
+    if any(domain in url.lower() for domain in ['pinterest.', 'pin.it']):
+        base_opts.update({
+            'format': 'best',  # Formato más simple para Pinterest
+            'ignoreerrors': True,
+        })
+    
+    return base_opts
+
+@sio.event
+def connect(sid, environ):
+    print('✅ Cliente conectado:', sid)
+
+@sio.event
+def disconnect(sid):
+    print('❌ Cliente desconectado:', sid)
+
+@sio.event
+def start_download(sid, data):
+    url = data['url']
+    download_type = data.get('download_type', 'video')  # 'video' o 'audio'
+    download_id = data.get('download_id', 'default_id')
+
+    try:
+        sio.emit('progress_update', {
+            'download_id': download_id, 
+            'status': '🔄 Conectando...',
+            'type': download_type
+        })
+
+        def progress_hook(d):
+            if d['status'] == 'downloading':
+                sio.emit('progress_update', {
+                    'download_id': download_id, 
+                    'status': '📥 Descargando...',
+                    'type': download_type
+                })
+            elif d['status'] == 'finished':
+                # Obtener y sanitizar el nombre del archivo
+                original_filename = os.path.basename(d['filename'])
+                sanitized_filename = sanitize_filename(original_filename)
+
+                # Renombrar el archivo
+                original_path = d['filename']
+                new_path = os.path.join('downloads', sanitized_filename)
+
+                if original_path != new_path and os.path.exists(original_path):
+                    os.rename(original_path, new_path)
+                    print(f"📝 Archivo renombrado: {original_filename} -> {sanitized_filename}")
+
+                # Registrar archivo para eliminación en 15 minutos
+                expiry_time = datetime.now() + timedelta(minutes=15)
+                file_expirations[sanitized_filename] = expiry_time
+
+                download_url = f"/downloads/{urllib.parse.quote(sanitized_filename)}"
+
+                sio.emit('progress_update', {
+                    'download_id': download_id, 
+                    'status': '✅ Completo',
+                    'filename': sanitized_filename,
+                    'download_url': download_url,
+                    'expires_at': expiry_time.isoformat(),
+                    'type': download_type
+                })
+                print(f"✅ Descarga completada: {sanitized_filename}")
+                print(f"🔗 Enlace de descarga: {download_url}")
+
+        # Obtener configuración optimizada según la URL
+        ydl_opts = get_ydl_opts_for_url(url, download_type)
+        ydl_opts_with_progress = {**ydl_opts, 'progress_hooks': [progress_hook]}
+
+        with yt_dlp.YoutubeDL(ydl_opts_with_progress) as ydl:
+            sio.emit('progress_update', {
+                'download_id': download_id, 
+                'status': '🚀 Iniciando...',
+                'type': download_type
+            })
+            ydl.download([url])
+
+    except Exception as e:
+        error_str = str(e)
         
-        :root {
-            --dark-bg: #0f172a;
-            --dark-card: #1e293b;
-            --dark-border: #334155;
-            --dark-text: #f1f5f9;
-            --dark-text-secondary: #94a3b8;
-            --primary-blue: #3b82f6;
-            --blue-hover: #2563eb;
-            --blue-glow: rgba(59, 130, 246, 0.3);
-            --gradient: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
-        }
+        # Manejar errores específicos de Pinterest
+        if 'pinterest' in url.lower() and 'format' in error_str.lower():
+            error_message = 'Pinterest: Formato no disponible. Intenta con otro video o verifica que sea público.'
+        elif 'pinterest' in url.lower():
+            error_message = 'Pinterest: No se pudo descargar el video. Verifica la URL.'
+        else:
+            error_message = f'Error: {error_str}'
         
-        body {
-            font-family: 'Poppins', sans-serif;
-            background: var(--dark-bg);
-            color: var(--dark-text);
-            min-height: 100vh;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            line-height: 1.6;
-        }
+        print(f"❌ {error_message}")
+        sio.emit('progress_update', {
+            'download_id': download_id, 
+            'status': f'❌ {error_message}',
+            'type': download_type
+        })
 
-        .container {
-            width: 100%;
-            max-width: 500px;
-            background: var(--dark-card);
-            border-radius: 20px;
-            border: 1px solid var(--dark-border);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
-        }
+def serve_application(environ, start_response):
+    """Middleware WSGI para manejar archivos estáticos y la aplicación Socket.IO"""
+    path = environ['PATH_INFO']
 
-        .header {
-            background: var(--gradient);
-            padding: 40px 30px;
-            text-align: center;
-            position: relative;
-        }
+    if path.startswith('/downloads/'):
+        filename_encoded = path[11:]
+        filename = urllib.parse.unquote(filename_encoded)
 
-        .logo {
-            font-size: 3.5rem;
-            margin-bottom: 15px;
-            color: white;
-            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
-        }
+        file_path = os.path.join('downloads', filename)
 
-        h1 {
-            font-size: 2.2rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: white;
-        }
+        print(f"📥 Solicitud de descarga directa: {filename}")
 
-        .subtitle {
-            font-size: 1rem;
-            opacity: 0.9;
-            font-weight: 300;
-        }
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            if filename in file_expirations and datetime.now() < file_expirations[filename]:
+                headers = [
+                    ('Content-Type', 'application/octet-stream'),
+                    ('Content-Disposition', f'attachment; filename="{filename}"'),
+                    ('Cache-Control', 'no-cache, must-revalidate'),
+                    ('Pragma', 'no-cache'),
+                    ('Expires', '0'),
+                    ('Content-Length', str(os.path.getsize(file_path)))
+                ]
+                start_response('200 OK', headers)
+                print(f"✅ Sirviendo archivo para descarga: {filename}")
 
-        .content {
-            padding: 30px;
-        }
+                with open(file_path, 'rb') as f:
+                    return [f.read()]
+            else:
+                print(f"⏰ Archivo expirado: {filename}")
+                start_response('410 Gone', [('Content-Type', 'text/plain')])
+                return [b'Archivo expirado o no disponible']
+        else:
+            print(f"❌ Archivo no encontrado: {filename}")
+            start_response('404 Not Found', [('Content-Type', 'text/plain')])
+            return [b'Archivo no encontrado']
 
-        .download-type-selector {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 25px;
-            background: rgba(30, 41, 59, 0.8);
-            padding: 8px;
-            border-radius: 12px;
-            border: 1px solid var(--dark-border);
-        }
+    if path == '/' or path == '':
+        try:
+            with open('static/index.html', 'rb') as f:
+                html_content = f.read()
+            start_response('200 OK', [('Content-Type', 'text/html')])
+            return [html_content]
+        except FileNotFoundError:
+            start_response('404 Not Found', [('Content-Type', 'text/plain')])
+            return [b'Archivo HTML no encontrado']
 
-        .type-btn {
-            flex: 1;
-            padding: 14px 16px;
-            border: none;
-            border-radius: 8px;
-            background: transparent;
-            color: var(--dark-text-secondary);
-            font-family: 'Poppins', sans-serif;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
+    return app(environ, start_response)
 
-        .type-btn.active {
-            background: var(--primary-blue);
-            color: white;
-            box-shadow: 0 4px 12px var(--blue-glow);
-        }
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 10000))
+    print(f"🚀 Servidor ejecutándose en 0.0.0.0:{port}")
+    print(f"📁 Directorio actual: {os.getcwd()}")
+    print(f"⏰ Los archivos se eliminarán automáticamente después de 15 minutos")
+    print(f"🎯 Sistema de estados: Conectando → Iniciando → Descargando → Completo")
+    print(f"🔧 Funcionalidades: Descarga de video/audio + cookies para YouTube")
+    print(f"📌 Soporte mejorado para Pinterest")
 
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin-bottom: 25px;
-        }
+    # Verificar si existe el archivo de cookies
+    if os.path.exists('cookies.txt'):
+        print(f"✅ Archivo de cookies encontrado")
+    else:
+        print(f"⚠️  Archivo de cookies no encontrado - algunas descargas pueden fallar")
 
-        .url-input {
-            width: 100%;
-            padding: 16px 20px;
-            border: 2px solid var(--dark-border);
-            border-radius: 12px;
-            font-family: 'Poppins', sans-serif;
-            font-size: 15px;
-            background: rgba(30, 41, 59, 0.8);
-            color: var(--dark-text);
-            transition: all 0.3s ease;
-        }
-
-        .url-input:focus {
-            outline: none;
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 0 3px var(--blue-glow);
-        }
-
-        .url-input::placeholder {
-            color: var(--dark-text-secondary);
-        }
-
-        .download-btn {
-            background: var(--primary-blue);
-            border: none;
-            color: white;
-            padding: 16px 24px;
-            border-radius: 12px;
-            cursor: pointer;
-            font-family: 'Poppins', sans-serif;
-            font-size: 16px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            box-shadow: 0 4px 15px var(--blue-glow);
-        }
-
-        .download-btn:hover {
-            background: var(--blue-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px var(--blue-glow);
-        }
-
-        .download-btn:disabled {
-            background: #475569;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-            opacity: 0.7;
-        }
-
-        .status-section {
-            margin-top: 30px;
-        }
-
-        .section-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: var(--dark-text);
-        }
-
-        .status-list {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .status-item {
-            background: rgba(30, 41, 59, 0.8);
-            border-radius: 12px;
-            padding: 20px;
-            border-left: 4px solid var(--primary-blue);
-            transition: all 0.3s ease;
-            border: 1px solid var(--dark-border);
-        }
-
-        .status-item.audio {
-            border-left-color: #ec4899;
-        }
-
-        .status-item.completed {
-            border-left-color: #10b981;
-            background: rgba(16, 185, 129, 0.1);
-        }
-
-        .status-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-
-        .status-title {
-            font-weight: 600;
-            font-size: 0.95rem;
-            color: var(--dark-text);
-        }
-
-        .status-badge {
-            font-size: 0.75rem;
-            padding: 4px 8px;
-            border-radius: 8px;
-            background: rgba(59, 130, 246, 0.2);
-            color: var(--primary-blue);
-        }
-
-        .status-badge.audio {
-            background: rgba(236, 72, 153, 0.2);
-            color: #ec4899;
-        }
-
-        .status-text {
-            font-size: 0.9rem;
-            color: var(--dark-text-secondary);
-            min-height: 20px;
-        }
-
-        .status-processing { color: #f59e0b; }
-        .status-downloading { color: #f59e0b; }
-        .status-complete { color: #10b981; }
-
-        .completed-message {
-            margin-top: 15px;
-            padding: 15px;
-            background: rgba(16, 185, 129, 0.1);
-            border-radius: 8px;
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            text-align: center;
-        }
-
-        .auto-download-info {
-            font-size: 0.8rem;
-            margin-top: 8px;
-            opacity: 0.8;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-
-        .expiry-info {
-            font-size: 0.75rem;
-            margin-top: 10px;
-            opacity: 0.7;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            justify-content: center;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            opacity: 0.6;
-        }
-
-        .empty-state i {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            color: var(--dark-text-secondary);
-        }
-
-        /* Scrollbar personalizado */
-        .status-list::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .status-list::-webkit-scrollbar-track {
-            background: rgba(30, 41, 59, 0.8);
-            border-radius: 3px;
-        }
-
-        .status-list::-webkit-scrollbar-thumb {
-            background: var(--primary-blue);
-            border-radius: 3px;
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                margin: 10px;
-            }
-            
-            .header {
-                padding: 30px 20px;
-            }
-            
-            .logo {
-                font-size: 3rem;
-            }
-            
-            h1 {
-                font-size: 1.8rem;
-            }
-            
-            .content {
-                padding: 20px;
-            }
-            
-            .download-type-selector {
-                flex-direction: column;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">
-                <i class="fas fa-cloud-download-alt"></i>
-            </div>
-            <h1>Descargador Premium</h1>
-            <p class="subtitle">Descarga videos y audio en calidad premium</p>
-        </div>
-
-        <div class="content">
-            <div class="download-type-selector">
-                <button class="type-btn active" id="videoBtn" onclick="selectType('video')">
-                    <i class="fas fa-video"></i>
-                    Video
-                </button>
-                <button class="type-btn" id="audioBtn" onclick="selectType('audio')">
-                    <i class="fas fa-music"></i>
-                    Audio
-                </button>
-            </div>
-
-            <div class="input-group">
-                <input type="url" class="url-input" id="urlInput" 
-                       placeholder="https://youtube.com/watch?v=..." required>
-                <button class="download-btn" id="downloadBtn" onclick="startDownload()">
-                    <i class="fas fa-download"></i>
-                    Descargar
-                </button>
-            </div>
-
-            <div class="status-section">
-                <h2 class="section-title">
-                    <i class="fas fa-list"></i>
-                    Estado de Descargas
-                </h2>
-                <div class="status-list" id="statusList">
-                    <div class="empty-state">
-                        <i class="fas fa-cloud-download-alt"></i>
-                        <p>No hay descargas activas</p>
-                        <p style="font-size: 0.85rem; margin-top: 8px; opacity: 0.7;">
-                            Pega una URL y haz clic en Descargar
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const socket = io();
-        const statusList = document.getElementById('statusList');
-        const downloadBtn = document.getElementById('downloadBtn');
-        const urlInput = document.getElementById('urlInput');
-        const videoBtn = document.getElementById('videoBtn');
-        const audioBtn = document.getElementById('audioBtn');
-        
-        let selectedType = 'video';
-        
-        socket.on('connect', () => {
-            console.log('✅ Conectado al servidor');
-        });
-        
-        socket.on('progress_update', (data) => {
-            updateDownloadProgress(data.download_id, data.status, data.filename, data.download_url, data.expires_at, data.type);
-        });
-        
-        function selectType(type) {
-            selectedType = type;
-            if (type === 'video') {
-                videoBtn.classList.add('active');
-                audioBtn.classList.remove('active');
-            } else {
-                audioBtn.classList.add('active');
-                videoBtn.classList.remove('active');
-            }
-            downloadBtn.disabled = false;
-            downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar';
-        }
-        
-        urlInput.addEventListener('input', function() {
-            downloadBtn.disabled = false;
-            downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar';
-        });
-        
-        function startDownload() {
-            const url = urlInput.value.trim();
-            
-            if (url) {
-                const downloadId = 'download_' + Date.now();
-                addStatusItem(downloadId, selectedType);
-                socket.emit('start_download', { 
-                    url: url, 
-                    download_id: downloadId,
-                    download_type: selectedType 
-                });
-                
-                downloadBtn.disabled = true;
-                downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
-                
-            } else {
-                alert('Por favor, ingresa una URL válida');
-            }
-        }
-        
-        function addStatusItem(downloadId, type) {
-            if (statusList.children.length === 1 && statusList.children[0].classList.contains('empty-state')) {
-                statusList.innerHTML = '';
-            }
-            
-            const statusItem = document.createElement('div');
-            statusItem.className = `status-item ${type}`;
-            statusItem.id = `status-${downloadId}`;
-            
-            const typeLabel = type === 'video' ? 'Video' : 'Audio';
-            
-            statusItem.innerHTML = `
-                <div class="status-header">
-                    <div class="status-title">Preparando descarga de ${typeLabel}...</div>
-                    <div class="status-badge ${type}">
-                        <i class="fas ${type === 'video' ? 'fa-video' : 'fa-music'}"></i> ${typeLabel}
-                    </div>
-                </div>
-                <div class="status-text" id="statusText-${downloadId}">
-                    <span class="status-processing">🔄 Conectando con el servidor...</span>
-                </div>
-            `;
-            statusList.prepend(statusItem);
-        }
-        
-        function updateDownloadProgress(downloadId, status, filename = null, downloadUrl = null, expiresAt = null, type = 'video') {
-            const statusItem = document.getElementById(`status-${downloadId}`);
-            const statusText = document.getElementById(`statusText-${downloadId}`);
-            
-            if (statusText) {
-                if (status.includes('Conectando')) {
-                    statusText.innerHTML = '<span class="status-processing">🔄 Conectando con el servidor...</span>';
-                } else if (status.includes('Iniciando')) {
-                    statusText.innerHTML = '<span class="status-processing">🚀 Iniciando descarga...</span>';
-                } else if (status.includes('Descargando')) {
-                    statusText.innerHTML = '<span class="status-downloading">📥 Descargando contenido...</span>';
-                } else if (status.includes('Completo') || status.includes('✅')) {
-                    statusText.innerHTML = `
-                        <div>
-                            <span class="status-complete">✅ ${status}</span>
-                            <div class="completed-message">
-                                <div class="auto-download-info">
-                                    <i class="fas fa-info-circle"></i>
-                                    El archivo se descargará automáticamente...
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    if (expiresAt) {
-                        const expiryTime = new Date(expiresAt);
-                        const expiryElement = document.createElement('div');
-                        expiryElement.className = 'expiry-info';
-                        expiryElement.innerHTML = `<i class="fas fa-clock"></i> Válido hasta: ${expiryTime.toLocaleString()}`;
-                        statusText.appendChild(expiryElement);
-                    }
-                    
-                    setTimeout(() => {
-                        const fullDownloadUrl = window.location.origin + downloadUrl;
-                        const downloadLink = document.createElement('a');
-                        downloadLink.href = fullDownloadUrl;
-                        downloadLink.download = filename;
-                        document.body.appendChild(downloadLink);
-                        downloadLink.click();
-                        document.body.removeChild(downloadLink);
-                        
-                        downloadBtn.disabled = false;
-                        downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar';
-                    }, 1000);
-                    
-                } else if (status.includes('❌')) {
-                    statusText.innerHTML = `<span style="color: #ef4444;">❌ ${status}</span>`;
-                    downloadBtn.disabled = false;
-                    downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar';
-                } else {
-                    statusText.textContent = status;
-                }
-            }
-        }
-
-        urlInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                startDownload();
-            }
-        });
-
-        urlInput.focus();
-    </script>
-</body>
-</html>
+    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', port)), serve_application)
