@@ -149,7 +149,8 @@ class YouChatBot {
 
             console.log("📧 Mensaje RAW construido, procediendo a enviar...");
 
-            const transporter = nodemailer.createTransporter({
+            // ✅ CORREGIDO: createTransport en lugar de createTransporter
+            const transporter = nodemailer.createTransport({
                 host: CONFIG.SMTP_SERVER,
                 port: CONFIG.SMTP_PORT,
                 secure: false,
@@ -161,6 +162,7 @@ class YouChatBot {
             });
 
             console.log("🔗 Conectando al servidor SMTP...");
+            
             await transporter.sendMail({
                 from: CONFIG.EMAIL_ACCOUNT,
                 to: destinatario,
