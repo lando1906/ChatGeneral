@@ -2,7 +2,6 @@ import os
 import time
 import imaplib
 import email
-from email.message import EmailMessage
 import smtplib
 from flask import Flask, jsonify
 import threading
@@ -16,28 +15,24 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # =============================================================================
-# CONFIGURACIÓN PARA GMAIL (ACCESIBLE DESDE RENDER)
+# CONFIGURACIÓN PARA GMAIL
 # =============================================================================
 
-# 🔐 CONFIGURA TUS CREDENCIALES DE GMAIL AQUÍ
-EMAIL_ACCOUNT = "videodown797@gmail.com"  # 📧 Tu correo Gmail
-EMAIL_PASSWORD = "nlhoedrevnlihgdo"    # 🔑 Tu contraseña de aplicación
+EMAIL_ACCOUNT = "videodown797@gmail.com"
+EMAIL_PASSWORD = "nlhoedrevnlihgdo"
 
-# Configuración servidores Gmail
 IMAP_SERVER = "imap.gmail.com"
 IMAP_PORT = 993
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 
-# Usar el mismo correo para SMTP
 SMTP_ACCOUNT = EMAIL_ACCOUNT
 SMTP_PASSWORD = EMAIL_PASSWORD
 
-# ⚙️ Configuración del bot
 CHECK_INTERVAL = 3
 
 # =============================================================================
-# FUNCIONES DEL BOT YOUCHAT
+# FUNCIONES DEL BOT YOUCHAT - VERSIÓN RAW
 # =============================================================================
 
 class YouChatBot:
@@ -48,7 +43,7 @@ class YouChatBot:
         self.total_processed = 0
     
     def extraer_headers_youchat(self, mensaje_email):
-        """Extrae TODOS los headers específicos de YouChat del mensaje entrante"""
+        """Extrae headers específicos de YouChat"""
         headers_youchat = {}
         
         headers_especificos = [
@@ -70,75 +65,98 @@ class YouChatBot:
         try:
             mail = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
             mail.login(EMAIL_ACCOUNT, EMAIL_PASSWORD)
-            logger.info(f"✅ Conexión IMAP exitosa a {IMAP_SERVER}")
             return mail
         except Exception as e:
             logger.error(f"❌ Error conexión IMAP: {str(e)}")
             return None
 
-    def enviar_respuesta_youchat(self, destinatario, msg_id_original=None, youchat_profile_headers=None):
-        """Envía una respuesta con los headers EXACTOS que requiere YouChat"""
+    def construir_mensaje_raw_youchat(self, destinatario, msg_id_original=None, youchat_profile_headers=None):
+        """Construye el mensaje en formato RAW exacto para YouChat"""
         try:
-            msg = EmailMessage()
-            
-            # 1. HEADERS BÁSICOS
-            msg["From"] = SMTP_ACCOUNT
-            msg["To"] = destinatario
-            msg["Subject"] = "YouChat"
-            
-            # 2. HEADERS DE YOUCHAT GENERALES
+            # 1. Headers de YouChat Generales
+            headers_string = ""
             if youchat_profile_headers and isinstance(youchat_profile_headers, dict):
                 for key, value in youchat_profile_headers.items():
-                    if value and key not in ['Msg_id', 'Chat-Version', 'Pd', 'Sender-Alias', 'From-Alias', 'Message-ID']:
-                        msg[key] = str(value)
+                    if value and key not in ['Msg_id', 'Chat-Version', 'Pd', 'Sender-Alias', 'From-Alias']:
+                        headers_string += f"{key}: {value}\r\n"
             
-            # 3. HEADERS DE THREADING (CRÍTICOS)
-            # NO agregar Message-ID manualmente - Python lo genera automáticamente
+            # 2. Headers de Threading
+            domain = SMTP_ACCOUNT.split('@')[1]
+            headers_string += f"Message-ID: <auto-reply-{int(time.time()*1000)}@{domain}>\r\n"
             
             if msg_id_original:
                 clean_message_id = msg_id_original
                 if not (msg_id_original.startswith('<') and msg_id_original.endswith('>')):
                     clean_message_id = f"<{msg_id_original}>"
                 
-                msg['In-Reply-To'] = clean_message_id
-                msg['References'] = clean_message_id
+                headers_string += f"In-Reply-To: {clean_message_id}\r\n"
+                headers_string += f"References: {clean_message_id}\r\n"
             
-            # 4. HEADERS ESPECÍFICOS DEL BOT YOUCHAT
-            msg['Msg_id'] = f"auto-reply-{int(time.time()*1000)}"
+            # 3. Headers del Bot
+            headers_string += f"Msg_id: auto-reply-{int(time.time()*1000)}\r\n"
             
             chat_version = '1.1'
             if youchat_profile_headers and 'Chat-Version' in youchat_profile_headers:
                 chat_version = youchat_profile_headers['Chat-Version']
-            msg['Chat-Version'] = chat_version
+            headers_string += f"Chat-Version: {chat_version}\r\n"
             
             pd_value = None
             if youchat_profile_headers and 'Pd' in youchat_profile_headers:
                 pd_value = youchat_profile_headers['Pd']
             if pd_value:
-                msg['Pd'] = str(pd_value).strip()
+                headers_string += f"Pd: {str(pd_value).strip()}\r\n"
             
-            # 5. HEADERS ESTÁNDAR
-            msg['MIME-Version'] = '1.0'
+            # 4. Headers Estándar
+            headers_string += "MIME-Version: 1.0\r\n"
+            headers_string += 'Content-Type: text/plain; charset="UTF-8"\r\n'
             
-            # 6. CONTENIDO DEL MENSAJE
-            mensaje_respuesta = "¡Hola! Soy un bot en desarrollo. Pronto podré descargar tus Reels de Instagram."
-            msg.set_content(mensaje_respuesta)
+            # 5. Construcción FINAL del mensaje RAW
+            mensaje_texto = "¡Hola! Soy un bot en desarrollo. Pronto podré descargar tus Reels de Instagram."
             
-            # ENVÍO CON SMTP GMAIL
+            mail_raw = (
+                f"From: {SMTP_ACCOUNT}\r\n" +
+                f"To: {destinatario}\r\n" +
+                f"Subject: YouChat\r\n" +
+                headers_string +
+                f"\r\n" +
+                f"{mensaje_texto}"
+            )
+            
+            return mail_raw.encode('utf-8')
+            
+        except Exception as e:
+            logger.error(f"❌ Error construyendo mensaje RAW: {str(e)}")
+            return None
+
+    def enviar_respuesta_raw(self, destinatario, msg_id_original=None, youchat_profile_headers=None):
+        """Envía respuesta usando formato RAW"""
+        try:
+            # Construir mensaje RAW
+            mensaje_raw = self.construir_mensaje_raw_youchat(
+                destinatario, 
+                msg_id_original, 
+                youchat_profile_headers
+            )
+            
+            if not mensaje_raw:
+                return False
+            
+            # Enviar usando SMTP
             with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as servidor:
                 servidor.starttls()
                 servidor.login(SMTP_ACCOUNT, SMTP_PASSWORD)
-                servidor.send_message(msg)
+                # Enviar mensaje RAW
+                servidor.sendmail(SMTP_ACCOUNT, destinatario, mensaje_raw)
             
-            logger.info("✅ Respuesta enviada a: %s", destinatario)
+            logger.info("✅ Respuesta RAW enviada a: %s", destinatario)
             return True
             
         except Exception as e:
-            logger.error("❌ Error enviando respuesta: %s", str(e))
+            logger.error("❌ Error enviando respuesta RAW: %s", str(e))
             return False
 
     def procesar_emails_no_leidos(self):
-        """Función principal que revisa emails no leídos y responde automáticamente"""
+        """Función principal que revisa emails no leídos"""
         try:
             mail = self.conectar_imap()
             if not mail:
@@ -184,7 +202,8 @@ class YouChatBot:
                     if msg_id_original:
                         logger.info("🔗 Message-ID del mensaje original: %s", msg_id_original)
                     
-                    exito = self.enviar_respuesta_youchat(
+                    # Usar el nuevo método RAW
+                    exito = self.enviar_respuesta_raw(
                         email_remitente,
                         msg_id_original=msg_id_original,
                         youchat_profile_headers=headers_youchat
@@ -213,11 +232,9 @@ class YouChatBot:
     def run_bot(self):
         """Ejecuta el bot en un bucle continuo"""
         self.is_running = True
-        logger.info("🚀 Bot YouChat INICIADO")
+        logger.info("🚀 Bot YouChat INICIADO - VERSIÓN RAW")
         logger.info("⏰ Intervalo: %d segundos", CHECK_INTERVAL)
         logger.info("📧 Cuenta Gmail: %s", EMAIL_ACCOUNT)
-        logger.info("🌐 Servidor IMAP: %s:%d", IMAP_SERVER, IMAP_PORT)
-        logger.info("🌐 Servidor SMTP: %s:%d", SMTP_SERVER, SMTP_PORT)
         
         while self.is_running:
             try:
@@ -229,7 +246,7 @@ class YouChatBot:
                 time.sleep(CHECK_INTERVAL)
                 
             except Exception as e:
-                logger.error("💥 Error en el bucle principal: %s", str(e))
+                logger.error("💥 Error en el bucle principal: %s", str(e)")
                 time.sleep(CHECK_INTERVAL)
 
 # =============================================================================
@@ -247,7 +264,7 @@ bot_thread = None
 def home():
     return jsonify({
         "status": "online",
-        "service": "YouChat Bot - Gmail",
+        "service": "YouChat Bot - RAW Version",
         "version": "1.0",
         "interval": f"{CHECK_INTERVAL} segundos",
         "email_account": EMAIL_ACCOUNT,
@@ -264,64 +281,14 @@ def health():
         "bot_running": youchat_bot.is_running
     })
 
-@app.route('/start')
-def start_bot():
-    global bot_thread
-    
-    if youchat_bot.is_running:
-        return jsonify({"status": "already_running", "message": "El bot ya está en ejecución"})
-    
-    bot_thread = threading.Thread(target=youchat_bot.run_bot, daemon=True)
-    bot_thread.start()
-    
-    return jsonify({"status": "started", "message": "Bot iniciado correctamente"})
-
-@app.route('/stop')
-def stop_bot():
-    youchat_bot.is_running = False
-    return jsonify({"status": "stopped", "message": "Bot detenido"})
-
-@app.route('/status')
-def status():
-    return jsonify({
-        "is_running": youchat_bot.is_running,
-        "last_check": youchat_bot.last_check.isoformat() if youchat_bot.last_check else None,
-        "total_processed": youchat_bot.total_processed,
-        "check_interval": CHECK_INTERVAL
-    })
-
-@app.route('/test')
-def test_bot():
-    """Endpoint para probar el bot manualmente"""
-    try:
-        # Simular procesamiento de un email
-        test_email = "miguelorlandos@nauta.cu"
-        logger.info("🧪 Probando envío a: %s", test_email)
-        
-        exito = youchat_bot.enviar_respuesta_youchat(test_email)
-        
-        return jsonify({
-            "status": "test_completed",
-            "success": exito,
-            "test_email": test_email
-        })
-    except Exception as e:
-        return jsonify({"status": "test_failed", "error": str(e)})
-
-# =============================================================================
-# INICIALIZACIÓN AUTOMÁTICA
-# =============================================================================
-
+# Inicialización automática
 def inicializar_bot():
-    """Inicializa el bot automáticamente al cargar la aplicación"""
     global bot_thread
-    
     logger.info("🔧 Iniciando bot automáticamente...")
     bot_thread = threading.Thread(target=youchat_bot.run_bot, daemon=True)
     bot_thread.start()
     logger.info("🎉 Bot iniciado y listo para recibir mensajes")
 
-# Iniciar el bot cuando se carga la aplicación
 inicializar_bot()
 
 if __name__ == '__main__':
