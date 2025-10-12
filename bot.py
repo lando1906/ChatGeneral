@@ -16,19 +16,22 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # =============================================================================
-# CONFIGURACIÓN DIRECTA - ACTUALIZA ESTOS VALORES
+# CONFIGURACIÓN PARA NAUTA CUBA
 # =============================================================================
 
-# 🔐 CONFIGURA TUS CREDENCIALES AQUÍ
-IMAP_SERVER = "imap.gmail.com"
-IMAP_PORT = 993
-EMAIL_ACCOUNT = "videodown797@gmail.com"  # 📧 Cambia por tu email
-EMAIL_PASSWORD = "lhatdyeghjthuonz"  # 🔑 Cambia por tu contraseña de aplicación
+# 🔐 CONFIGURA TUS CREDENCIALES DE NAUTA AQUÍ
+EMAIL_ACCOUNT = "miguelorlandos@nauta.cu"  # 📧 Cambia por tu usuario Nauta
+EMAIL_PASSWORD = "TdrPQQxq"  # 🔑 Cambia por tu contraseña Nauta
 
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 465
-SMTP_ACCOUNT = "videodown 797@gmail.com"  # 📧 Mismo email
-SMTP_PASSWORD = "lhatdyeghjthuonz"  # 🔑 Misma contraseña
+# Configuración servidores Nauta
+IMAP_SERVER = "imap.nauta.cu"
+IMAP_PORT = 143  # Puerto IMAP de Nauta
+SMTP_SERVER = "smtp.nauta.cu"
+SMTP_PORT = 25   # Puerto SMTP de Nauta
+
+# Usar el mismo correo para SMTP
+SMTP_ACCOUNT = EMAIL_ACCOUNT
+SMTP_PASSWORD = EMAIL_PASSWORD
 
 # ⚙️ Configuración del bot
 CHECK_INTERVAL = 3  # ⏰ 3 segundos entre revisiones
@@ -61,6 +64,18 @@ class YouChatBot:
                 headers_youchat[header] = valor
         
         return headers_youchat
+
+    def conectar_imap_nauta(self):
+        """Conexión IMAP específica para servidores Nauta"""
+        try:
+            # Para puerto 143 puede necesitar STARTTLS
+            mail = imaplib.IMAP4(IMAP_SERVER, IMAP_PORT)
+            mail.starttls()  # Importante para seguridad en puerto 143
+            mail.login(EMAIL_ACCOUNT, EMAIL_PASSWORD)
+            return mail
+        except Exception as e:
+            logger.error(f"❌ Error conexión IMAP Nauta: {str(e)}")
+            return None
 
     def enviar_respuesta_youchat(self, destinatario, msg_id_original=None, youchat_profile_headers=None):
         """Envía una respuesta con los headers EXACTOS que requiere YouChat"""
@@ -111,8 +126,9 @@ class YouChatBot:
             mensaje_respuesta = "¡Hola! Soy un bot en desarrollo. Pronto podré descargar tus Reels de Instagram."
             msg.set_content(mensaje_respuesta)
             
-            # ENVÍO
-            with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as servidor:
+            # ENVÍO CON SMTP NAUTA
+            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as servidor:
+                servidor.starttls()  # Seguridad para puerto 25
                 servidor.login(SMTP_ACCOUNT, SMTP_PASSWORD)
                 servidor.send_message(msg)
             
@@ -126,8 +142,10 @@ class YouChatBot:
     def procesar_emails_no_leidos(self):
         """Función principal que revisa emails no leídos y responde automáticamente"""
         try:
-            mail = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
-            mail.login(EMAIL_ACCOUNT, EMAIL_PASSWORD)
+            mail = self.conectar_imap_nauta()
+            if not mail:
+                return
+                
             mail.select("inbox")
             
             estado, mensajes = mail.search(None, "UNSEEN")
@@ -183,7 +201,7 @@ class YouChatBot:
                     continue
                     
         except Exception as e:
-            logger.error("❌ Error de conexión IMAP: %s", str(e))
+            logger.error("❌ Error procesando emails: %s", str(e))
         finally:
             try:
                 mail.close()
@@ -196,7 +214,9 @@ class YouChatBot:
         self.is_running = True
         logger.info("🚀 Bot YouChat INICIADO")
         logger.info("⏰ Intervalo: %d segundos", CHECK_INTERVAL)
-        logger.info("📧 Cuenta: %s", EMAIL_ACCOUNT)
+        logger.info("📧 Cuenta Nauta: %s", EMAIL_ACCOUNT)
+        logger.info("🌐 Servidor IMAP: %s:%d", IMAP_SERVER, IMAP_PORT)
+        logger.info("🌐 Servidor SMTP: %s:%d", SMTP_SERVER, SMTP_PORT)
         
         while self.is_running:
             try:
@@ -225,10 +245,12 @@ bot_thread = None
 def home():
     return jsonify({
         "status": "online",
-        "service": "YouChat Bot",
+        "service": "YouChat Bot - Nauta Cuba",
         "version": "1.0",
         "interval": f"{CHECK_INTERVAL} segundos",
         "email_account": EMAIL_ACCOUNT,
+        "imap_server": f"{IMAP_SERVER}:{IMAP_PORT}",
+        "smtp_server": f"{SMTP_SERVER}:{SMTP_PORT}",
         "last_check": youchat_bot.last_check.isoformat() if youchat_bot.last_check else None,
         "total_processed": youchat_bot.total_processed,
         "is_running": youchat_bot.is_running
@@ -269,13 +291,32 @@ def status():
         "uptime": "always" if youchat_bot.is_running else "stopped"
     })
 
-@app.route('/test')
-def test():
-    """Endpoint para probar el envío de emails"""
+@app.route('/test-conexion')
+def test_conexion():
+    """Endpoint para probar la conexión con servidores Nauta"""
     try:
-        # Probar envío a uno mismo
-        youchat_bot.enviar_respuesta_youchat(EMAIL_ACCOUNT)
-        return jsonify({"status": "test_sent", "message": "Email de prueba enviado"})
+        # Probar IMAP
+        mail = youchat_bot.conectar_imap_nauta()
+        imap_ok = mail is not None
+        if mail:
+            mail.logout()
+        
+        # Probar SMTP
+        smtp_ok = False
+        try:
+            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as servidor:
+                servidor.starttls()
+                servidor.login(SMTP_ACCOUNT, SMTP_PASSWORD)
+                smtp_ok = True
+        except:
+            pass
+            
+        return jsonify({
+            "status": "test_completed",
+            "imap_connection": "success" if imap_ok else "failed",
+            "smtp_connection": "success" if smtp_ok else "failed",
+            "server": f"{IMAP_SERVER}:{IMAP_PORT} / {SMTP_SERVER}:{SMTP_PORT}"
+        })
     except Exception as e:
         return jsonify({"status": "test_failed", "error": str(e)})
 
@@ -288,12 +329,12 @@ def inicializar_bot():
     global bot_thread
     
     # Verificar que las credenciales estén configuradas
-    if not all([EMAIL_ACCOUNT, EMAIL_PASSWORD, SMTP_ACCOUNT, SMTP_PASSWORD]):
+    if not all([EMAIL_ACCOUNT, EMAIL_PASSWORD]):
         logger.error("⚠️ CREDENCIALES NO CONFIGURADAS: Actualiza las variables en app.py")
         return
     
-    if EMAIL_ACCOUNT == "tu_correo@gmail.com":
-        logger.error("⚠️ CONFIGURA TU EMAIL: Cambia 'tu_correo@gmail.com' por tu email real")
+    if EMAIL_ACCOUNT == "tu_usuario@nauta.cu":
+        logger.error("⚠️ CONFIGURA TU EMAIL NAUTA: Cambia 'tu_usuario@nauta.cu' por tu usuario real")
         return
     
     logger.info("🔧 Iniciando bot automáticamente...")
