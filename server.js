@@ -19,14 +19,82 @@ const CONFIG = {
 };
 
 // =============================================================================
-// CLASE YOUCHAT BOT
+// CLASE YOUCHAT BOT CON CONEXIÓN IMAP PERSISTENTE
 // =============================================================================
 class YouChatBot {
     constructor() {
         this.isRunning = false;
         this.processedEmails = new Set();
         this.totalProcessed = 0;
+        this.imapConnection = null;
+        this.isImapReady = false;
         console.log('🤖 Bot YouChat inicializado');
+    }
+
+    // ✅ CONEXIÓN IMAP PERSISTENTE
+    async connectIMAP() {
+        return new Promise((resolve, reject) => {
+            if (this.imapConnection && this.isImapReady) {
+                console.log("✅ Usando conexión IMAP existente");
+                return resolve(this.imapConnection);
+            }
+
+            console.log("🔄 Estableciendo conexión IMAP persistente...");
+            
+            this.imapConnection = new Imap({
+                user: CONFIG.EMAIL_ACCOUNT,
+                password: CONFIG.EMAIL_PASSWORD,
+                host: CONFIG.IMAP_SERVER,
+                port: CONFIG.IMAP_PORT,
+                tls: true,
+                tlsOptions: { rejectUnauthorized: false },
+                authTimeout: 10000
+            });
+
+            this.imapConnection.once('ready', () => {
+                console.log("✅ Conexión IMAP persistente establecida");
+                this.isImapReady = true;
+                
+                this.imapConnection.openBox('INBOX', false, (err, box) => {
+                    if (err) {
+                        console.error('❌ Error abriendo buzón:', err);
+                        return reject(err);
+                    }
+                    console.log("📬 Buzón INBOX abierto - Listo para monitoreo continuo");
+                    resolve(this.imapConnection);
+                });
+            });
+
+            this.imapConnection.once('error', (err) => {
+                console.error('❌ Error en conexión IMAP:', err);
+                this.isImapReady = false;
+                this.imapConnection = null;
+                reject(err);
+            });
+
+            this.imapConnection.once('end', () => {
+                console.log('🔒 Conexión IMAP cerrada por el servidor');
+                this.isImapReady = false;
+                this.imapConnection = null;
+            });
+
+            this.imapConnection.connect();
+        });
+    }
+
+    // ✅ MANTENER CONEXIÓN ACTIVA
+    async keepAliveIMAP() {
+        if (this.imapConnection && this.isImapReady) {
+            try {
+                this.imapConnection.noop();
+                console.log("💓 Latido IMAP - Conexión activa");
+            } catch (error) {
+                console.error('❌ Error en latido IMAP, reconectando...', error);
+                this.isImapReady = false;
+                this.imapConnection = null;
+                await this.connectIMAP();
+            }
+        }
     }
 
     extractYouChatHeaders(emailHeaders) {
@@ -162,7 +230,6 @@ class YouChatBot {
 
             console.log("🔗 Conectando al servidor SMTP...");
             
-            // Enviar usando el mensaje RAW construido
             await transporter.sendMail({
                 from: CONFIG.EMAIL_ACCOUNT,
                 to: destinatario,
@@ -209,151 +276,129 @@ class YouChatBot {
         return headers;
     }
 
-    processUnreadEmails() {
+    // ✅ PROCESAR EMAILS CON CONEXIÓN PERSISTENTE
+    async processUnreadEmails() {
+        if (!this.imapConnection || !this.isImapReady) {
+            console.log("❌ No hay conexión IMAP activa, intentando reconectar...");
+            await this.connectIMAP();
+            return;
+        }
+
         return new Promise((resolve, reject) => {
-            console.log("🔄 Conectando a IMAP para leer bandeja...");
-            
-            // ✅ CONEXIÓN IMAP SOLO PARA LECTURA
-            const imap = new Imap({
-                user: CONFIG.EMAIL_ACCOUNT,
-                password: CONFIG.EMAIL_PASSWORD,
-                host: CONFIG.IMAP_SERVER,
-                port: CONFIG.IMAP_PORT,
-                tls: true,
-                tlsOptions: { rejectUnauthorized: false },
-                authTimeout: 10000
-            });
+            console.log("🔍 Buscando emails no leídos con conexión persistente...");
 
-            imap.once('ready', () => {
-                console.log("✅ Conexión IMAP exitosa - Leyendo bandeja de entrada");
-                imap.openBox('INBOX', false, (err, box) => {
-                    if (err) {
-                        console.error('❌ Error abriendo buzón:', err);
-                        imap.end();
-                        return reject(err);
-                    }
+            this.imapConnection.search(['UNSEEN'], (err, results) => {
+                if (err) {
+                    console.error('❌ Error buscando emails:', err);
+                    this.isImapReady = false;
+                    return reject(err);
+                }
 
-                    console.log("🔍 Buscando SOLO emails no leídos...");
-                    // ✅ SOLO BUSCAR EMAILS NO LEÍDOS
-                    imap.search(['UNSEEN'], (err, results) => {
-                        if (err) {
-                            console.error('❌ Error buscando emails:', err);
-                            imap.end();
-                            return reject(err);
-                        }
+                if (!results || results.length === 0) {
+                    console.log('📭 No hay emails nuevos no leídos');
+                    return resolve();
+                }
 
-                        if (!results || results.length === 0) {
-                            console.log('📭 No hay emails nuevos no leídos');
-                            imap.end();
-                            return resolve();
-                        }
+                console.log(`📥 ${results.length} nuevo(s) email(s) no leído(s) para procesar`);
 
-                        console.log(`📥 ${results.length} nuevo(s) email(s) no leído(s) para procesar`);
+                const fetch = this.imapConnection.fetch(results, { bodies: '' });
 
-                        const fetch = imap.fetch(results, { bodies: '' });
+                fetch.on('message', (msg, seqno) => {
+                    console.log(`📨 Procesando email no leído - Secuencia: ${seqno}`);
 
-                        fetch.on('message', (msg, seqno) => {
-                            console.log(`📨 Procesando email no leído - Secuencia: ${seqno}`);
+                    msg.on('body', (stream) => {
+                        simpleParser(stream, async (err, parsed) => {
+                            if (err) {
+                                console.error('❌ Error parseando email:', err);
+                                return;
+                            }
 
-                            msg.on('body', (stream) => {
-                                simpleParser(stream, async (err, parsed) => {
+                            const emailId = `${seqno}-${parsed.messageId}`;
+                            if (this.processedEmails.has(emailId)) {
+                                console.log('⏭️ Email ya procesado:', emailId);
+                                return;
+                            }
+
+                            const senderEmail = this.extractSenderEmail(parsed.from.text);
+                            if (!senderEmail) {
+                                console.error('❌ No se pudo extraer email del remitente');
+                                return;
+                            }
+
+                            console.log(`👤 Email no leído de: ${senderEmail} - Asunto: ${parsed.subject}`);
+
+                            const youchatHeaders = this.extractYouChatHeaders(parsed.headers);
+                            const originalMsgId = parsed.messageId;
+
+                            if (originalMsgId) {
+                                console.log('🔗 Message-ID del mensaje original:', originalMsgId);
+                            }
+
+                            console.log('🚀 Preparando respuesta automática...');
+                            
+                            // ✅ ENVIAR RESPUESTA VÍA SMTP
+                            const success = await this.sendRawResponse(
+                                senderEmail,
+                                originalMsgId,
+                                youchatHeaders,
+                                parsed.subject
+                            );
+
+                            if (success) {
+                                this.processedEmails.add(emailId);
+                                this.totalProcessed++;
+                                console.log(`🎉 Respuesta #${this.totalProcessed} enviada exitosamente a: ${senderEmail}`);
+                                
+                                // ✅ MARCAR COMO LEÍDO después de procesar
+                                this.imapConnection.addFlags(seqno, ['\\Seen'], (err) => {
                                     if (err) {
-                                        console.error('❌ Error parseando email:', err);
-                                        return;
-                                    }
-
-                                    const emailId = `${seqno}-${parsed.messageId}`;
-                                    if (this.processedEmails.has(emailId)) {
-                                        console.log('⏭️ Email ya procesado:', emailId);
-                                        return;
-                                    }
-
-                                    const senderEmail = this.extractSenderEmail(parsed.from.text);
-                                    if (!senderEmail) {
-                                        console.error('❌ No se pudo extraer email del remitente');
-                                        return;
-                                    }
-
-                                    console.log(`👤 Email no leído de: ${senderEmail} - Asunto: ${parsed.subject}`);
-
-                                    const youchatHeaders = this.extractYouChatHeaders(parsed.headers);
-                                    const originalMsgId = parsed.messageId;
-
-                                    if (originalMsgId) {
-                                        console.log('🔗 Message-ID del mensaje original:', originalMsgId);
-                                    }
-
-                                    console.log('🚀 Preparando respuesta automática...');
-                                    
-                                    // ✅ ENVIAR RESPUESTA VÍA SMTP
-                                    const success = await this.sendRawResponse(
-                                        senderEmail,
-                                        originalMsgId,
-                                        youchatHeaders,
-                                        parsed.subject
-                                    );
-
-                                    if (success) {
-                                        this.processedEmails.add(emailId);
-                                        this.totalProcessed++;
-                                        console.log(`🎉 Respuesta #${this.totalProcessed} enviada exitosamente a: ${senderEmail}`);
-                                        
-                                        // ✅ MARCAR COMO LEÍDO después de procesar
-                                        imap.addFlags(seqno, ['\\Seen'], (err) => {
-                                            if (err) {
-                                                console.error('❌ Error marcando email como leído:', err);
-                                            } else {
-                                                console.log('📭 Email marcado como leído');
-                                            }
-                                        });
+                                        console.error('❌ Error marcando email como leído:', err);
                                     } else {
-                                        console.error(`❌ Falló el envío de la respuesta a: ${senderEmail}`);
+                                        console.log('📭 Email marcado como leído');
                                     }
                                 });
-                            });
-                        });
-
-                        fetch.once('end', () => {
-                            console.log('✅ Procesamiento de emails no leídos completado');
-                            imap.end();
-                            resolve();
-                        });
-
-                        fetch.once('error', (err) => {
-                            console.error('❌ Error en fetch:', err);
-                            imap.end();
-                            reject(err);
+                            } else {
+                                console.error(`❌ Falló el envío de la respuesta a: ${senderEmail}`);
+                            }
                         });
                     });
                 });
-            });
 
-            imap.once('error', (err) => {
-                console.error('❌ Error de conexión IMAP:', err);
-                reject(err);
-            });
+                fetch.once('end', () => {
+                    console.log('✅ Procesamiento de emails no leídos completado');
+                    resolve();
+                });
 
-            imap.once('end', () => {
-                console.log('🔒 Conexión IMAP cerrada');
+                fetch.once('error', (err) => {
+                    console.error('❌ Error en fetch:', err);
+                    reject(err);
+                });
             });
-
-            imap.connect();
         });
     }
 
     async runBot() {
         this.isRunning = true;
-        console.log('🚀 Bot YouChat INICIADO - MONITOREO CADA 3 SEGUNDOS');
+        console.log('🚀 Bot YouChat INICIADO - CONEXIÓN IMAP PERSISTENTE');
         console.log('⏰ Intervalo:', CONFIG.CHECK_INTERVAL, 'ms');
         console.log('📧 Cuenta configurada:', CONFIG.EMAIL_ACCOUNT);
-        console.log('🎯 SOLO procesará emails NO LEÍDOS');
+        console.log('🎯 Conexión IMAP persistente - Sin abrir/cerrar por ciclo');
+
+        // ✅ ESTABLECER CONEXIÓN IMAP PERSISTENTE AL INICIAR
+        await this.connectIMAP();
 
         let cycleCount = 0;
         while (this.isRunning) {
             try {
                 cycleCount++;
                 console.log(`\n🔄 CICLO #${cycleCount} - ${new Date().toLocaleTimeString()}`);
+                
+                // ✅ VERIFICAR Y MANTENER CONEXIÓN IMAP
+                await this.keepAliveIMAP();
+                
+                // ✅ PROCESAR EMAILS CON CONEXIÓN PERSISTENTE
                 await this.processUnreadEmails();
+                
                 console.log(`⏳ Esperando ${CONFIG.CHECK_INTERVAL}ms para siguiente verificación...`);
                 await new Promise(resolve => setTimeout(resolve, CONFIG.CHECK_INTERVAL));
             } catch (error) {
@@ -366,6 +411,12 @@ class YouChatBot {
 
     stopBot() {
         this.isRunning = false;
+        if (this.imapConnection) {
+            console.log('🔒 Cerrando conexión IMAP persistente...');
+            this.imapConnection.end();
+            this.imapConnection = null;
+            this.isImapReady = false;
+        }
         console.log('🛑 Bot YouChat detenido');
     }
 }
@@ -380,18 +431,18 @@ app.use(express.json());
 app.get('/', (req, res) => {
     res.json({
         status: 'online',
-        service: 'YouChat Bot - Solo Emails No Leídos',
-        version: '2.0',
+        service: 'YouChat Bot - Conexión IMAP Persistente',
+        version: '2.1',
         bot_running: youchatBot.isRunning,
         total_processed: youchatBot.totalProcessed,
+        imap_connected: youchatBot.isImapReady,
         check_interval: CONFIG.CHECK_INTERVAL + 'ms',
         features: [
-            'Monitoreo cada 3 segundos', 
+            'Conexión IMAP persistente', 
+            'Monitoreo cada 3 segundos',
             'SOLO emails no leídos',
             'Headers YouChat', 
-            'Respuestas automáticas',
-            'IMAP para lectura',
-            'SMTP para envío'
+            'Respuestas automáticas'
         ]
     });
 });
@@ -401,6 +452,7 @@ app.get('/health', (req, res) => {
         status: 'healthy',
         timestamp: new Date().toISOString(),
         bot_running: youchatBot.isRunning,
+        imap_connected: youchatBot.isImapReady,
         total_processed: youchatBot.totalProcessed,
         memory_usage: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`
     });
@@ -411,13 +463,14 @@ app.post('/start', (req, res) => {
         return res.json({ 
             status: 'already_running', 
             message: 'El bot ya está en ejecución',
-            total_processed: youchatBot.totalProcessed
+            total_processed: youchatBot.totalProcessed,
+            imap_connected: youchatBot.isImapReady
         });
     }
     youchatBot.runBot();
     res.json({ 
         status: 'started', 
-        message: 'Bot iniciado correctamente - Solo emails no leídos',
+        message: 'Bot iniciado con conexión IMAP persistente',
         check_interval: CONFIG.CHECK_INTERVAL + 'ms'
     });
 });
@@ -426,7 +479,7 @@ app.post('/stop', (req, res) => {
     youchatBot.stopBot();
     res.json({ 
         status: 'stopped', 
-        message: 'Bot detenido',
+        message: 'Bot detenido - Conexión IMAP cerrada',
         final_stats: {
             total_processed: youchatBot.totalProcessed
         }
@@ -436,11 +489,12 @@ app.post('/stop', (req, res) => {
 app.get('/status', (req, res) => {
     res.json({
         is_running: youchatBot.isRunning,
+        imap_connected: youchatBot.isImapReady,
         total_processed: youchatBot.totalProcessed,
         processed_emails_count: youchatBot.processedEmails.size,
         check_interval: CONFIG.CHECK_INTERVAL,
         last_check: new Date().toISOString(),
-        mode: 'solo_emails_no_leidos'
+        mode: 'conexion_imap_persistente'
     });
 });
 
@@ -451,7 +505,7 @@ app.listen(port, '0.0.0.0', () => {
     console.log(`🎯 Servidor ejecutándose en puerto ${port}`);
     console.log(`🌐 URL: http://0.0.0.0:${port}`);
     console.log('🔧 Iniciando bot automáticamente...');
-    console.log('🎯 MODO: Solo procesará emails NO LEÍDOS');
+    console.log('🎯 MODO: Conexión IMAP persistente activada');
     
     // Iniciar el bot automáticamente
     youchatBot.runBot().catch(error => {
