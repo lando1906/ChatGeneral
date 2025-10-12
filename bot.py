@@ -12,7 +12,8 @@ import traceback
 import signal
 import sys
 import json
-from email.utils import parseaddr
+from email.utils import parseaddr, formatdate
+import uuid
 
 # Configuración de logging mejorada con rotación
 logging.basicConfig(
@@ -187,14 +188,22 @@ class YouChatBot:
         try:
             structured_logger.info("Construyendo mensaje RAW", {"destinatario": destinatario})
             headers_string = ""
+            reserved_headers = [
+                'Message-ID', 'Msg_id', 'In-Reply-To', 'References', 'Chat-Version', 'Pd',
+                'MIME-Version', 'Content-Type', 'Content-Transfer-Encoding', 'From', 'To', 'Subject', 'Date',
+                'Sender-Alias', 'From-Alias'
+            ]
             if youchat_profile_headers and isinstance(youchat_profile_headers, dict):
                 for key, value in youchat_profile_headers.items():
-                    if value and key not in ['Msg_id', 'Message-ID']:
-                        safe_value = str(value).replace('\r', '').replace('\n', '')
-                        headers_string += f"{key}: {safe_value}\r\n"
+                    if value and key not in reserved_headers:
+                        safe_value = str(value).replace('\r', '').replace('\n', '')[:998]
+                        if all(32 <= ord(c) <= 126 for c in safe_value):
+                            headers_string += f"{key}: {safe_value}\r\n"
+                        else:
+                            structured_logger.warning(f"Header {key} ignorado por caracteres inválidos", {"value": safe_value})
 
             domain = EMAIL_ACCOUNT.split('@')[1]
-            nuevo_msg_id = f"<auto-reply-{int(time.time()*1000)}@{domain}>"
+            nuevo_msg_id = f"<auto-reply-{uuid.uuid4()}@{domain}>"
             headers_string += f"Message-ID: {nuevo_msg_id}\r\n"
 
             if msg_id_original:
@@ -204,15 +213,18 @@ class YouChatBot:
                 headers_string += f"In-Reply-To: {clean_message_id}\r\n"
                 headers_string += f"References: {clean_message_id}\r\n"
 
-            headers_string += f"Msg_id: auto-reply-{int(time.time()*1000)}\r\n"
+            headers_string += f"Msg_id: auto-reply-{uuid.uuid4()}\r\n"
 
             chat_version = youchat_profile_headers.get('Chat-Version', '1.1') if youchat_profile_headers else '1.1'
             headers_string += f"Chat-Version: {chat_version}\r\n"
 
             pd_value = youchat_profile_headers.get('Pd') if youchat_profile_headers else None
             if pd_value:
-                headers_string += f"Pd: {str(pd_value).strip()}\r\n"
+                safe_pd = str(pd_value).strip()[:998]
+                if all(32 <= ord(c) <= 126 for c in safe_pd):
+                    headers_string += f"Pd: {safe_pd}\r\n"
 
+            headers_string += f"Date: {formatdate(time.time(), localtime=True)}\r\n"
             headers_string += "MIME-Version: 1.0\r\n"
             headers_string += 'Content-Type: text/plain; charset="UTF-8"\r\n'
             headers_string += 'Content-Transfer-Encoding: 8bit\r\n'
@@ -253,7 +265,7 @@ class YouChatBot:
                 return False
 
             self.reset_email_count()
-            if self.emails_sent_today >= 100:  # Ajustar según límites de Gmail
+            if self.emails_sent_today >= 100:
                 structured_logger.warning("Límite de emails alcanzado, esperando")
                 return False
 
@@ -424,13 +436,14 @@ def home():
     return jsonify({
         "status": "online",
         "service": "YouChat Bot - Conexión Robusta",
-        "version": "2.3",
+        "version": "2.4",
         "features": [
             "Conexión IMAP persistente",
             "Reconexión automática",
             "Manejo robusto de errores",
             "Logging estructurado y rotación",
-            "Reintentos SMTP"
+            "Reintentos SMTP",
+            "Headers optimizados"
         ],
         "interval": f"{CHECK_INTERVAL} segundos",
         "email_account": EMAIL_ACCOUNT,
@@ -509,13 +522,14 @@ def inicializar_bot():
     """Inicializa el bot automáticamente al cargar la aplicación"""
     global bot_thread
     structured_logger.info("Iniciando bot automáticamente", {
-        "version": "2.3",
+        "version": "2.4",
         "features": [
             "Conexión IMAP persistente",
             "Reconexión automática",
             "Manejo robusto de errores",
             "Logging estructurado",
-            "Reintentos SMTP"
+            "Reintentos SMTP",
+            "Headers optimizados"
         ]
     })
     youchat_bot.is_running = True
