@@ -20,8 +20,8 @@ app = Flask(__name__)
 # =============================================================================
 
 # 🔐 CONFIGURA TUS CREDENCIALES DE GMAIL AQUÍ
-EMAIL_ACCOUNT = "videodown797@gmail.com"  # 📧 Cambia por tu Gmail
-EMAIL_PASSWORD = "nlhoedrevnlihgdo"  # 🔑 Contraseña de aplicación de 16 dígitos
+EMAIL_ACCOUNT = "videodown797@gmail.com"  # 📧 Tu correo Gmail
+EMAIL_PASSWORD = "nlhoedrevnlihgdo"    # 🔑 Tu contraseña de aplicación
 
 # Configuración servidores Gmail
 IMAP_SERVER = "imap.gmail.com"
@@ -89,12 +89,11 @@ class YouChatBot:
             # 2. HEADERS DE YOUCHAT GENERALES
             if youchat_profile_headers and isinstance(youchat_profile_headers, dict):
                 for key, value in youchat_profile_headers.items():
-                    if value and key not in ['Msg_id', 'Chat-Version', 'Pd', 'Sender-Alias', 'From-Alias']:
+                    if value and key not in ['Msg_id', 'Chat-Version', 'Pd', 'Sender-Alias', 'From-Alias', 'Message-ID']:
                         msg[key] = str(value)
             
             # 3. HEADERS DE THREADING (CRÍTICOS)
-            domain = SMTP_ACCOUNT.split('@')[1]
-            msg['Message-ID'] = f"<auto-reply-{int(time.time()*1000)}@{domain}>"
+            # NO agregar Message-ID manualmente - Python lo genera automáticamente
             
             if msg_id_original:
                 clean_message_id = msg_id_original
@@ -182,6 +181,9 @@ class YouChatBot:
                     headers_youchat = self.extraer_headers_youchat(mensaje)
                     msg_id_original = headers_youchat.get('Message-ID')
                     
+                    if msg_id_original:
+                        logger.info("🔗 Message-ID del mensaje original: %s", msg_id_original)
+                    
                     exito = self.enviar_respuesta_youchat(
                         email_remitente,
                         msg_id_original=msg_id_original,
@@ -220,6 +222,7 @@ class YouChatBot:
         while self.is_running:
             try:
                 self.last_check = datetime.now()
+                logger.info("🔍 Revisando nuevos emails - %s", self.last_check.strftime('%H:%M:%S'))
                 
                 self.procesar_emails_no_leidos()
                 
@@ -287,6 +290,24 @@ def status():
         "check_interval": CHECK_INTERVAL
     })
 
+@app.route('/test')
+def test_bot():
+    """Endpoint para probar el bot manualmente"""
+    try:
+        # Simular procesamiento de un email
+        test_email = "miguelorlandos@nauta.cu"
+        logger.info("🧪 Probando envío a: %s", test_email)
+        
+        exito = youchat_bot.enviar_respuesta_youchat(test_email)
+        
+        return jsonify({
+            "status": "test_completed",
+            "success": exito,
+            "test_email": test_email
+        })
+    except Exception as e:
+        return jsonify({"status": "test_failed", "error": str(e)})
+
 # =============================================================================
 # INICIALIZACIÓN AUTOMÁTICA
 # =============================================================================
@@ -295,19 +316,12 @@ def inicializar_bot():
     """Inicializa el bot automáticamente al cargar la aplicación"""
     global bot_thread
     
-    if not all([EMAIL_ACCOUNT, EMAIL_PASSWORD]):
-        logger.error("⚠️ CREDENCIALES NO CONFIGURADAS")
-        return
-    
-    if EMAIL_ACCOUNT == "tu_correo@gmail.com":
-        logger.error("⚠️ CONFIGURA TU GMAIL: Cambia 'tu_correo@gmail.com' por tu email real")
-        return
-    
     logger.info("🔧 Iniciando bot automáticamente...")
     bot_thread = threading.Thread(target=youchat_bot.run_bot, daemon=True)
     bot_thread.start()
     logger.info("🎉 Bot iniciado y listo para recibir mensajes")
 
+# Iniciar el bot cuando se carga la aplicación
 inicializar_bot()
 
 if __name__ == '__main__':
