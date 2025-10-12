@@ -1,0 +1,14 @@
+{
+  "name": "youchat-bot",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "imap": "^0.8.19",
+    "nodemailer": "^6.9.7",
+    "mailparser": "^3.6.4"
+  }
+}
