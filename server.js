@@ -26,7 +26,6 @@ class YouChatBot {
         this.isRunning = false;
         this.processedEmails = new Set();
         this.totalProcessed = 0;
-        this.imapConnection = null;
         console.log('🤖 Bot YouChat inicializado');
     }
 
@@ -149,7 +148,7 @@ class YouChatBot {
 
             console.log("📧 Mensaje RAW construido, procediendo a enviar...");
 
-            // ✅ CORREGIDO: createTransport en lugar de createTransporter
+            // ✅ CONEXIÓN SMTP PARA ENVÍO
             const transporter = nodemailer.createTransport({
                 host: CONFIG.SMTP_SERVER,
                 port: CONFIG.SMTP_PORT,
@@ -163,6 +162,7 @@ class YouChatBot {
 
             console.log("🔗 Conectando al servidor SMTP...");
             
+            // Enviar usando el mensaje RAW construido
             await transporter.sendMail({
                 from: CONFIG.EMAIL_ACCOUNT,
                 to: destinatario,
@@ -211,8 +211,9 @@ class YouChatBot {
 
     processUnreadEmails() {
         return new Promise((resolve, reject) => {
-            console.log("🔄 Intentando conectar a IMAP...");
+            console.log("🔄 Conectando a IMAP para leer bandeja...");
             
+            // ✅ CONEXIÓN IMAP SOLO PARA LECTURA
             const imap = new Imap({
                 user: CONFIG.EMAIL_ACCOUNT,
                 password: CONFIG.EMAIL_PASSWORD,
@@ -224,7 +225,7 @@ class YouChatBot {
             });
 
             imap.once('ready', () => {
-                console.log("✅ Conexión IMAP exitosa");
+                console.log("✅ Conexión IMAP exitosa - Leyendo bandeja de entrada");
                 imap.openBox('INBOX', false, (err, box) => {
                     if (err) {
                         console.error('❌ Error abriendo buzón:', err);
@@ -232,7 +233,8 @@ class YouChatBot {
                         return reject(err);
                     }
 
-                    console.log("🔍 Buscando emails no leídos...");
+                    console.log("🔍 Buscando SOLO emails no leídos...");
+                    // ✅ SOLO BUSCAR EMAILS NO LEÍDOS
                     imap.search(['UNSEEN'], (err, results) => {
                         if (err) {
                             console.error('❌ Error buscando emails:', err);
@@ -241,17 +243,17 @@ class YouChatBot {
                         }
 
                         if (!results || results.length === 0) {
-                            console.log('📭 No hay emails nuevos');
+                            console.log('📭 No hay emails nuevos no leídos');
                             imap.end();
                             return resolve();
                         }
 
-                        console.log(`📥 ${results.length} nuevo(s) email(s) para procesar`);
+                        console.log(`📥 ${results.length} nuevo(s) email(s) no leído(s) para procesar`);
 
                         const fetch = imap.fetch(results, { bodies: '' });
 
                         fetch.on('message', (msg, seqno) => {
-                            console.log(`📨 Procesando email secuencia: ${seqno}`);
+                            console.log(`📨 Procesando email no leído - Secuencia: ${seqno}`);
 
                             msg.on('body', (stream) => {
                                 simpleParser(stream, async (err, parsed) => {
@@ -272,7 +274,7 @@ class YouChatBot {
                                         return;
                                     }
 
-                                    console.log(`👤 Procesando mensaje de: ${senderEmail} - Asunto: ${parsed.subject}`);
+                                    console.log(`👤 Email no leído de: ${senderEmail} - Asunto: ${parsed.subject}`);
 
                                     const youchatHeaders = this.extractYouChatHeaders(parsed.headers);
                                     const originalMsgId = parsed.messageId;
@@ -281,8 +283,9 @@ class YouChatBot {
                                         console.log('🔗 Message-ID del mensaje original:', originalMsgId);
                                     }
 
-                                    console.log('🚀 Iniciando proceso de respuesta...');
+                                    console.log('🚀 Preparando respuesta automática...');
                                     
+                                    // ✅ ENVIAR RESPUESTA VÍA SMTP
                                     const success = await this.sendRawResponse(
                                         senderEmail,
                                         originalMsgId,
@@ -294,6 +297,15 @@ class YouChatBot {
                                         this.processedEmails.add(emailId);
                                         this.totalProcessed++;
                                         console.log(`🎉 Respuesta #${this.totalProcessed} enviada exitosamente a: ${senderEmail}`);
+                                        
+                                        // ✅ MARCAR COMO LEÍDO después de procesar
+                                        imap.addFlags(seqno, ['\\Seen'], (err) => {
+                                            if (err) {
+                                                console.error('❌ Error marcando email como leído:', err);
+                                            } else {
+                                                console.log('📭 Email marcado como leído');
+                                            }
+                                        });
                                     } else {
                                         console.error(`❌ Falló el envío de la respuesta a: ${senderEmail}`);
                                     }
@@ -302,7 +314,7 @@ class YouChatBot {
                         });
 
                         fetch.once('end', () => {
-                            console.log('✅ Procesamiento de emails completado');
+                            console.log('✅ Procesamiento de emails no leídos completado');
                             imap.end();
                             resolve();
                         });
@@ -334,6 +346,7 @@ class YouChatBot {
         console.log('🚀 Bot YouChat INICIADO - MONITOREO CADA 3 SEGUNDOS');
         console.log('⏰ Intervalo:', CONFIG.CHECK_INTERVAL, 'ms');
         console.log('📧 Cuenta configurada:', CONFIG.EMAIL_ACCOUNT);
+        console.log('🎯 SOLO procesará emails NO LEÍDOS');
 
         let cycleCount = 0;
         while (this.isRunning) {
@@ -367,12 +380,19 @@ app.use(express.json());
 app.get('/', (req, res) => {
     res.json({
         status: 'online',
-        service: 'YouChat Bot',
+        service: 'YouChat Bot - Solo Emails No Leídos',
         version: '2.0',
         bot_running: youchatBot.isRunning,
         total_processed: youchatBot.totalProcessed,
         check_interval: CONFIG.CHECK_INTERVAL + 'ms',
-        features: ['Monitoreo cada 3 segundos', 'Headers YouChat', 'Respuestas automáticas']
+        features: [
+            'Monitoreo cada 3 segundos', 
+            'SOLO emails no leídos',
+            'Headers YouChat', 
+            'Respuestas automáticas',
+            'IMAP para lectura',
+            'SMTP para envío'
+        ]
     });
 });
 
@@ -397,7 +417,7 @@ app.post('/start', (req, res) => {
     youchatBot.runBot();
     res.json({ 
         status: 'started', 
-        message: 'Bot iniciado correctamente',
+        message: 'Bot iniciado correctamente - Solo emails no leídos',
         check_interval: CONFIG.CHECK_INTERVAL + 'ms'
     });
 });
@@ -419,7 +439,8 @@ app.get('/status', (req, res) => {
         total_processed: youchatBot.totalProcessed,
         processed_emails_count: youchatBot.processedEmails.size,
         check_interval: CONFIG.CHECK_INTERVAL,
-        last_check: new Date().toISOString()
+        last_check: new Date().toISOString(),
+        mode: 'solo_emails_no_leidos'
     });
 });
 
@@ -430,6 +451,7 @@ app.listen(port, '0.0.0.0', () => {
     console.log(`🎯 Servidor ejecutándose en puerto ${port}`);
     console.log(`🌐 URL: http://0.0.0.0:${port}`);
     console.log('🔧 Iniciando bot automáticamente...');
+    console.log('🎯 MODO: Solo procesará emails NO LEÍDOS');
     
     // Iniciar el bot automáticamente
     youchatBot.runBot().catch(error => {
