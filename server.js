@@ -19,7 +19,7 @@ const CONFIG = {
 };
 
 // =============================================================================
-// CLASE YOUCHAT BOT CON CONEXIÓN IMAP PERSISTENTE
+// CLASE YOUCHAT BOT CON CONEXIÓN IMAP PERSISTENTE CORREGIDA
 // =============================================================================
 class YouChatBot {
     constructor() {
@@ -28,10 +28,11 @@ class YouChatBot {
         this.totalProcessed = 0;
         this.imapConnection = null;
         this.isImapReady = false;
+        this.lastKeepAlive = Date.now();
         console.log('🤖 Bot YouChat inicializado');
     }
 
-    // ✅ CONEXIÓN IMAP PERSISTENTE
+    // ✅ CONEXIÓN IMAP PERSISTENTE CORREGIDA
     async connectIMAP() {
         return new Promise((resolve, reject) => {
             if (this.imapConnection && this.isImapReady) {
@@ -48,12 +49,14 @@ class YouChatBot {
                 port: CONFIG.IMAP_PORT,
                 tls: true,
                 tlsOptions: { rejectUnauthorized: false },
-                authTimeout: 10000
+                authTimeout: 10000,
+                keepalive: true // ✅ Habilitar keepalive interno
             });
 
             this.imapConnection.once('ready', () => {
                 console.log("✅ Conexión IMAP persistente establecida");
                 this.isImapReady = true;
+                this.lastKeepAlive = Date.now();
                 
                 this.imapConnection.openBox('INBOX', false, (err, box) => {
                     if (err) {
@@ -78,18 +81,45 @@ class YouChatBot {
                 this.imapConnection = null;
             });
 
+            // ✅ EVENTO KEEPALIVE PARA MANTENER CONEXIÓN
+            this.imapConnection.on('mail', () => {
+                this.lastKeepAlive = Date.now();
+                console.log("💓 Evento mail - Conexión IMAP activa");
+            });
+
             this.imapConnection.connect();
         });
     }
 
-    // ✅ MANTENER CONEXIÓN ACTIVA
+    // ✅ MANTENER CONEXIÓN ACTIVA CORREGIDA
     async keepAliveIMAP() {
-        if (this.imapConnection && this.isImapReady) {
+        if (!this.imapConnection || !this.isImapReady) {
+            console.log("❌ No hay conexión IMAP activa, reconectando...");
+            await this.connectIMAP();
+            return;
+        }
+
+        // Verificar si la conexión sigue activa mediante una búsqueda simple
+        const timeSinceLastKeepAlive = Date.now() - this.lastKeepAlive;
+        if (timeSinceLastKeepAlive > 60000) { // 1 minuto sin actividad
+            console.log("🔄 Realizando verificación de conexión IMAP...");
             try {
-                this.imapConnection.noop();
-                console.log("💓 Latido IMAP - Conexión activa");
+                // Usar search como verificación de conexión en lugar de noop
+                await new Promise((resolve, reject) => {
+                    this.imapConnection.search(['ALL'], (err, results) => {
+                        if (err) {
+                            console.error('❌ Error en verificación de conexión IMAP:', err);
+                            this.isImapReady = false;
+                            reject(err);
+                        } else {
+                            this.lastKeepAlive = Date.now();
+                            console.log("💓 Verificación IMAP exitosa - Conexión activa");
+                            resolve(results);
+                        }
+                    });
+                });
             } catch (error) {
-                console.error('❌ Error en latido IMAP, reconectando...', error);
+                console.error('❌ Error en verificación IMAP, reconectando...', error);
                 this.isImapReady = false;
                 this.imapConnection = null;
                 await this.connectIMAP();
@@ -296,6 +326,7 @@ class YouChatBot {
 
                 if (!results || results.length === 0) {
                     console.log('📭 No hay emails nuevos no leídos');
+                    this.lastKeepAlive = Date.now(); // ✅ Actualizar timestamp
                     return resolve();
                 }
 
@@ -366,6 +397,7 @@ class YouChatBot {
 
                 fetch.once('end', () => {
                     console.log('✅ Procesamiento de emails no leídos completado');
+                    this.lastKeepAlive = Date.now(); // ✅ Actualizar timestamp
                     resolve();
                 });
 
@@ -388,13 +420,19 @@ class YouChatBot {
         await this.connectIMAP();
 
         let cycleCount = 0;
+        let keepAliveCounter = 0;
+        
         while (this.isRunning) {
             try {
                 cycleCount++;
                 console.log(`\n🔄 CICLO #${cycleCount} - ${new Date().toLocaleTimeString()}`);
                 
-                // ✅ VERIFICAR Y MANTENER CONEXIÓN IMAP
-                await this.keepAliveIMAP();
+                // ✅ VERIFICAR Y MANTENER CONEXIÓN IMAP (cada 10 ciclos)
+                keepAliveCounter++;
+                if (keepAliveCounter >= 10) {
+                    await this.keepAliveIMAP();
+                    keepAliveCounter = 0;
+                }
                 
                 // ✅ PROCESAR EMAILS CON CONEXIÓN PERSISTENTE
                 await this.processUnreadEmails();
@@ -432,7 +470,7 @@ app.get('/', (req, res) => {
     res.json({
         status: 'online',
         service: 'YouChat Bot - Conexión IMAP Persistente',
-        version: '2.1',
+        version: '2.2',
         bot_running: youchatBot.isRunning,
         total_processed: youchatBot.totalProcessed,
         imap_connected: youchatBot.isImapReady,
