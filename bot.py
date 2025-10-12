@@ -51,7 +51,7 @@ EMAIL_PASSWORD = "nlhoedrevnlihgdo"
 IMAP_SERVER = "imap.gmail.com"
 IMAP_PORT = 993
 SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
+SMTP_PORT = 465
 CHECK_INTERVAL = 3
 
 # =============================================================================
