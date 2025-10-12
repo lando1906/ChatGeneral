@@ -110,7 +110,6 @@ class YouChatBot:
         except:
             self.imap_connection = None
 
-    # MANTENER TODAS TUS FUNCIONES EXISTENTES (extraer_headers_youchat, etc.)
     def extraer_headers_youchat(self, mensaje_email):
         """Extrae headers específicos de YouChat de manera más completa"""
         headers_youchat = {}
@@ -147,12 +146,15 @@ class YouChatBot:
     def construir_mensaje_raw_youchat(self, destinatario, msg_id_original=None, youchat_profile_headers=None, asunto_original=None):
         """Construye el mensaje en formato RAW optimizado para YouChat"""
         try:
+            logger.info("🔨 Construyendo mensaje RAW...")
+            
             headers_string = ""
             if youchat_profile_headers and isinstance(youchat_profile_headers, dict):
                 for key, value in youchat_profile_headers.items():
                     if value and key not in ['Msg_id', 'Message-ID']:
                         headers_string += f"{key}: {value}\r\n"
 
+            # ✅ CORREGIDO: Usar EMAIL_ACCOUNT en lugar de SMTP_ACCOUNT
             domain = EMAIL_ACCOUNT.split('@')[1]
             nuevo_msg_id = f"<auto-reply-{int(time.time()*1000)}@{domain}>"
             headers_string += f"Message-ID: {nuevo_msg_id}\r\n"
@@ -196,16 +198,19 @@ class YouChatBot:
                 f"{mensaje_texto}"
             )
 
-            logger.debug("📧 Mensaje RAW construido para: %s", destinatario)
+            logger.info("📧 Mensaje RAW construido exitosamente para: %s", destinatario)
             return mail_raw.encode('utf-8')
 
         except Exception as e:
             logger.error(f"❌ Error construyendo mensaje RAW: {str(e)}")
+            logger.error(f"🔍 Traceback: {traceback.format_exc()}")
             return None
 
     def enviar_respuesta_raw(self, destinatario, msg_id_original=None, youchat_profile_headers=None, asunto_original=None):
         """Envía respuesta usando formato RAW mejorado"""
         try:
+            logger.info("🔄 Iniciando envío de respuesta RAW...")
+            
             mensaje_raw = self.construir_mensaje_raw_youchat(
                 destinatario, 
                 msg_id_original, 
@@ -213,20 +218,32 @@ class YouChatBot:
                 asunto_original
             )
 
+            logger.info("📧 Mensaje RAW construido, procediendo a enviar...")
+
             if not mensaje_raw:
                 logger.error("❌ No se pudo construir el mensaje RAW")
                 return False
 
-            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as servidor:
+            logger.info("🔗 Conectando al servidor SMTP (timeout: 30s)...")
+            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=30) as servidor:
+                logger.info("🔐 Iniciando TLS...")
                 servidor.starttls()
+                
+                logger.info("👤 Autenticando con Gmail...")
                 servidor.login(EMAIL_ACCOUNT, EMAIL_PASSWORD)
+                
+                logger.info("📤 Enviando email...")
                 servidor.sendmail(EMAIL_ACCOUNT, destinatario, mensaje_raw)
 
-            logger.info("✅ Respuesta RAW enviada a: %s", destinatario)
+            logger.info("✅ Respuesta RAW enviada exitosamente a: %s", destinatario)
             return True
 
+        except smtplib.SMTPException as e:
+            logger.error("❌ Error SMTP específico: %s", str(e))
+            return False
         except Exception as e:
-            logger.error("❌ Error enviando respuesta RAW: %s", str(e))
+            logger.error("❌ Error inesperado enviando respuesta: %s", str(e))
+            logger.error("🔍 Traceback completo: %s", traceback.format_exc())
             return False
 
     def procesar_emails_no_leidos(self):
@@ -288,6 +305,7 @@ class YouChatBot:
                     if msg_id_original:
                         logger.debug("🔗 Message-ID del mensaje original: %s", msg_id_original)
 
+                    logger.info("🚀 Iniciando proceso de respuesta...")
                     exito = self.enviar_respuesta_raw(
                         email_remitente,
                         msg_id_original=msg_id_original,
@@ -298,18 +316,18 @@ class YouChatBot:
                     if exito:
                         self.processed_emails.add(email_id)
                         self.total_processed += 1
-                        logger.info("💬 Respuesta #%d enviada exitosamente a: %s", self.total_processed, email_remitente)
+                        logger.info("🎉 Respuesta #%d enviada exitosamente a: %s", self.total_processed, email_remitente)
                     else:
                         logger.error("❌ Falló el envío de la respuesta a: %s", email_remitente)
 
                 except Exception as e:
                     logger.error("❌ Error procesando email ID %s: %s", email_id, str(e))
-                    logger.error(traceback.format_exc())
+                    logger.error("🔍 Traceback: %s", traceback.format_exc())
                     continue
 
         except Exception as e:
             logger.error("❌ Error general procesando emails: %s", str(e))
-            logger.error(traceback.format_exc())
+            logger.error("🔍 Traceback: %s", traceback.format_exc())
             # Forzar reconexión en el próximo ciclo
             self.cerrar_conexion_imap()
 
@@ -337,6 +355,7 @@ class YouChatBot:
             except Exception as e:
                 consecutive_errors += 1
                 logger.error("💥 Error #%d en el bucle principal: %s", consecutive_errors, str(e))
+                logger.error("🔍 Traceback: %s", traceback.format_exc())
                 
                 if consecutive_errors >= max_consecutive_errors:
                     logger.error("🛑 Demasiados errores consecutivos, reiniciando conexiones...")
@@ -357,7 +376,7 @@ youchat_bot = YouChatBot()
 bot_thread = None
 
 # =============================================================================
-# RUTAS DEL SERVICIO WEB (MANTENER IGUAL)
+# RUTAS DEL SERVICIO WEB
 # =============================================================================
 
 @app.route('/')
@@ -365,11 +384,12 @@ def home():
     return jsonify({
         "status": "online",
         "service": "YouChat Bot - Conexión Robusta",
-        "version": "2.1",
+        "version": "2.2",
         "features": [
             "Conexión IMAP persistente",
-            "Reconexión automática",
-            "Manejo robusto de errores"
+            "Reconexión automática", 
+            "Manejo robusto de errores",
+            "Logging detallado"
         ],
         "interval": f"{CHECK_INTERVAL} segundos",
         "email_account": EMAIL_ACCOUNT,
@@ -443,7 +463,7 @@ def inicializar_bot():
     global bot_thread
 
     logger.info("🔧 Iniciando bot automáticamente...")
-    logger.info("🆕 VERSIÓN 2.1 - CONEXIÓN ROBUSTA IMAP")
+    logger.info("🆕 VERSIÓN 2.2 - LOGGING DETALLADO Y CONEXIÓN ROBUSTA")
     youchat_bot.is_running = True
     bot_thread = threading.Thread(target=youchat_bot.run_bot, daemon=True)
     bot_thread.start()
@@ -452,6 +472,7 @@ def inicializar_bot():
     logger.info("   ✅ Conexión IMAP persistente")
     logger.info("   ✅ Reconexión automática")
     logger.info("   ✅ Manejo robusto de errores")
+    logger.info("   ✅ Logging detallado paso a paso")
 
 # Iniciar el bot cuando se carga la aplicación
 inicializar_bot()
