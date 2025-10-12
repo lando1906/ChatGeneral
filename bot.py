@@ -246,7 +246,7 @@ class YouChatBot:
                 time.sleep(CHECK_INTERVAL)
                 
             except Exception as e:
-                logger.error("💥 Error en el bucle principal: %s", str(e)")
+                logger.error("💥 Error en el bucle principal: %s", str(e))
                 time.sleep(CHECK_INTERVAL)
 
 # =============================================================================
@@ -281,14 +281,46 @@ def health():
         "bot_running": youchat_bot.is_running
     })
 
-# Inicialización automática
-def inicializar_bot():
+@app.route('/start')
+def start_bot():
     global bot_thread
+    
+    if youchat_bot.is_running:
+        return jsonify({"status": "already_running", "message": "El bot ya está en ejecución"})
+    
+    bot_thread = threading.Thread(target=youchat_bot.run_bot, daemon=True)
+    bot_thread.start()
+    
+    return jsonify({"status": "started", "message": "Bot iniciado correctamente"})
+
+@app.route('/stop')
+def stop_bot():
+    youchat_bot.is_running = False
+    return jsonify({"status": "stopped", "message": "Bot detenido"})
+
+@app.route('/status')
+def status():
+    return jsonify({
+        "is_running": youchat_bot.is_running,
+        "last_check": youchat_bot.last_check.isoformat() if youchat_bot.last_check else None,
+        "total_processed": youchat_bot.total_processed,
+        "check_interval": CHECK_INTERVAL
+    })
+
+# =============================================================================
+# INICIALIZACIÓN AUTOMÁTICA
+# =============================================================================
+
+def inicializar_bot():
+    """Inicializa el bot automáticamente al cargar la aplicación"""
+    global bot_thread
+    
     logger.info("🔧 Iniciando bot automáticamente...")
     bot_thread = threading.Thread(target=youchat_bot.run_bot, daemon=True)
     bot_thread.start()
     logger.info("🎉 Bot iniciado y listo para recibir mensajes")
 
+# Iniciar el bot cuando se carga la aplicación
 inicializar_bot()
 
 if __name__ == '__main__':
