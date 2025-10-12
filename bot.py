@@ -46,8 +46,8 @@ app = Flask(__name__)
 # =============================================================================
 # CONFIGURACIÓN PARA GMAIL
 # =============================================================================
-EMAIL_ACCOUNT = "videodown797@gmail.com"
-EMAIL_PASSWORD = "nlhoedrevnlihgdo"
+EMAIL_ACCOUNT = "smorlando19@nauta.cu"
+EMAIL_PASSWORD = "mO*061119"
 IMAP_SERVER = "imap.nauta.cu"
 IMAP_PORT = 143
 SMTP_SERVER = "smtp.nauta.cu"
