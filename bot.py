@@ -153,7 +153,7 @@ class YouChatBot:
                     if value and key not in ['Msg_id', 'Message-ID']:
                         headers_string += f"{key}: {value}\r\n"
 
-            domain = SMTP_ACCOUNT.split('@')[1]
+            domain = EMAIL_ACCOUNT.split('@')[1]
             nuevo_msg_id = f"<auto-reply-{int(time.time()*1000)}@{domain}>"
             headers_string += f"Message-ID: {nuevo_msg_id}\r\n"
 
