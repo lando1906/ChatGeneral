@@ -247,130 +247,167 @@ class YouChatBot:
             return False
 
     def procesar_emails_no_leidos(self):
-    """Función principal mejorada para procesar emails con manejo robusto de conexiones"""
-    mail = None
-    try:
-        mail = self.verificar_conexion_imap()
-        if not mail:
-            logger.error("❌ No se pudo establecer conexión IMAP")
-            return
+        """Función principal mejorada para procesar emails con manejo robusto de conexiones"""
+        mail = None
+        try:
+            mail = self.verificar_conexion_imap()
+            if not mail:
+                logger.error("❌ No se pudo establecer conexión IMAP")
+                return
 
-        logger.debug("🔍 Buscando emails no leídos...")
-        estado, mensajes = mail.search(None, "UNSEEN")
-        if estado != "OK":
-            logger.info("📭 No hay emails nuevos o error en búsqueda")
-            return
+            logger.debug("🔍 Buscando emails no leídos...")
+            estado, mensajes = mail.search(None, "UNSEEN")
+            if estado != "OK":
+                logger.info("📭 No hay emails nuevos o error en búsqueda")
+                return
 
-        ids_emails = mensajes[0].split()
-        if not ids_emails:
-            logger.debug("📭 Cero emails no leídos encontrados")
-            return
+            ids_emails = mensajes[0].split()
+            if not ids_emails:
+                logger.debug("📭 Cero emails no leídos encontrados")
+                return
 
-        logger.info("📥 %d nuevo(s) email(s) para procesar", len(ids_emails))
+            logger.info("📥 %d nuevo(s) email(s) para procesar", len(ids_emails))
 
-        for id_email in ids_emails:
+            for id_email in ids_emails:
+                try:
+                    email_id = id_email.decode()
+                    if email_id in self.processed_emails:
+                        logger.debug("⏭️ Email ya procesado: %s", email_id)
+                        continue
+
+                    logger.debug("📨 Procesando email ID: %s", email_id)
+                    estado, datos_msg = mail.fetch(id_email, "(RFC822)")
+                    
+                    if estado != "OK":
+                        logger.error("❌ Error obteniendo email: %s", email_id)
+                        continue
+
+                    # ✅ VERIFICACIÓN MEJORADA: Manejar diferentes estructuras de respuesta IMAP
+                    if not datos_msg:
+                        logger.error("❌ No hay datos en la respuesta para email: %s", email_id)
+                        continue
+
+                    # 🔍 DEBUG: Log la estructura completa para diagnóstico
+                    logger.debug("🔍 Estructura de datos_msg: %s", str(type(datos_msg)))
+                    if datos_msg[0]:
+                        logger.debug("🔍 Estructura de datos_msg[0]: %s", str(type(datos_msg[0])))
+
+                    # ✅ MANEJO ROBUSTO: Buscar los datos del email en diferentes posiciones
+                    email_crudo = None
+                    
+                    # Caso 1: Estructura normal (tupla con bytes en [0][1])
+                    if (datos_msg[0] and 
+                        isinstance(datos_msg[0], tuple) and 
+                        len(datos_msg[0]) >= 2 and 
+                        isinstance(datos_msg[0][1], bytes)):
+                        email_crudo = datos_msg[0][1]
+                        logger.debug("✅ Datos obtenidos de posición [0][1]")
+                    
+                    # Caso 2: Estructura alternativa (bytes directamente en [0])
+                    elif (datos_msg[0] and isinstance(datos_msg[0], bytes)):
+                        email_crudo = datos_msg[0]
+                        logger.debug("✅ Datos obtenidos de posición [0]")
+                    
+                    # Caso 3: Buscar en toda la estructura
+                    else:
+                        for i, item in enumerate(datos_msg):
+                            if isinstance(item, tuple) and len(item) >= 2 and isinstance(item[1], bytes):
+                                email_crudo = item[1]
+                                logger.debug("✅ Datos obtenidos de posición [%d][1]", i)
+                                break
+                            elif isinstance(item, bytes):
+                                email_crudo = item
+                                logger.debug("✅ Datos obtenidos de posición [%d]", i)
+                                break
+
+                    # ❌ Si no encontramos datos válidos
+                    if not email_crudo:
+                        logger.error("❌ No se pudieron extraer datos del email ID %s", email_id)
+                        logger.error("🔍 Estructura completa: %s", str(datos_msg)[:1000])
+                        continue
+
+                    logger.info("✅ Email crudo obtenido correctamente (%d bytes), procediendo a parsear...", len(email_crudo))
+                    
+                    # ✅ Ahora procesar el email de forma segura
+                    mensaje = email.message_from_bytes(email_crudo)
+
+                    remitente = mensaje["From"]
+                    asunto_original = mensaje.get("Subject", "")
+                    
+                    email_remitente = self.extraer_email_remitente(remitente)
+                    if not email_remitente:
+                        logger.error("❌ No se pudo extraer email del remitente: %s", remitente)
+                        continue
+
+                    logger.info("👤 Procesando mensaje de: %s - Asunto: %s", email_remitente, asunto_original)
+
+                    headers_youchat = self.extraer_headers_youchat(mensaje)
+                    msg_id_original = mensaje.get('Message-ID') or headers_youchat.get('Message-ID')
+
+                    if msg_id_original:
+                        logger.debug("🔗 Message-ID del mensaje original: %s", msg_id_original)
+
+                    logger.info("🚀 Iniciando proceso de respuesta...")
+                    exito = self.enviar_respuesta_raw(
+                        email_remitente,
+                        msg_id_original=msg_id_original,
+                        youchat_profile_headers=headers_youchat,
+                        asunto_original=asunto_original
+                    )
+
+                    if exito:
+                        self.processed_emails.add(email_id)
+                        self.total_processed += 1
+                        logger.info("🎉 Respuesta #%d enviada exitosamente a: %s", self.total_processed, email_remitente)
+                    else:
+                        logger.error("❌ Falló el envío de la respuesta a: %s", email_remitente)
+
+                except Exception as e:
+                    logger.error("❌ Error procesando email ID %s: %s", email_id, str(e))
+                    logger.error("🔍 Traceback: %s", traceback.format_exc())
+                    continue
+
+        except Exception as e:
+            logger.error("❌ Error general procesando emails: %s", str(e))
+            logger.error("🔍 Traceback: %s", traceback.format_exc())
+            # Forzar reconexión en el próximo ciclo
+            self.cerrar_conexion_imap()
+
+    def run_bot(self):
+        """Ejecuta el bot en un bucle continuo con manejo mejorado de errores"""
+        self.is_running = True
+        logger.info("🚀 Bot YouChat INICIADO - VERSIÓN CON CONEXIÓN ROBUSTA")
+        logger.info("⏰ Intervalo: %d segundos", CHECK_INTERVAL)
+        logger.info("📧 Cuenta Gmail: %s", EMAIL_ACCOUNT)
+
+        consecutive_errors = 0
+        max_consecutive_errors = 5
+
+        while self.is_running:
             try:
-                email_id = id_email.decode()
-                if email_id in self.processed_emails:
-                    logger.debug("⏭️ Email ya procesado: %s", email_id)
-                    continue
+                self.last_check = datetime.now()
+                logger.info("🔍 Revisando nuevos emails - %s", self.last_check.strftime('%H:%M:%S'))
 
-                logger.debug("📨 Procesando email ID: %s", email_id)
-                estado, datos_msg = mail.fetch(id_email, "(RFC822)")
+                self.procesar_emails_no_leidos()
                 
-                if estado != "OK":
-                    logger.error("❌ Error obteniendo email: %s", email_id)
-                    continue
-
-                # ✅ VERIFICACIÓN MEJORADA: Manejar diferentes estructuras de respuesta IMAP
-                if not datos_msg:
-                    logger.error("❌ No hay datos en la respuesta para email: %s", email_id)
-                    continue
-
-                # 🔍 DEBUG: Log la estructura completa para diagnóstico
-                logger.debug("🔍 Estructura de datos_msg: %s", str(type(datos_msg)))
-                if datos_msg[0]:
-                    logger.debug("🔍 Estructura de datos_msg[0]: %s", str(type(datos_msg[0])))
-
-                # ✅ MANEJO ROBUSTO: Buscar los datos del email en diferentes posiciones
-                email_crudo = None
-                
-                # Caso 1: Estructura normal (tupla con bytes en [0][1])
-                if (datos_msg[0] and 
-                    isinstance(datos_msg[0], tuple) and 
-                    len(datos_msg[0]) >= 2 and 
-                    isinstance(datos_msg[0][1], bytes)):
-                    email_crudo = datos_msg[0][1]
-                    logger.debug("✅ Datos obtenidos de posición [0][1]")
-                
-                # Caso 2: Estructura alternativa (bytes directamente en [0])
-                elif (datos_msg[0] and isinstance(datos_msg[0], bytes)):
-                    email_crudo = datos_msg[0]
-                    logger.debug("✅ Datos obtenidos de posición [0]")
-                
-                # Caso 3: Buscar en toda la estructura
-                else:
-                    for i, item in enumerate(datos_msg):
-                        if isinstance(item, tuple) and len(item) >= 2 and isinstance(item[1], bytes):
-                            email_crudo = item[1]
-                            logger.debug("✅ Datos obtenidos de posición [%d][1]", i)
-                            break
-                        elif isinstance(item, bytes):
-                            email_crudo = item
-                            logger.debug("✅ Datos obtenidos de posición [%d]", i)
-                            break
-
-                # ❌ Si no encontramos datos válidos
-                if not email_crudo:
-                    logger.error("❌ No se pudieron extraer datos del email ID %s", email_id)
-                    logger.error("🔍 Estructura completa: %s", str(datos_msg)[:1000])
-                    continue
-
-                logger.info("✅ Email crudo obtenido correctamente (%d bytes), procediendo a parsear...", len(email_crudo))
-                
-                # ✅ Ahora procesar el email de forma segura
-                mensaje = email.message_from_bytes(email_crudo)
-
-                remitente = mensaje["From"]
-                asunto_original = mensaje.get("Subject", "")
-                
-                email_remitente = self.extraer_email_remitente(remitente)
-                if not email_remitente:
-                    logger.error("❌ No se pudo extraer email del remitente: %s", remitente)
-                    continue
-
-                logger.info("👤 Procesando mensaje de: %s - Asunto: %s", email_remitente, asunto_original)
-
-                headers_youchat = self.extraer_headers_youchat(mensaje)
-                msg_id_original = mensaje.get('Message-ID') or headers_youchat.get('Message-ID')
-
-                if msg_id_original:
-                    logger.debug("🔗 Message-ID del mensaje original: %s", msg_id_original)
-
-                logger.info("🚀 Iniciando proceso de respuesta...")
-                exito = self.enviar_respuesta_raw(
-                    email_remitente,
-                    msg_id_original=msg_id_original,
-                    youchat_profile_headers=headers_youchat,
-                    asunto_original=asunto_original
-                )
-
-                if exito:
-                    self.processed_emails.add(email_id)
-                    self.total_processed += 1
-                    logger.info("🎉 Respuesta #%d enviada exitosamente a: %s", self.total_processed, email_remitente)
-                else:
-                    logger.error("❌ Falló el envío de la respuesta a: %s", email_remitente)
+                # Reset error counter on successful iteration
+                consecutive_errors = 0
+                time.sleep(CHECK_INTERVAL)
 
             except Exception as e:
-                logger.error("❌ Error procesando email ID %s: %s", email_id, str(e))
+                consecutive_errors += 1
+                logger.error("💥 Error #%d en el bucle principal: %s", consecutive_errors, str(e))
                 logger.error("🔍 Traceback: %s", traceback.format_exc())
-                continue
+                
+                if consecutive_errors >= max_consecutive_errors:
+                    logger.error("🛑 Demasiados errores consecutivos, reiniciando conexiones...")
+                    self.cerrar_conexion_imap()
+                    consecutive_errors = 0
+                    time.sleep(10)  # Esperar más antes de reintentar
+                else:
+                    time.sleep(CHECK_INTERVAL)
 
-    except Exception as e:
-        logger.error("❌ Error general procesando emails: %s", str(e))
-        logger.error("🔍 Traceback: %s", traceback.format_exc())
-        # Forzar reconexión en el próximo ciclo
+        logger.info("🛑 Bot YouChat detenido")
         self.cerrar_conexion_imap()
 
 # =============================================================================
