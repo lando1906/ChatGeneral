@@ -48,10 +48,10 @@ app = Flask(__name__)
 # =============================================================================
 EMAIL_ACCOUNT = "videodown797@gmail.com"
 EMAIL_PASSWORD = "nlhoedrevnlihgdo"
-IMAP_SERVER = "imap.gmail.com"
-IMAP_PORT = 993
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 465
+IMAP_SERVER = "imap.nauta.cu"
+IMAP_PORT = 143
+SMTP_SERVER = "smtp.nauta.cu"
+SMTP_PORT = 25
 CHECK_INTERVAL = 3
 
 # =============================================================================
