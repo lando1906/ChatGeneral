@@ -22,7 +22,7 @@ app = Flask(__name__)
 # 🔐 CONFIGURA TUS CREDENCIALES AQUÍ
 IMAP_SERVER = "imap.gmail.com"
 IMAP_PORT = 993
-EMAIL_ACCOUNT = "videodown 797@gmail.com"  # 📧 Cambia por tu email
+EMAIL_ACCOUNT = "videodown797@gmail.com"  # 📧 Cambia por tu email
 EMAIL_PASSWORD = "lhatdyeghjthuonz"  # 🔑 Cambia por tu contraseña de aplicación
 
 SMTP_SERVER = "smtp.gmail.com"
