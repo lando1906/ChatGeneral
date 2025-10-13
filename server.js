@@ -39,7 +39,7 @@ function saveUsers(users) {
 // Almacenar clientes conectados
 const clients = new Map();
 
-// Rutas de API - SOLO USERNAME/PASSWORD
+// Rutas de API
 app.post('/api/register', (req, res) => {
     const { username, password } = req.body;
     
@@ -57,7 +57,6 @@ app.post('/api/register', (req, res) => {
     
     const users = loadUsers();
     
-    // Verificar si el usuario ya existe
     if (users.find(user => user.username.toLowerCase() === username.toLowerCase())) {
         return res.json({ success: false, message: 'El usuario ya está registrado' });
     }
@@ -65,8 +64,8 @@ app.post('/api/register', (req, res) => {
     const newUser = {
         id: Date.now().toString(),
         username: username.trim(),
-        password: password, // En producción, esto debería estar hasheado
-        name: username.trim(), // Usamos el username como nombre para mostrar
+        password: password,
+        name: username.trim(),
         createdAt: new Date().toISOString()
     };
     
@@ -145,33 +144,30 @@ wss.on('connection', function connection(ws) {
             const messageData = JSON.parse(data);
             
             if (messageData.type === 'user_join') {
-                // Almacenar información del usuario
                 currentUser = messageData.user;
                 clients.set(ws, {
                     user: currentUser,
                     isTyping: false
                 });
                 
-                // Notificar a todos los usuarios
                 broadcastToAll({
                     type: 'user_join',
                     user: currentUser,
                     timestamp: new Date().toLocaleTimeString()
                 }, ws);
                 
-                // Enviar contador actualizado
                 broadcastUserCount();
                 
             } else if (messageData.type === 'typing') {
-                // Actualizar estado de escritura
                 const clientData = clients.get(ws);
                 if (clientData) {
                     clientData.isTyping = messageData.typing;
                     broadcastTypingStatus(clientData, messageData.typing);
                 }
                 
-            } else if (messageData.type === 'message' || messageData.type === 'image' || messageData.type === 'audio') {
-                // Mensaje normal (texto, imagen o audio) - reenviar a todos EXCEPTO al remitente original
+            } else if (messageData.type === 'message' || messageData.type === 'image' || messageData.type === 'audio' || messageData.type === 'file') {
+                // Agregar ID único para cada mensaje
+                messageData.messageId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
                 broadcastToAll(messageData, ws);
             }
             
@@ -188,7 +184,6 @@ wss.on('connection', function connection(ws) {
         console.log('❌ Cliente desconectado');
         const clientData = clients.get(ws);
         if (clientData) {
-            // Notificar que el usuario se fue
             broadcastToAll({
                 type: 'user_leave',
                 user: clientData.user,
@@ -263,5 +258,4 @@ server.listen(PORT, function() {
     console.log(`🔐 Auth: http://localhost:${PORT}/auth.html`);
     console.log(`💬 Chat: http://localhost:${PORT}/`);
     console.log(`👥 Usuarios registrados: ${loadUsers().length}`);
-    console.log(`📝 Sistema: Solo username/password (sin email)`);
 });
