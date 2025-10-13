@@ -251,7 +251,7 @@
 
         /* Área de entrada compacta */
         .input-container {
-            padding: 12px 15px;
+            padding: 10px 12px;
             background: white;
             border-top: 1px solid var(--border-color);
             display: flex;
@@ -416,7 +416,7 @@
             }
             
             .input-container {
-                padding: 10px 12px;
+                padding: 8px 10px;
             }
             
             .message {
@@ -573,7 +573,10 @@
                 } else if (messageData.type === 'user_leave') {
                     displaySystemMessage(`${messageData.user.name} abandonó el chat`);
                 } else {
-                    displayMessage(messageData, messageData.userId === currentUser.id ? 'sent' : 'received');
+                    // SOLUCIÓN CLAVE: Solo mostrar mensajes que NO sean del usuario actual
+                    if (messageData.userId !== currentUser.id) {
+                        displayMessage(messageData, 'received');
+                    }
                     hideTypingIndicator();
                 }
             };
@@ -608,8 +611,13 @@
                     user: currentUser
                 };
                 
-                socket.send(JSON.stringify(messageData));
+                // SOLUCIÓN CLAVE: Mostrar inmediatamente el mensaje localmente
                 displayMessage(messageData, 'sent');
+                
+                // Enviar al servidor para que lo distribuya a otros usuarios
+                socket.send(JSON.stringify(messageData));
+                
+                // Limpiar input
                 messageInput.value = '';
                 resetTextarea();
                 sendTypingStop();
@@ -629,8 +637,11 @@
                     user: currentUser
                 };
                 
-                socket.send(JSON.stringify(messageData));
+                // Mostrar inmediatamente la imagen localmente
                 displayMessage(messageData, 'sent');
+                
+                // Enviar al servidor
+                socket.send(JSON.stringify(messageData));
             };
             reader.readAsDataURL(file);
         }
@@ -695,8 +706,11 @@
                     user: currentUser
                 };
                 
-                socket.send(JSON.stringify(messageData));
+                // Mostrar inmediatamente el audio localmente
                 displayMessage(messageData, 'sent');
+                
+                // Enviar al servidor
+                socket.send(JSON.stringify(messageData));
             };
             reader.readAsDataURL(audioBlob);
         }
