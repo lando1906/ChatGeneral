@@ -39,29 +39,34 @@ function saveUsers(users) {
 // Almacenar clientes conectados
 const clients = new Map();
 
-// Rutas de API
+// Rutas de API - SOLO USERNAME/PASSWORD
 app.post('/api/register', (req, res) => {
-    const { name, email, password } = req.body;
+    const { username, password } = req.body;
     
-    if (!name || !email || !password) {
-        return res.json({ success: false, message: 'Todos los campos son requeridos' });
+    if (!username || !password) {
+        return res.json({ success: false, message: 'Usuario y contraseña son requeridos' });
     }
     
-    if (password.length < 6) {
-        return res.json({ success: false, message: 'La contraseña debe tener al menos 6 caracteres' });
+    if (password.length < 4) {
+        return res.json({ success: false, message: 'La contraseña debe tener al menos 4 caracteres' });
+    }
+    
+    if (username.length < 3) {
+        return res.json({ success: false, message: 'El usuario debe tener al menos 3 caracteres' });
     }
     
     const users = loadUsers();
     
-    if (users.find(user => user.email === email)) {
-        return res.json({ success: false, message: 'El email ya está registrado' });
+    // Verificar si el usuario ya existe
+    if (users.find(user => user.username.toLowerCase() === username.toLowerCase())) {
+        return res.json({ success: false, message: 'El usuario ya está registrado' });
     }
     
     const newUser = {
         id: Date.now().toString(),
-        name,
-        email,
-        password,
+        username: username.trim(),
+        password: password, // En producción, esto debería estar hasheado
+        name: username.trim(), // Usamos el username como nombre para mostrar
         createdAt: new Date().toISOString()
     };
     
@@ -71,7 +76,11 @@ app.post('/api/register', (req, res) => {
         res.json({ 
             success: true, 
             message: 'Usuario registrado exitosamente',
-            user: { id: newUser.id, name: newUser.name, email: newUser.email }
+            user: { 
+                id: newUser.id, 
+                name: newUser.name, 
+                username: newUser.username 
+            }
         });
     } else {
         res.json({ success: false, message: 'Error al guardar usuario' });
@@ -79,23 +88,30 @@ app.post('/api/register', (req, res) => {
 });
 
 app.post('/api/login', (req, res) => {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
     
-    if (!email || !password) {
-        return res.json({ success: false, message: 'Email y contraseña requeridos' });
+    if (!username || !password) {
+        return res.json({ success: false, message: 'Usuario y contraseña requeridos' });
     }
     
     const users = loadUsers();
-    const user = users.find(u => u.email === email && u.password === password);
+    const user = users.find(u => 
+        u.username.toLowerCase() === username.toLowerCase() && 
+        u.password === password
+    );
     
     if (user) {
         res.json({ 
             success: true, 
             message: 'Login exitoso',
-            user: { id: user.id, name: user.name, email: user.email }
+            user: { 
+                id: user.id, 
+                name: user.name, 
+                username: user.username 
+            }
         });
     } else {
-        res.json({ success: false, message: 'Credenciales incorrectas' });
+        res.json({ success: false, message: 'Usuario o contraseña incorrectos' });
     }
 });
 
@@ -113,7 +129,8 @@ app.get('/health', (req, res) => {
     res.status(200).json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
-        connections: clients.size
+        connections: clients.size,
+        usersRegistered: loadUsers().length
     });
 });
 
@@ -140,7 +157,7 @@ wss.on('connection', function connection(ws) {
                     type: 'user_join',
                     user: currentUser,
                     timestamp: new Date().toLocaleTimeString()
-                }, ws); // Excluir al usuario que se acaba de unir
+                }, ws);
                 
                 // Enviar contador actualizado
                 broadcastUserCount();
@@ -246,4 +263,5 @@ server.listen(PORT, function() {
     console.log(`🔐 Auth: http://localhost:${PORT}/auth.html`);
     console.log(`💬 Chat: http://localhost:${PORT}/`);
     console.log(`👥 Usuarios registrados: ${loadUsers().length}`);
+    console.log(`📝 Sistema: Solo username/password (sin email)`);
 });
