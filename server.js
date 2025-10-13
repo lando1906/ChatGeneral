@@ -61,7 +61,7 @@ app.post('/api/register', (req, res) => {
         id: Date.now().toString(),
         name,
         email,
-        password, // En producción, esto debería estar hasheado
+        password,
         createdAt: new Date().toISOString()
     };
     
@@ -121,23 +121,26 @@ app.get('/health', (req, res) => {
 wss.on('connection', function connection(ws) {
     console.log('✅ Nuevo cliente conectado');
     
+    let currentUser = null;
+
     ws.on('message', function incoming(data) {
         try {
             const messageData = JSON.parse(data);
             
             if (messageData.type === 'user_join') {
                 // Almacenar información del usuario
+                currentUser = messageData.user;
                 clients.set(ws, {
-                    user: messageData.user,
+                    user: currentUser,
                     isTyping: false
                 });
                 
                 // Notificar a todos los usuarios
                 broadcastToAll({
                     type: 'user_join',
-                    user: messageData.user,
+                    user: currentUser,
                     timestamp: new Date().toLocaleTimeString()
-                });
+                }, ws); // Excluir al usuario que se acaba de unir
                 
                 // Enviar contador actualizado
                 broadcastUserCount();
@@ -150,9 +153,9 @@ wss.on('connection', function connection(ws) {
                     broadcastTypingStatus(clientData, messageData.typing);
                 }
                 
-            } else {
-                // Mensaje normal (texto, imagen o audio)
-                broadcastToAll(messageData);
+            } else if (messageData.type === 'message' || messageData.type === 'image' || messageData.type === 'audio') {
+                // Mensaje normal (texto, imagen o audio) - reenviar a todos EXCEPTO al remitente original
+                broadcastToAll(messageData, ws);
             }
             
         } catch (error) {
@@ -186,11 +189,11 @@ wss.on('connection', function connection(ws) {
     });
 });
 
-// Funciones de broadcast
-function broadcastToAll(data) {
+// Función para broadcast a todos excepto al remitente especificado
+function broadcastToAll(data, excludeWs = null) {
     const message = JSON.stringify(data);
     clients.forEach((clientData, client) => {
-        if (client.readyState === WebSocket.OPEN) {
+        if (client !== excludeWs && client.readyState === WebSocket.OPEN) {
             client.send(message);
         }
     });
