@@ -4,8 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat en Tiempo Real</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary-blue: #2563eb;
+            --dark-blue: #1d4ed8;
+            --light-blue: #3b82f6;
+            --gradient-start: #667eea;
+            --gradient-end: #764ba2;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --border-color: #e2e8f0;
+            --received-msg: #e2e8f0;
+            --sent-msg: #2563eb;
+            --online: #10b981;
+            --typing: #f59e0b;
+            --error: #ef4444;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -14,99 +33,242 @@
         }
 
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            height: 100vh;
+            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 10px;
+            padding: 15px;
         }
 
-        .chat-container {
+        .chat-app {
             width: 100%;
-            max-width: 400px;
+            max-width: 440px;
             height: 90vh;
-            background: white;
+            background: var(--card-bg);
             border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            position: relative;
         }
 
+        /* Header mejorado */
         .chat-header {
-            background: #2563eb;
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
             color: white;
             padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 10;
+        }
+
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .chat-title h1 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .chat-title p {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--online);
+            display: inline-block;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .header-actions i {
+            font-size: 1.2rem;
+            cursor: pointer;
+            opacity: 0.9;
+            transition: opacity 0.2s;
+        }
+
+        .header-actions i:hover {
+            opacity: 1;
+        }
+
+        /* Indicador de conexión */
+        .connection-status {
+            padding: 8px 15px;
             text-align: center;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            font-size: 0.8rem;
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--primary-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s;
         }
 
-        .chat-header h1 {
-            font-size: 1.4rem;
-            font-weight: 500;
+        .connection-status.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
         }
 
+        .connection-status.connected {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--online);
+        }
+
+        /* Área de mensajes mejorada */
         .messages-container {
             flex: 1;
             padding: 20px;
             overflow-y: auto;
-            background: #f8fafc;
+            background: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
 
         .message {
-            margin-bottom: 15px;
+            max-width: 80%;
             padding: 12px 16px;
             border-radius: 18px;
-            max-width: 80%;
+            position: relative;
             word-wrap: break-word;
-            animation: fadeIn 0.3s ease-in;
+            animation: messageAppear 0.3s ease-out;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
         }
 
         .received {
-            background: #e2e8f0;
+            background: var(--received-msg);
+            color: var(--text-dark);
             border-bottom-left-radius: 5px;
-            margin-right: auto;
+            align-self: flex-start;
         }
 
         .sent {
-            background: #2563eb;
+            background: var(--sent-msg);
             color: white;
             border-bottom-right-radius: 5px;
-            margin-left: auto;
+            align-self: flex-end;
         }
 
         .message-sender {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 600;
             margin-bottom: 4px;
             opacity: 0.8;
         }
 
+        .message-text {
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            text-align: right;
+            margin-top: 5px;
+            opacity: 0.7;
+        }
+
+        /* Indicador de escritura */
+        .typing-indicator {
+            align-self: flex-start;
+            background: var(--received-msg);
+            color: var(--text-dark);
+            padding: 12px 16px;
+            border-radius: 18px;
+            border-bottom-left-radius: 5px;
+            font-size: 0.85rem;
+            display: none;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 3px;
+        }
+
+        .typing-dots span {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--text-light);
+            animation: typingPulse 1.5s infinite ease-in-out;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        /* Input area mejorada */
         .input-container {
             padding: 15px;
             background: white;
-            border-top: 1px solid #e2e8f0;
+            border-top: 1px solid var(--border-color);
             display: flex;
             gap: 10px;
+            align-items: flex-end;
         }
 
         #messageInput {
             flex: 1;
             padding: 12px 16px;
-            border: 2px solid #e2e8f0;
+            border: 2px solid var(--border-color);
             border-radius: 25px;
             outline: none;
             font-size: 0.9rem;
-            transition: border-color 0.3s;
+            resize: none;
+            max-height: 120px;
+            transition: border-color 0.3s, box-shadow 0.3s;
         }
 
         #messageInput:focus {
-            border-color: #2563eb;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
-        #sendButton {
-            background: #2563eb;
+        .input-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            background: var(--primary-blue);
             color: white;
             border: none;
             border-radius: 50%;
@@ -116,27 +278,95 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            transition: background 0.3s;
+            transition: all 0.3s;
         }
 
-        #sendButton:hover {
-            background: #1d4ed8;
+        .action-btn:hover {
+            background: var(--dark-blue);
+            transform: translateY(-2px);
         }
 
-        .connection-status {
-            text-align: center;
-            padding: 8px;
+        .action-btn:active {
+            transform: translateY(0);
+        }
+
+        .action-btn i {
+            font-size: 1.1rem;
+        }
+
+        /* Animaciones */
+        @keyframes messageAppear {
+            from { 
+                opacity: 0; 
+                transform: translateY(10px) scale(0.95); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            }
+        }
+
+        @keyframes typingPulse {
+            0%, 60%, 100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+            30% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+        }
+
+        /* Scrollbar personalizado */
+        .messages-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .messages-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 10px;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb:hover {
+            background: var(--text-light);
+        }
+
+        /* Efectos de notificación */
+        .notification {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--card-bg);
+            padding: 10px 20px;
+            border-radius: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             font-size: 0.8rem;
-            color: #64748b;
+            z-index: 100;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            animation: slideDown 0.3s ease-out;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes slideDown {
+            from { 
+                opacity: 0; 
+                transform: translateX(-50%) translateY(-20px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateX(-50%) translateY(0); 
+            }
         }
 
+        /* Responsive */
         @media (max-width: 480px) {
-            .chat-container {
+            .chat-app {
                 height: 95vh;
                 max-width: 100%;
                 border-radius: 15px;
@@ -145,77 +375,192 @@
             .message {
                 max-width: 85%;
             }
+            
+            .chat-header {
+                padding: 15px;
+            }
+            
+            .header-actions {
+                gap: 12px;
+            }
+        }
+
+        /* Efectos de carga */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <div class="chat-container">
+    <div class="chat-app">
         <div class="chat-header">
-            <h1>Chat en Tiempo Real</h1>
+            <div class="header-info">
+                <div class="avatar">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="chat-title">
+                    <h1>Chat en Tiempo Real</h1>
+                    <p><span class="status-indicator"></span> <span id="userCount">Conectando...</span></p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <i class="fas fa-search"></i>
+                <i class="fas fa-ellipsis-v"></i>
+            </div>
         </div>
         
-        <div class="connection-status" id="status">Conectando...</div>
+        <div class="connection-status" id="status">
+            <i class="fas fa-circle-notch loading"></i>
+            <span>Conectando al servidor...</span>
+        </div>
         
         <div class="messages-container" id="messagesContainer">
-            <!-- Los mensajes se insertarán aquí dinámicamente -->
+            <div class="message received">
+                <div class="message-sender">Sistema</div>
+                <div class="message-text">¡Bienvenido al chat! Los mensajes se envían en tiempo real.</div>
+                <div class="message-time">Ahora</div>
+            </div>
+        </div>
+        
+        <div class="typing-indicator" id="typingIndicator">
+            <span id="typingText">Alguien está escribiendo</span>
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
         </div>
         
         <div class="input-container">
-            <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." autocomplete="off">
-            <button id="sendButton">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                    <polygon points="22,2 15,22 11,13 2,9"></polygon>
-                </svg>
-            </button>
+            <textarea id="messageInput" placeholder="Escribe tu mensaje..." rows="1" autocomplete="off"></textarea>
+            <div class="input-actions">
+                <button class="action-btn" id="attachButton">
+                    <i class="fas fa-paperclip"></i>
+                </button>
+                <button class="action-btn" id="sendButton">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="notification" id="notification">
+            <i class="fas fa-bell"></i>
+            <span id="notificationText"></span>
         </div>
     </div>
 
     <script>
+        // Elementos DOM
         const messagesContainer = document.getElementById('messagesContainer');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         const status = document.getElementById('status');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const typingText = document.getElementById('typingText');
+        const notification = document.getElementById('notification');
+        const notificationText = document.getElementById('notificationText');
+        const userCount = document.getElementById('userCount');
 
-        // Configuración WebSocket - se ajustará automáticamente en producción
+        // Estado de la aplicación
+        let isTyping = false;
+        let typingTimer;
+        let connectionRetries = 0;
+        const maxRetries = 5;
+
+        // Configuración WebSocket
         const socket = new WebSocket(
             window.location.hostname === 'localhost' 
                 ? 'ws://localhost:3000' 
                 : `wss://${window.location.host}`
         );
 
+        // Eventos WebSocket
         socket.onopen = function(event) {
-            status.textContent = 'Conectado';
-            status.style.color = '#16a34a';
+            updateStatus('Conectado', 'connected');
+            connectionRetries = 0;
+            showNotification('Conexión establecida');
+            
+            // Simular usuarios conectados
+            userCount.textContent = `${Math.floor(Math.random() * 5) + 1} usuarios conectados`;
         };
 
         socket.onmessage = function(event) {
             const messageData = JSON.parse(event.data);
-            displayMessage(messageData, 'received');
+            
+            if (messageData.type === 'typing') {
+                handleTypingIndicator(messageData);
+            } else if (messageData.type === 'userCount') {
+                userCount.textContent = `${messageData.count} usuarios conectados`;
+            } else {
+                displayMessage(messageData, 'received');
+                // Ocultar indicador de escritura si está activo
+                hideTypingIndicator();
+            }
         };
 
         socket.onerror = function(event) {
-            status.textContent = 'Error de conexión';
-            status.style.color = '#dc2626';
+            updateStatus('Error de conexión', 'error');
         };
 
         socket.onclose = function(event) {
-            status.textContent = 'Desconectado';
-            status.style.color = '#dc2626';
+            updateStatus('Desconectado', 'error');
+            
+            // Intentar reconectar
+            if (connectionRetries < maxRetries) {
+                connectionRetries++;
+                setTimeout(() => {
+                    updateStatus(`Reconectando... (${connectionRetries}/${maxRetries})`, '');
+                    window.location.reload();
+                }, 3000);
+            }
         };
+
+        // Funciones de UI
+        function updateStatus(text, className) {
+            status.innerHTML = className === 'connected' 
+                ? `<i class="fas fa-check-circle"></i><span>${text}</span>`
+                : className === 'error'
+                ? `<i class="fas fa-exclamation-circle"></i><span>${text}</span>`
+                : `<i class="fas fa-circle-notch loading"></i><span>${text}</span>`;
+                
+            status.className = `connection-status ${className}`;
+        }
+
+        function showNotification(text) {
+            notificationText.textContent = text;
+            notification.style.display = 'flex';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
 
         function sendMessage() {
             const message = messageInput.value.trim();
             if (message && socket.readyState === WebSocket.OPEN) {
                 const messageData = {
                     text: message,
-                    timestamp: new Date().toLocaleTimeString(),
-                    sender: 'Tú'
+                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    sender: 'Tú',
+                    type: 'message'
                 };
                 
                 socket.send(JSON.stringify(messageData));
                 displayMessage(messageData, 'sent');
                 messageInput.value = '';
+                resetTextarea();
+                
+                // Enviar evento de dejar de escribir
+                sendTypingStop();
             }
         }
 
@@ -226,26 +571,113 @@
             messageElement.innerHTML = `
                 ${type === 'received' ? `<div class="message-sender">${messageData.sender || 'Usuario'}</div>` : ''}
                 <div class="message-text">${messageData.text}</div>
-                <div style="font-size: 0.7rem; margin-top: 5px; opacity: 0.7;">${messageData.timestamp}</div>
+                <div class="message-time">${messageData.timestamp}</div>
             `;
             
             messagesContainer.appendChild(messageElement);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function handleTypingIndicator(data) {
+            if (data.typing) {
+                typingText.textContent = `${data.sender} está escribiendo...`;
+                typingIndicator.style.display = 'flex';
+                scrollToBottom();
+            } else {
+                hideTypingIndicator();
+            }
+        }
+
+        function hideTypingIndicator() {
+            typingIndicator.style.display = 'none';
+        }
+
+        function sendTypingStart() {
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'typing',
+                    typing: true,
+                    sender: 'Tú'
+                }));
+            }
+        }
+
+        function sendTypingStop() {
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'typing',
+                    typing: false
+                }));
+            }
+        }
+
+        function resetTextarea() {
+            messageInput.style.height = 'auto';
         }
 
         // Event listeners
         sendButton.addEventListener('click', sendMessage);
         
         messageInput.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
                 sendMessage();
             }
+        });
+
+        // Detectar escritura
+        messageInput.addEventListener('input', function() {
+            if (!isTyping) {
+                isTyping = true;
+                sendTypingStart();
+            }
+            
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(function() {
+                isTyping = false;
+                sendTypingStop();
+            }, 1000);
+            
+            // Autoajustar altura del textarea
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
         });
 
         // Enfocar el input al cargar
         window.addEventListener('load', () => {
             messageInput.focus();
+            scrollToBottom();
         });
+
+        // Simular actividad de otros usuarios (solo para demo)
+        setInterval(() => {
+            if (Math.random() > 0.7 && messagesContainer.children.length < 10) {
+                const messages = [
+                    "¡Hola a todos!",
+                    "¿Cómo están?",
+                    "Este chat está muy bien diseñado",
+                    "Me gusta la interfaz azul",
+                    "Los mensajes en tiempo real funcionan perfecto"
+                ];
+                
+                const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+                
+                const messageData = {
+                    text: randomMessage,
+                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    sender: `Usuario${Math.floor(Math.random() * 5) + 1}`
+                };
+                
+                // Solo mostrar mensajes simulados si estamos conectados
+                if (socket.readyState === WebSocket.OPEN) {
+                    displayMessage(messageData, 'received');
+                }
+            }
+        }, 10000);
     </script>
 </body>
 </html>
