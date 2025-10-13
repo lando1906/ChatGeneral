@@ -1,7 +1,7 @@
 {
-  "name": "globalchat-realtime",
+  "name": "chat-tiempo-real",
   "version": "1.0.0",
-  "description": "Aplicación de mensajería global en tiempo real",
+  "description": "Chat en tiempo real con Node.js y WebSockets",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -9,17 +9,12 @@
   },
   "dependencies": {
     "express": "^4.18.2",
-    "socket.io": "^4.7.2"
+    "ws": "^8.13.0"
   },
-  "engines": {
-    "node": ">=16.0.0"
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   },
-  "keywords": [
-    "chat",
-    "realtime",
-    "websockets",
-    "messaging"
-  ],
-  "author": "GlobalChat Team",
+  "keywords": ["chat", "websocket", "nodejs", "realtime"],
+  "author": "Tu Nombre",
   "license": "MIT"
 }
