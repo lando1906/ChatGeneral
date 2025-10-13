@@ -1,7 +1,7 @@
 {
-  "name": "chat-tiempo-real",
+  "name": "chat-completo-render",
   "version": "1.0.0",
-  "description": "Chat en tiempo real con Node.js y WebSockets",
+  "description": "Sistema completo de chat con autenticación",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -14,7 +14,7 @@
   "devDependencies": {
     "nodemon": "^3.0.1"
   },
-  "keywords": ["chat", "websocket", "nodejs", "realtime"],
-  "author": "Tu Nombre",
-  "license": "MIT"
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }
