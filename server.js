@@ -99,6 +99,24 @@ app.post('/api/login', (req, res) => {
     }
 });
 
+// Rutas de páginas
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/auth.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'auth.html'));
+});
+
+// Health check para Render
+app.get('/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'OK', 
+        timestamp: new Date().toISOString(),
+        connections: clients.size
+    });
+});
+
 // WebSocket connection
 wss.on('connection', function connection(ws) {
     console.log('✅ Nuevo cliente conectado');
@@ -202,20 +220,6 @@ function broadcastTypingStatus(clientData, isTyping) {
     });
 }
 
-// Health check para Render
-app.get('/health', (req, res) => {
-    res.status(200).json({ 
-        status: 'OK', 
-        timestamp: new Date().toISOString(),
-        connections: clients.size
-    });
-});
-
-// Ruta principal
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
 // Manejo graceful de shutdown
 process.on('SIGTERM', function() {
     console.log('🔄 Recibió SIGTERM, cerrando servidor...');
@@ -236,6 +240,7 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, function() {
     console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
     console.log(`📍 Salud: http://localhost:${PORT}/health`);
+    console.log(`🔐 Auth: http://localhost:${PORT}/auth.html`);
     console.log(`💬 Chat: http://localhost:${PORT}/`);
     console.log(`👥 Usuarios registrados: ${loadUsers().length}`);
 });
