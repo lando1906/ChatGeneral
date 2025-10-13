@@ -55,18 +55,18 @@
         .auth-header {
             background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
             color: white;
-            padding: 20px;
+            padding: 25px;
             text-align: center;
         }
 
         .auth-header h1 {
-            font-size: 1.4rem;
+            font-size: 1.5rem;
             font-weight: 600;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
 
         .auth-header p {
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             opacity: 0.9;
         }
 
@@ -77,13 +77,13 @@
 
         .auth-tab {
             flex: 1;
-            padding: 12px;
+            padding: 14px;
             text-align: center;
             color: white;
             cursor: pointer;
             transition: background 0.3s;
             font-weight: 500;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
         }
 
         .auth-tab.active {
@@ -91,7 +91,7 @@
         }
 
         .auth-form {
-            padding: 25px;
+            padding: 30px;
             display: none;
         }
 
@@ -101,23 +101,23 @@
         }
 
         .form-group {
-            margin-bottom: 16px;
+            margin-bottom: 20px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             color: var(--text-dark);
             font-weight: 500;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
         }
 
         .form-group input {
             width: 100%;
-            padding: 10px 12px;
+            padding: 12px 15px;
             border: 2px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 0.9rem;
+            border-radius: 10px;
+            font-size: 1rem;
             transition: border-color 0.3s;
         }
 
@@ -128,16 +128,16 @@
 
         .auth-btn {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             background: var(--primary-blue);
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 0.9rem;
+            border-radius: 10px;
+            font-size: 1rem;
             font-weight: 500;
             cursor: pointer;
             transition: background 0.3s;
-            margin-top: 8px;
+            margin-top: 10px;
         }
 
         .auth-btn:hover {
@@ -149,11 +149,11 @@
         }
 
         .auth-message {
-            margin-top: 12px;
-            padding: 8px 12px;
-            border-radius: 6px;
+            margin-top: 15px;
+            padding: 10px 12px;
+            border-radius: 8px;
             text-align: center;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             display: none;
         }
 
@@ -171,9 +171,9 @@
 
         .app-info {
             text-align: center;
-            margin-top: 20px;
+            margin-top: 25px;
             color: white;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             opacity: 0.9;
         }
 
@@ -188,6 +188,10 @@
             }
             
             .auth-form {
+                padding: 25px;
+            }
+            
+            .auth-header {
                 padding: 20px;
             }
         }
@@ -198,7 +202,7 @@
         <div class="auth-card">
             <div class="auth-header">
                 <h1>Chat en Tiempo Real</h1>
-                <p>Conecta con personas alrededor del mundo</p>
+                <p>Conecta y chatea al instante</p>
             </div>
             
             <div class="auth-tabs">
@@ -208,12 +212,12 @@
             
             <div class="auth-form active" id="loginForm">
                 <div class="form-group">
-                    <label for="loginEmail">Email</label>
-                    <input type="email" id="loginEmail" placeholder="tu@email.com">
+                    <label for="loginUsername">Usuario</label>
+                    <input type="text" id="loginUsername" placeholder="Tu nombre de usuario" autocomplete="username">
                 </div>
                 <div class="form-group">
                     <label for="loginPassword">Contraseña</label>
-                    <input type="password" id="loginPassword" placeholder="Tu contraseña">
+                    <input type="password" id="loginPassword" placeholder="Tu contraseña" autocomplete="current-password">
                 </div>
                 <button class="auth-btn" id="loginBtn">
                     <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
@@ -223,16 +227,12 @@
             
             <div class="auth-form" id="registerForm">
                 <div class="form-group">
-                    <label for="registerName">Nombre</label>
-                    <input type="text" id="registerName" placeholder="Tu nombre completo">
-                </div>
-                <div class="form-group">
-                    <label for="registerEmail">Email</label>
-                    <input type="email" id="registerEmail" placeholder="tu@email.com">
+                    <label for="registerUsername">Usuario</label>
+                    <input type="text" id="registerUsername" placeholder="Elige un nombre de usuario" autocomplete="username">
                 </div>
                 <div class="form-group">
                     <label for="registerPassword">Contraseña</label>
-                    <input type="password" id="registerPassword" placeholder="Mínimo 6 caracteres">
+                    <input type="password" id="registerPassword" placeholder="Mínimo 4 caracteres" autocomplete="new-password">
                 </div>
                 <button class="auth-btn" id="registerBtn">
                     <i class="fas fa-user-plus"></i> Crear Cuenta
@@ -280,17 +280,21 @@
 
         // Registro de usuario
         registerBtn.addEventListener('click', async () => {
-            const name = document.getElementById('registerName').value;
-            const email = document.getElementById('registerEmail').value;
+            const username = document.getElementById('registerUsername').value.trim();
             const password = document.getElementById('registerPassword').value;
             
-            if (!name || !email || !password) {
-                showAuthMessage(registerMessage, 'Todos los campos son requeridos', 'error');
+            if (!username || !password) {
+                showAuthMessage(registerMessage, 'Usuario y contraseña son requeridos', 'error');
                 return;
             }
             
-            if (password.length < 6) {
-                showAuthMessage(registerMessage, 'La contraseña debe tener al menos 6 caracteres', 'error');
+            if (password.length < 4) {
+                showAuthMessage(registerMessage, 'La contraseña debe tener al menos 4 caracteres', 'error');
+                return;
+            }
+            
+            if (username.length < 3) {
+                showAuthMessage(registerMessage, 'El usuario debe tener al menos 3 caracteres', 'error');
                 return;
             }
             
@@ -303,15 +307,14 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ name, email, password })
+                    body: JSON.stringify({ username, password })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
                     showAuthMessage(registerMessage, '¡Cuenta creada! Ahora inicia sesión', 'success');
-                    document.getElementById('registerName').value = '';
-                    document.getElementById('registerEmail').value = '';
+                    document.getElementById('registerUsername').value = '';
                     document.getElementById('registerPassword').value = '';
                     
                     // Cambiar a pestaña de login después de 1 segundo
@@ -331,11 +334,11 @@
 
         // Inicio de sesión
         loginBtn.addEventListener('click', async () => {
-            const email = document.getElementById('loginEmail').value;
+            const username = document.getElementById('loginUsername').value.trim();
             const password = document.getElementById('loginPassword').value;
             
-            if (!email || !password) {
-                showAuthMessage(loginMessage, 'Email y contraseña requeridos', 'error');
+            if (!username || !password) {
+                showAuthMessage(loginMessage, 'Usuario y contraseña requeridos', 'error');
                 return;
             }
             
@@ -348,7 +351,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify({ username, password })
                 });
                 
                 const data = await response.json();
@@ -392,7 +395,7 @@
 
         // Auto-focus first input
         window.addEventListener('load', () => {
-            document.getElementById('loginEmail').focus();
+            document.getElementById('loginUsername').focus();
         });
     </script>
 </body>
