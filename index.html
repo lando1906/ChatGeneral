@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat en Tiempo Real</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 400px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: #2563eb;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-header h1 {
+            font-size: 1.4rem;
+            font-weight: 500;
+        }
+
+        .messages-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8fafc;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 80%;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .received {
+            background: #e2e8f0;
+            border-bottom-left-radius: 5px;
+            margin-right: auto;
+        }
+
+        .sent {
+            background: #2563eb;
+            color: white;
+            border-bottom-right-radius: 5px;
+            margin-left: auto;
+        }
+
+        .message-sender {
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            opacity: 0.8;
+        }
+
+        .input-container {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 10px;
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            outline: none;
+            font-size: 0.9rem;
+            transition: border-color 0.3s;
+        }
+
+        #messageInput:focus {
+            border-color: #2563eb;
+        }
+
+        #sendButton {
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.3s;
+        }
+
+        #sendButton:hover {
+            background: #1d4ed8;
+        }
+
+        .connection-status {
+            text-align: center;
+            padding: 8px;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 480px) {
+            .chat-container {
+                height: 95vh;
+                max-width: 100%;
+                border-radius: 15px;
+            }
+            
+            .message {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>Chat en Tiempo Real</h1>
+        </div>
+        
+        <div class="connection-status" id="status">Conectando...</div>
+        
+        <div class="messages-container" id="messagesContainer">
+            <!-- Los mensajes se insertarán aquí dinámicamente -->
+        </div>
+        
+        <div class="input-container">
+            <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." autocomplete="off">
+            <button id="sendButton">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22,2 15,22 11,13 2,9"></polygon>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const status = document.getElementById('status');
+
+        // Configuración WebSocket - se ajustará automáticamente en producción
+        const socket = new WebSocket(
+            window.location.hostname === 'localhost' 
+                ? 'ws://localhost:3000' 
+                : `wss://${window.location.host}`
+        );
+
+        socket.onopen = function(event) {
+            status.textContent = 'Conectado';
+            status.style.color = '#16a34a';
+        };
+
+        socket.onmessage = function(event) {
+            const messageData = JSON.parse(event.data);
+            displayMessage(messageData, 'received');
+        };
+
+        socket.onerror = function(event) {
+            status.textContent = 'Error de conexión';
+            status.style.color = '#dc2626';
+        };
+
+        socket.onclose = function(event) {
+            status.textContent = 'Desconectado';
+            status.style.color = '#dc2626';
+        };
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message && socket.readyState === WebSocket.OPEN) {
+                const messageData = {
+                    text: message,
+                    timestamp: new Date().toLocaleTimeString(),
+                    sender: 'Tú'
+                };
+                
+                socket.send(JSON.stringify(messageData));
+                displayMessage(messageData, 'sent');
+                messageInput.value = '';
+            }
+        }
+
+        function displayMessage(messageData, type) {
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${type}`;
+            
+            messageElement.innerHTML = `
+                ${type === 'received' ? `<div class="message-sender">${messageData.sender || 'Usuario'}</div>` : ''}
+                <div class="message-text">${messageData.text}</div>
+                <div style="font-size: 0.7rem; margin-top: 5px; opacity: 0.7;">${messageData.timestamp}</div>
+            `;
+            
+            messagesContainer.appendChild(messageElement);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        
+        messageInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Enfocar el input al cargar
+        window.addEventListener('load', () => {
+            messageInput.focus();
+        });
+    </script>
+</body>
+</html>
