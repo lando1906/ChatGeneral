@@ -24,6 +24,7 @@
             --typing: #f59e0b;
             --error: #ef4444;
             --success: #10b981;
+            --recording: #ef4444;
         }
 
         * {
@@ -40,318 +41,246 @@
             overflow: hidden;
         }
 
-        /* Pantalla de Autenticación */
-        .auth-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            width: 100vw;
-            padding: 20px;
-        }
-
-        .auth-card {
-            background: var(--card-bg);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
-            overflow: hidden;
-        }
-
-        .auth-tabs {
-            display: flex;
-            background: var(--primary-blue);
-        }
-
-        .auth-tab {
-            flex: 1;
-            padding: 15px;
-            text-align: center;
-            color: white;
-            cursor: pointer;
-            transition: background 0.3s;
-            font-weight: 500;
-        }
-
-        .auth-tab.active {
-            background: var(--dark-blue);
-        }
-
-        .auth-form {
-            padding: 30px;
-            display: none;
-        }
-
-        .auth-form.active {
-            display: block;
-            animation: fadeIn 0.5s ease;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: var(--text-dark);
-            font-weight: 500;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid var(--border-color);
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: border-color 0.3s;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: var(--primary-blue);
-        }
-
-        .auth-btn {
-            width: 100%;
-            padding: 12px;
-            background: var(--primary-blue);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .auth-btn:hover {
-            background: var(--dark-blue);
-        }
-
-        .auth-message {
-            margin-top: 15px;
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 0.9rem;
-            display: none;
-        }
-
-        .auth-message.error {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--error);
-            display: block;
-        }
-
-        .auth-message.success {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--success);
-            display: block;
-        }
-
-        /* Pantalla de Chat */
         .chat-app {
             height: 100vh;
             width: 100vw;
             background: var(--card-bg);
-            display: none;
+            display: flex;
             flex-direction: column;
         }
 
+        /* Header compacto */
         .chat-header {
             background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
             color: white;
-            padding: 15px 20px;
+            padding: 12px 16px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
         }
 
         .header-info {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
         .avatar {
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.2);
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 600;
+            font-size: 0.9rem;
         }
 
         .user-info h2 {
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 600;
         }
 
         .user-info p {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             opacity: 0.9;
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 4px;
         }
 
         .status-indicator {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
             background: var(--online);
         }
 
         .header-actions {
             display: flex;
-            gap: 15px;
+            gap: 12px;
         }
 
         .header-actions i {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             cursor: pointer;
             opacity: 0.9;
             transition: opacity 0.2s;
+            padding: 6px;
         }
 
+        .header-actions i:hover {
+            opacity: 1;
+        }
+
+        /* Indicador de conexión compacto */
         .connection-status {
-            padding: 8px 15px;
+            padding: 6px 12px;
             text-align: center;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             background: rgba(37, 99, 235, 0.1);
             color: var(--primary-blue);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 6px;
+            flex-shrink: 0;
         }
 
+        .connection-status.connected {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--online);
+        }
+
+        .connection-status.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+        }
+
+        /* Área de mensajes */
         .messages-container {
             flex: 1;
-            padding: 20px;
+            padding: 15px;
             overflow-y: auto;
             background: var(--bg-color);
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
         }
 
         .message {
-            max-width: 80%;
-            padding: 12px 16px;
-            border-radius: 18px;
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 16px;
             position: relative;
             word-wrap: break-word;
-            animation: messageAppear 0.3s ease-out;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            animation: messageAppear 0.25s ease-out;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
         .received {
             background: var(--received-msg);
             color: var(--text-dark);
-            border-bottom-left-radius: 5px;
+            border-bottom-left-radius: 4px;
             align-self: flex-start;
         }
 
         .sent {
             background: var(--sent-msg);
             color: white;
-            border-bottom-right-radius: 5px;
+            border-bottom-right-radius: 4px;
             align-self: flex-end;
         }
 
         .message-sender {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 600;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
             opacity: 0.8;
         }
 
         .message-text {
-            font-size: 0.9rem;
-            line-height: 1.4;
+            font-size: 0.85rem;
+            line-height: 1.3;
         }
 
         .message-image {
             max-width: 100%;
-            border-radius: 10px;
-            margin-top: 5px;
+            border-radius: 8px;
+            margin-top: 4px;
             cursor: pointer;
+            max-height: 200px;
+            object-fit: cover;
         }
 
         .message-audio {
-            margin-top: 5px;
+            margin-top: 4px;
         }
 
         .audio-player {
             width: 100%;
-            height: 40px;
-            border-radius: 20px;
+            height: 32px;
+            border-radius: 16px;
             background: rgba(255, 255, 255, 0.2);
         }
 
         .message-time {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             text-align: right;
-            margin-top: 5px;
+            margin-top: 4px;
             opacity: 0.7;
         }
 
+        /* Indicador de escritura */
         .typing-indicator {
             align-self: flex-start;
             background: var(--received-msg);
             color: var(--text-dark);
-            padding: 12px 16px;
-            border-radius: 18px;
-            border-bottom-left-radius: 5px;
-            font-size: 0.85rem;
+            padding: 10px 14px;
+            border-radius: 16px;
+            border-bottom-left-radius: 4px;
+            font-size: 0.8rem;
             display: none;
             align-items: center;
-            gap: 5px;
+            gap: 4px;
         }
 
         .typing-dots {
             display: flex;
-            gap: 3px;
+            gap: 2px;
         }
 
         .typing-dots span {
-            width: 6px;
-            height: 6px;
+            width: 4px;
+            height: 4px;
             border-radius: 50%;
             background: var(--text-light);
             animation: typingPulse 1.5s infinite ease-in-out;
         }
 
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        /* Área de entrada compacta */
         .input-container {
-            padding: 15px;
+            padding: 12px 15px;
             background: white;
             border-top: 1px solid var(--border-color);
             display: flex;
-            gap: 10px;
+            gap: 8px;
             align-items: flex-end;
+            flex-shrink: 0;
         }
 
         #messageInput {
             flex: 1;
-            padding: 12px 16px;
-            border: 2px solid var(--border-color);
-            border-radius: 25px;
+            padding: 10px 14px;
+            border: 1.5px solid var(--border-color);
+            border-radius: 20px;
             outline: none;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             resize: none;
-            max-height: 120px;
+            max-height: 100px;
             transition: border-color 0.3s;
+            line-height: 1.3;
+        }
+
+        #messageInput:focus {
+            border-color: var(--primary-blue);
         }
 
         .input-actions {
             display: flex;
-            gap: 10px;
+            gap: 6px;
+            align-items: center;
         }
 
         .action-btn {
@@ -359,27 +288,64 @@
             color: white;
             border: none;
             border-radius: 50%;
-            width: 45px;
-            height: 45px;
+            width: 38px;
+            height: 38px;
             cursor: pointer;
             display: flex;
             justify-content: center;
             align-items: center;
-            transition: all 0.3s;
+            transition: all 0.2s;
+            font-size: 0.9rem;
         }
 
         .action-btn:hover {
             background: var(--dark-blue);
+            transform: scale(1.05);
+        }
+
+        .action-btn:active {
+            transform: scale(0.95);
+        }
+
+        .action-btn.recording {
+            background: var(--recording);
+            animation: pulse 1s infinite;
         }
 
         .file-input {
             display: none;
         }
 
+        /* Grabación de audio */
+        .recording-indicator {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 16px;
+            color: var(--recording);
+            font-size: 0.8rem;
+            margin-right: 8px;
+        }
+
+        .recording-time {
+            font-weight: 600;
+        }
+
+        .recording-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--recording);
+            animation: blink 1s infinite;
+        }
+
+        /* Animaciones */
         @keyframes messageAppear {
             from { 
                 opacity: 0; 
-                transform: translateY(10px) scale(0.95); 
+                transform: translateY(8px) scale(0.96); 
             }
             to { 
                 opacity: 1; 
@@ -398,77 +364,81 @@
             }
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
         }
 
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        /* Scrollbar personalizado */
         .messages-container::-webkit-scrollbar {
-            width: 6px;
+            width: 4px;
+        }
+
+        .messages-container::-webkit-scrollbar-track {
+            background: transparent;
         }
 
         .messages-container::-webkit-scrollbar-thumb {
             background: var(--border-color);
             border-radius: 10px;
         }
+
+        .messages-container::-webkit-scrollbar-thumb:hover {
+            background: var(--text-light);
+        }
+
+        /* Estados de botones */
+        .send-btn { display: none; }
+        .audio-btn { display: flex; }
+
+        #messageInput:not(:placeholder-shown) ~ .input-actions .send-btn {
+            display: flex;
+        }
+
+        #messageInput:not(:placeholder-shown) ~ .input-actions .audio-btn {
+            display: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .chat-header {
+                padding: 10px 12px;
+            }
+            
+            .messages-container {
+                padding: 12px;
+            }
+            
+            .input-container {
+                padding: 10px 12px;
+            }
+            
+            .message {
+                max-width: 90%;
+                padding: 8px 12px;
+            }
+        }
     </style>
 </head>
 <body>
-    <!-- Pantalla de Autenticación -->
-    <div class="auth-container" id="authContainer">
-        <div class="auth-card">
-            <div class="auth-tabs">
-                <div class="auth-tab active" data-tab="login">Iniciar Sesión</div>
-                <div class="auth-tab" data-tab="register">Registrarse</div>
-            </div>
-            
-            <div class="auth-form active" id="loginForm">
-                <div class="form-group">
-                    <label for="loginEmail">Email</label>
-                    <input type="email" id="loginEmail" placeholder="tu@email.com">
-                </div>
-                <div class="form-group">
-                    <label for="loginPassword">Contraseña</label>
-                    <input type="password" id="loginPassword" placeholder="Tu contraseña">
-                </div>
-                <button class="auth-btn" id="loginBtn">Iniciar Sesión</button>
-                <div class="auth-message" id="loginMessage"></div>
-            </div>
-            
-            <div class="auth-form" id="registerForm">
-                <div class="form-group">
-                    <label for="registerName">Nombre</label>
-                    <input type="text" id="registerName" placeholder="Tu nombre completo">
-                </div>
-                <div class="form-group">
-                    <label for="registerEmail">Email</label>
-                    <input type="email" id="registerEmail" placeholder="tu@email.com">
-                </div>
-                <div class="form-group">
-                    <label for="registerPassword">Contraseña</label>
-                    <input type="password" id="registerPassword" placeholder="Mínimo 6 caracteres">
-                </div>
-                <button class="auth-btn" id="registerBtn">Crear Cuenta</button>
-                <div class="auth-message" id="registerMessage"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Pantalla de Chat -->
     <div class="chat-app" id="chatApp">
         <div class="chat-header">
             <div class="header-info">
-                <div class="avatar" id="userAvatar">
-                    <i class="fas fa-user"></i>
-                </div>
+                <div class="avatar" id="userAvatar">U</div>
                 <div class="user-info">
                     <h2 id="userName">Usuario</h2>
                     <p><span class="status-indicator"></span> <span id="userCount">Conectando...</span></p>
                 </div>
             </div>
             <div class="header-actions">
-                <i class="fas fa-cog" id="settingsBtn"></i>
-                <i class="fas fa-sign-out-alt" id="logoutBtn"></i>
+                <i class="fas fa-cog" id="settingsBtn" title="Configuración"></i>
+                <i class="fas fa-sign-out-alt" id="logoutBtn" title="Cerrar sesión"></i>
             </div>
         </div>
         
@@ -480,8 +450,8 @@
         <div class="messages-container" id="messagesContainer">
             <div class="message received">
                 <div class="message-sender">Sistema</div>
-                <div class="message-text">¡Bienvenido al chat! Puedes enviar mensajes, imágenes y audio.</div>
-                <div class="message-time">Ahora</div>
+                <div class="message-text">¡Bienvenido al chat! Escribe un mensaje o graba audio.</div>
+                <div class="message-time" id="currentTime"></div>
             </div>
         </div>
         
@@ -496,18 +466,23 @@
         
         <div class="input-container">
             <input type="file" id="imageInput" class="file-input" accept="image/*">
-            <input type="file" id="audioInput" class="file-input" accept="audio/*">
             
-            <textarea id="messageInput" placeholder="Escribe tu mensaje..." rows="1" autocomplete="off"></textarea>
+            <textarea id="messageInput" placeholder="Escribe un mensaje..." rows="1" autocomplete="off"></textarea>
+            
+            <div class="recording-indicator" id="recordingIndicator">
+                <div class="recording-dot"></div>
+                <span class="recording-time" id="recordingTime">0:00</span>
+                <span>Grabando...</span>
+            </div>
             
             <div class="input-actions">
-                <button class="action-btn" id="imageBtn">
+                <button class="action-btn" id="imageBtn" title="Enviar imagen">
                     <i class="fas fa-image"></i>
                 </button>
-                <button class="action-btn" id="audioBtn">
+                <button class="action-btn audio-btn" id="audioBtn" title="Grabar audio">
                     <i class="fas fa-microphone"></i>
                 </button>
-                <button class="action-btn" id="sendButton">
+                <button class="action-btn send-btn" id="sendButton" title="Enviar mensaje">
                     <i class="fas fa-paper-plane"></i>
                 </button>
             </div>
@@ -516,150 +491,57 @@
 
     <script>
         // Elementos DOM
-        const authContainer = document.getElementById('authContainer');
         const chatApp = document.getElementById('chatApp');
         const messagesContainer = document.getElementById('messagesContainer');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
+        const audioBtn = document.getElementById('audioBtn');
         const status = document.getElementById('status');
         const typingIndicator = document.getElementById('typingIndicator');
         const typingText = document.getElementById('typingText');
         const userCount = document.getElementById('userCount');
         const userName = document.getElementById('userName');
         const userAvatar = document.getElementById('userAvatar');
-        
-        // Elementos de autenticación
-        const authTabs = document.querySelectorAll('.auth-tab');
-        const loginForm = document.getElementById('loginForm');
-        const registerForm = document.getElementById('registerForm');
-        const loginBtn = document.getElementById('loginBtn');
-        const registerBtn = document.getElementById('registerBtn');
-        const loginMessage = document.getElementById('loginMessage');
-        const registerMessage = document.getElementById('registerMessage');
-        
-        // Elementos de archivos
         const imageBtn = document.getElementById('imageBtn');
-        const audioBtn = document.getElementById('audioBtn');
         const imageInput = document.getElementById('imageInput');
-        const audioInput = document.getElementById('audioInput');
+        const recordingIndicator = document.getElementById('recordingIndicator');
+        const recordingTime = document.getElementById('recordingTime');
+        const currentTime = document.getElementById('currentTime');
 
         // Estado de la aplicación
         let currentUser = null;
         let isTyping = false;
         let typingTimer;
         let socket = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let recordingStartTime = null;
+        let recordingTimer = null;
 
-        // Sistema de pestañas de autenticación
-        authTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                const tabName = tab.getAttribute('data-tab');
-                
-                authTabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                
-                loginForm.classList.remove('active');
-                registerForm.classList.remove('active');
-                
-                if (tabName === 'login') {
-                    loginForm.classList.add('active');
-                } else {
-                    registerForm.classList.add('active');
-                }
-                
-                loginMessage.style.display = 'none';
-                registerMessage.style.display = 'none';
-            });
-        });
-
-        // Registro de usuario
-        registerBtn.addEventListener('click', async () => {
-            const name = document.getElementById('registerName').value;
-            const email = document.getElementById('registerEmail').value;
-            const password = document.getElementById('registerPassword').value;
-            
-            if (!name || !email || !password) {
-                showAuthMessage(registerMessage, 'Todos los campos son requeridos', 'error');
+        // Verificar autenticación al cargar
+        window.addEventListener('load', () => {
+            const savedUser = localStorage.getItem('chatUser');
+            if (!savedUser) {
+                window.location.href = '/auth.html';
                 return;
             }
             
-            if (password.length < 6) {
-                showAuthMessage(registerMessage, 'La contraseña debe tener al menos 6 caracteres', 'error');
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ name, email, password })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    showAuthMessage(registerMessage, '¡Cuenta creada! Ahora inicia sesión', 'success');
-                    document.getElementById('registerName').value = '';
-                    document.getElementById('registerEmail').value = '';
-                    document.getElementById('registerPassword').value = '';
-                    
-                    // Cambiar a pestaña de login
-                    authTabs[0].click();
-                } else {
-                    showAuthMessage(registerMessage, data.message, 'error');
-                }
-            } catch (error) {
-                showAuthMessage(registerMessage, 'Error de conexión', 'error');
-            }
+            currentUser = JSON.parse(savedUser);
+            initializeChat();
+            updateCurrentTime();
         });
-
-        // Inicio de sesión
-        loginBtn.addEventListener('click', async () => {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            
-            if (!email || !password) {
-                showAuthMessage(loginMessage, 'Email y contraseña requeridos', 'error');
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ email, password })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    currentUser = data.user;
-                    initializeChat();
-                } else {
-                    showAuthMessage(loginMessage, data.message, 'error');
-                }
-            } catch (error) {
-                showAuthMessage(loginMessage, 'Error de conexión', 'error');
-            }
-        });
-
-        function showAuthMessage(element, message, type) {
-            element.textContent = message;
-            element.className = `auth-message ${type}`;
-            element.style.display = 'block';
-        }
 
         function initializeChat() {
-            authContainer.style.display = 'none';
-            chatApp.style.display = 'flex';
-            
             userName.textContent = currentUser.name;
             userAvatar.textContent = currentUser.name.charAt(0).toUpperCase();
             
             connectWebSocket();
+            initializeAudioRecording();
+        }
+
+        function updateCurrentTime() {
+            const now = new Date();
+            currentTime.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         }
 
         function connectWebSocket() {
@@ -712,17 +594,7 @@
                 ? `<i class="fas fa-exclamation-circle"></i><span>${text}</span>`
                 : `<i class="fas fa-circle-notch fa-spin"></i><span>${text}</span>`;
                 
-            status.style.background = className === 'connected' 
-                ? 'rgba(16, 185, 129, 0.1)' 
-                : className === 'error'
-                ? 'rgba(239, 68, 68, 0.1)'
-                : 'rgba(37, 99, 235, 0.1)';
-                
-            status.style.color = className === 'connected' 
-                ? '#10b981' 
-                : className === 'error'
-                ? '#ef4444'
-                : '#2563eb';
+            status.className = `connection-status ${className}`;
         }
 
         function sendMessage() {
@@ -763,7 +635,54 @@
             reader.readAsDataURL(file);
         }
 
-        function sendAudio(file) {
+        function initializeAudioRecording() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    
+                    mediaRecorder.ondataavailable = (event) => {
+                        audioChunks.push(event.data);
+                    };
+                    
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        sendAudio(audioBlob);
+                        audioChunks = [];
+                    };
+                })
+                .catch(error => {
+                    console.error('Error accessing microphone:', error);
+                });
+        }
+
+        function startRecording() {
+            if (!mediaRecorder) return;
+            
+            audioChunks = [];
+            mediaRecorder.start();
+            recordingStartTime = Date.now();
+            audioBtn.classList.add('recording');
+            recordingIndicator.style.display = 'flex';
+            
+            // Actualizar timer de grabación
+            recordingTimer = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                recordingTime.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function stopRecording() {
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+            
+            mediaRecorder.stop();
+            audioBtn.classList.remove('recording');
+            recordingIndicator.style.display = 'none';
+            clearInterval(recordingTimer);
+        }
+
+        function sendAudio(audioBlob) {
             if (!socket || socket.readyState !== WebSocket.OPEN) return;
             
             const reader = new FileReader();
@@ -779,7 +698,7 @@
                 socket.send(JSON.stringify(messageData));
                 displayMessage(messageData, 'sent');
             };
-            reader.readAsDataURL(file);
+            reader.readAsDataURL(audioBlob);
         }
 
         function displayMessage(messageData, type) {
@@ -900,8 +819,23 @@
             this.style.height = (this.scrollHeight) + 'px';
         });
 
+        // Grabación de audio
+        audioBtn.addEventListener('mousedown', startRecording);
+        audioBtn.addEventListener('mouseup', stopRecording);
+        audioBtn.addEventListener('mouseleave', stopRecording);
+        
+        // Para dispositivos táctiles
+        audioBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startRecording();
+        });
+        
+        audioBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopRecording();
+        });
+
         imageBtn.addEventListener('click', () => imageInput.click());
-        audioBtn.addEventListener('click', () => audioInput.click());
 
         imageInput.addEventListener('change', function(e) {
             if (e.target.files.length > 0) {
@@ -910,27 +844,12 @@
             }
         });
 
-        audioInput.addEventListener('change', function(e) {
-            if (e.target.files.length > 0) {
-                sendAudio(e.target.files[0]);
-                e.target.value = '';
-            }
-        });
-
         document.getElementById('logoutBtn').addEventListener('click', function() {
             if (socket) {
                 socket.close();
             }
-            chatApp.style.display = 'none';
-            authContainer.style.display = 'flex';
-            currentUser = null;
-            messagesContainer.innerHTML = `
-                <div class="message received">
-                    <div class="message-sender">Sistema</div>
-                    <div class="message-text">¡Bienvenido al chat! Puedes enviar mensajes, imágenes y audio.</div>
-                    <div class="message-time">Ahora</div>
-                </div>
-            `;
+            localStorage.removeItem('chatUser');
+            window.location.href = '/auth.html';
         });
 
         // Enfocar el input al cargar
