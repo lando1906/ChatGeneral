@@ -1,7 +1,7 @@
 {
   "name": "chat-completo-render",
   "version": "1.0.0",
-  "description": "Sistema completo de chat con autenticación",
+  "description": "Sistema completo de chat con autenticación y grabación de audio",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
