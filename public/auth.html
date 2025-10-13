@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Chat en Tiempo Real</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-blue: #2563eb;
+            --dark-blue: #1d4ed8;
+            --light-blue: #3b82f6;
+            --gradient-start: #667eea;
+            --gradient-end: #764ba2;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --border-color: #e2e8f0;
+            --error: #ef4444;
+            --success: #10b981;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 380px;
+        }
+
+        .auth-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+        }
+
+        .auth-header {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .auth-header h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .auth-header p {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .auth-tabs {
+            display: flex;
+            background: var(--primary-blue);
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .auth-tab.active {
+            background: var(--dark-blue);
+        }
+
+        .auth-form {
+            padding: 25px;
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-dark);
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 10px;
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-top: 8px;
+        }
+
+        .auth-btn:hover {
+            background: var(--dark-blue);
+        }
+
+        .auth-btn:active {
+            transform: translateY(1px);
+        }
+
+        .auth-message {
+            margin-top: 12px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.8rem;
+            display: none;
+        }
+
+        .auth-message.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+            display: block;
+        }
+
+        .auth-message.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            display: block;
+        }
+
+        .app-info {
+            text-align: center;
+            margin-top: 20px;
+            color: white;
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 480px) {
+            .auth-container {
+                max-width: 100%;
+            }
+            
+            .auth-form {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>Chat en Tiempo Real</h1>
+                <p>Conecta con personas alrededor del mundo</p>
+            </div>
+            
+            <div class="auth-tabs">
+                <div class="auth-tab active" data-tab="login">Iniciar Sesión</div>
+                <div class="auth-tab" data-tab="register">Registrarse</div>
+            </div>
+            
+            <div class="auth-form active" id="loginForm">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" placeholder="tu@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Contraseña</label>
+                    <input type="password" id="loginPassword" placeholder="Tu contraseña">
+                </div>
+                <button class="auth-btn" id="loginBtn">
+                    <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                </button>
+                <div class="auth-message" id="loginMessage"></div>
+            </div>
+            
+            <div class="auth-form" id="registerForm">
+                <div class="form-group">
+                    <label for="registerName">Nombre</label>
+                    <input type="text" id="registerName" placeholder="Tu nombre completo">
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" placeholder="tu@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Contraseña</label>
+                    <input type="password" id="registerPassword" placeholder="Mínimo 6 caracteres">
+                </div>
+                <button class="auth-btn" id="registerBtn">
+                    <i class="fas fa-user-plus"></i> Crear Cuenta
+                </button>
+                <div class="auth-message" id="registerMessage"></div>
+            </div>
+        </div>
+        
+        <div class="app-info">
+            <p>Envía mensajes, imágenes y grabaciones de audio en tiempo real</p>
+        </div>
+    </div>
+
+    <script>
+        // Elementos DOM
+        const authTabs = document.querySelectorAll('.auth-tab');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const loginBtn = document.getElementById('loginBtn');
+        const registerBtn = document.getElementById('registerBtn');
+        const loginMessage = document.getElementById('loginMessage');
+        const registerMessage = document.getElementById('registerMessage');
+
+        // Sistema de pestañas
+        authTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.getAttribute('data-tab');
+                
+                authTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                loginForm.classList.remove('active');
+                registerForm.classList.remove('active');
+                
+                if (tabName === 'login') {
+                    loginForm.classList.add('active');
+                } else {
+                    registerForm.classList.add('active');
+                }
+                
+                loginMessage.style.display = 'none';
+                registerMessage.style.display = 'none';
+            });
+        });
+
+        // Registro de usuario
+        registerBtn.addEventListener('click', async () => {
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            
+            if (!name || !email || !password) {
+                showAuthMessage(registerMessage, 'Todos los campos son requeridos', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showAuthMessage(registerMessage, 'La contraseña debe tener al menos 6 caracteres', 'error');
+                return;
+            }
+            
+            registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando cuenta...';
+            registerBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAuthMessage(registerMessage, '¡Cuenta creada! Ahora inicia sesión', 'success');
+                    document.getElementById('registerName').value = '';
+                    document.getElementById('registerEmail').value = '';
+                    document.getElementById('registerPassword').value = '';
+                    
+                    // Cambiar a pestaña de login después de 1 segundo
+                    setTimeout(() => {
+                        authTabs[0].click();
+                    }, 1500);
+                } else {
+                    showAuthMessage(registerMessage, data.message, 'error');
+                }
+            } catch (error) {
+                showAuthMessage(registerMessage, 'Error de conexión con el servidor', 'error');
+            } finally {
+                registerBtn.innerHTML = '<i class="fas fa-user-plus"></i> Crear Cuenta';
+                registerBtn.disabled = false;
+            }
+        });
+
+        // Inicio de sesión
+        loginBtn.addEventListener('click', async () => {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                showAuthMessage(loginMessage, 'Email y contraseña requeridos', 'error');
+                return;
+            }
+            
+            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando sesión...';
+            loginBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAuthMessage(loginMessage, '¡Inicio de sesión exitoso!', 'success');
+                    localStorage.setItem('chatUser', JSON.stringify(data.user));
+                    
+                    // Redirigir al chat después de 1 segundo
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    showAuthMessage(loginMessage, data.message, 'error');
+                }
+            } catch (error) {
+                showAuthMessage(loginMessage, 'Error de conexión con el servidor', 'error');
+            } finally {
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Iniciar Sesión';
+                loginBtn.disabled = false;
+            }
+        });
+
+        function showAuthMessage(element, message, type) {
+            element.textContent = message;
+            element.className = `auth-message ${type}`;
+            element.style.display = 'block';
+        }
+
+        // Enter key support
+        document.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                const activeForm = document.querySelector('.auth-form.active');
+                if (activeForm.id === 'loginForm') {
+                    loginBtn.click();
+                } else {
+                    registerBtn.click();
+                }
+            }
+        });
+
+        // Auto-focus first input
+        window.addEventListener('load', () => {
+            document.getElementById('loginEmail').focus();
+        });
+    </script>
+</body>
+</html>
