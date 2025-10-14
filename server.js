@@ -14,6 +14,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Base de datos simple de usuarios
 const USERS_FILE = path.join(__dirname, 'users.json');
+const MESSAGES_FILE = path.join(__dirname, 'messages.json');
 
 function loadUsers() {
     try {
@@ -33,6 +34,28 @@ function saveUsers(users) {
         return true;
     } catch (error) {
         console.error('❌ Error saving users:', error);
+        return false;
+    }
+}
+
+function loadMessages() {
+    try {
+        if (fs.existsSync(MESSAGES_FILE)) {
+            const data = fs.readFileSync(MESSAGES_FILE, 'utf8');
+            return JSON.parse(data);
+        }
+    } catch (error) {
+        console.error('❌ Error loading messages:', error);
+    }
+    return [];
+}
+
+function saveMessages(messages) {
+    try {
+        fs.writeFileSync(MESSAGES_FILE, JSON.stringify(messages, null, 2));
+        return true;
+    } catch (error) {
+        console.error('❌ Error saving messages:', error);
         return false;
     }
 }
@@ -119,13 +142,11 @@ app.post('/api/login', (req, res) => {
     }
 });
 
-// Actualizar perfil de usuario - MEJORADO
+// Actualizar perfil de usuario
 app.put('/api/update-profile', (req, res) => {
     const { userId, name, profilePicture } = req.body;
 
     console.log('📝 Actualizando perfil para usuario:', userId);
-    console.log('📝 Nuevo nombre:', name);
-    console.log('📝 Nueva foto:', profilePicture ? 'Sí' : 'No');
 
     if (!userId) {
         return res.json({ success: false, message: 'ID de usuario requerido' });
@@ -141,12 +162,10 @@ app.put('/api/update-profile', (req, res) => {
     // Actualizar datos
     if (name && name.trim() !== '') {
         users[userIndex].name = name.trim();
-        console.log('✅ Nombre actualizado:', users[userIndex].name);
     }
     
     if (profilePicture) {
         users[userIndex].profilePicture = profilePicture;
-        console.log('✅ Foto de perfil actualizada');
     }
 
     if (saveUsers(users)) {
@@ -155,16 +174,8 @@ app.put('/api/update-profile', (req, res) => {
         if (onlineUser) {
             if (name && name.trim() !== '') onlineUser.name = users[userIndex].name;
             if (profilePicture) onlineUser.profilePicture = users[userIndex].profilePicture;
-            
-            // Broadcast la actualización a todos los clientes
-            broadcastToAll({
-                type: 'user_update',
-                user: onlineUser,
-                timestamp: new Date().toLocaleTimeString()
-            });
         }
 
-        console.log('✅ Perfil actualizado exitosamente');
         res.json({ 
             success: true, 
             message: 'Perfil actualizado exitosamente',
@@ -176,16 +187,13 @@ app.put('/api/update-profile', (req, res) => {
             }
         });
     } else {
-        console.log('❌ Error al guardar cambios');
         res.json({ success: false, message: 'Error al actualizar perfil' });
     }
 });
 
-// Eliminar cuenta de usuario - MEJORADO
+// Eliminar cuenta de usuario
 app.delete('/api/delete-account', (req, res) => {
     const { userId } = req.body;
-
-    console.log('🗑️ Eliminando cuenta para usuario:', userId);
 
     if (!userId) {
         return res.json({ success: false, message: 'ID de usuario requerido' });
@@ -197,8 +205,6 @@ app.delete('/api/delete-account', (req, res) => {
     if (userIndex === -1) {
         return res.json({ success: false, message: 'Usuario no encontrado' });
     }
-
-    const userToDelete = users[userIndex];
 
     // Eliminar usuario
     users.splice(userIndex, 1);
@@ -215,29 +221,16 @@ app.delete('/api/delete-account', (req, res) => {
             }
         });
 
-        // Broadcast que el usuario fue eliminado
-        broadcastToAll({
-            type: 'user_leave',
-            user: userToDelete,
-            timestamp: new Date().toLocaleTimeString(),
-            systemMessage: `${userToDelete.name} ha eliminado su cuenta`
-        });
-
-        broadcastUserCount();
-        broadcastOnlineUsers();
-
-        console.log('✅ Cuenta eliminada exitosamente');
         res.json({ 
             success: true, 
             message: 'Cuenta eliminada exitosamente'
         });
     } else {
-        console.log('❌ Error al eliminar cuenta');
         res.json({ success: false, message: 'Error al eliminar cuenta' });
     }
 });
 
-// Obtener usuarios registrados - MEJORADO
+// Obtener usuarios registrados
 app.get('/api/registered-users', (req, res) => {
     try {
         const users = loadUsers().map(user => ({
@@ -245,11 +238,9 @@ app.get('/api/registered-users', (req, res) => {
             name: user.name,
             username: user.username,
             profilePicture: user.profilePicture,
-            isOnline: onlineUsers.has(user.id),
-            lastSeen: user.lastSeen || null
+            isOnline: onlineUsers.has(user.id)
         }));
         
-        console.log('👥 Enviando lista de usuarios registrados:', users.length);
         res.json({ success: true, users });
     } catch (error) {
         console.error('❌ Error obteniendo usuarios registrados:', error);
@@ -257,38 +248,51 @@ app.get('/api/registered-users', (req, res) => {
     }
 });
 
-// Obtener usuarios en línea
-app.get('/api/online-users', (req, res) => {
-    const users = Array.from(onlineUsers.values()).map(user => ({
-        id: user.id,
-        name: user.name,
-        username: user.username,
-        profilePicture: user.profilePicture
-    }));
-    
-    console.log('🌐 Usuarios en línea:', users.length);
-    res.json({ success: true, users });
+// Obtener historial de mensajes
+app.get('/api/chat-history', (req, res) => {
+    try {
+        const messages = loadMessages();
+        res.json({ success: true, messages });
+    } catch (error) {
+        console.error('❌ Error obteniendo historial:', error);
+        res.json({ success: false, message: 'Error al obtener historial', messages: [] });
+    }
 });
 
-// Obtener información de usuario específico
-app.get('/api/user/:userId', (req, res) => {
-    const { userId } = req.params;
-    const users = loadUsers();
-    const user = users.find(u => u.id === userId);
-    
-    if (user) {
-        res.json({
-            success: true,
-            user: {
-                id: user.id,
-                name: user.name,
-                username: user.username,
-                profilePicture: user.profilePicture,
-                isOnline: onlineUsers.has(user.id)
-            }
-        });
-    } else {
-        res.json({ success: false, message: 'Usuario no encontrado' });
+// Eliminar mensaje
+app.delete('/api/message/:messageId', (req, res) => {
+    const { messageId } = req.params;
+    const { userId } = req.body;
+
+    if (!userId) {
+        return res.json({ success: false, message: 'Usuario no autenticado' });
+    }
+
+    try {
+        const messages = loadMessages();
+        const messageIndex = messages.findIndex(m => m.messageId === messageId && m.userId === userId);
+        
+        if (messageIndex === -1) {
+            return res.json({ success: false, message: 'Mensaje no encontrado' });
+        }
+
+        messages.splice(messageIndex, 1);
+        
+        if (saveMessages(messages)) {
+            // Broadcast eliminación a todos los clientes
+            broadcastToAll({
+                type: 'message_deleted',
+                messageId: messageId,
+                timestamp: new Date().toLocaleTimeString()
+            });
+            
+            res.json({ success: true, message: 'Mensaje eliminado' });
+        } else {
+            res.json({ success: false, message: 'Error al eliminar mensaje' });
+        }
+    } catch (error) {
+        console.error('❌ Error eliminando mensaje:', error);
+        res.json({ success: false, message: 'Error al eliminar mensaje' });
     }
 });
 
@@ -301,48 +305,29 @@ app.get('/auth.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'auth.html'));
 });
 
-// Health check mejorado
+// Health check
 app.get('/health', (req, res) => {
     const users = loadUsers();
+    const messages = loadMessages();
     res.status(200).json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
         connections: clients.size,
         usersRegistered: users.length,
         onlineUsers: onlineUsers.size,
-        memoryUsage: process.memoryUsage(),
-        uptime: process.uptime()
+        totalMessages: messages.length
     });
 });
 
-// WebSocket connection - MEJORADO
+// WebSocket connection
 wss.on('connection', function connection(ws) {
     console.log('✅ Nuevo cliente conectado');
     
     let currentUser = null;
-    let isAlive = true;
-
-    // Heartbeat para detectar conexiones muertas
-    const heartbeat = () => {
-        isAlive = true;
-    };
-
-    ws.on('pong', heartbeat);
-
-    const heartbeatInterval = setInterval(() => {
-        if (!isAlive) {
-            console.log('💔 Conexión muerta, cerrando...');
-            return ws.terminate();
-        }
-        
-        isAlive = false;
-        ws.ping();
-    }, 30000);
 
     ws.on('message', function incoming(data) {
         try {
             const messageData = JSON.parse(data);
-            console.log('📨 Mensaje recibido:', messageData.type);
 
             if (messageData.type === 'user_join') {
                 currentUser = messageData.user;
@@ -355,6 +340,13 @@ wss.on('connection', function connection(ws) {
                 onlineUsers.set(currentUser.id, currentUser);
 
                 console.log(`👋 ${currentUser.name} se unió al chat`);
+
+                // Enviar historial de mensajes al nuevo usuario
+                const messages = loadMessages();
+                ws.send(JSON.stringify({
+                    type: 'chat_history',
+                    messages: messages
+                }));
 
                 broadcastToAll({
                     type: 'user_join',
@@ -388,6 +380,11 @@ wss.on('connection', function connection(ws) {
                 messageData.messageId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
                 messageData.timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 
+                // Guardar mensaje en historial
+                const messages = loadMessages();
+                messages.push(messageData);
+                saveMessages(messages);
+                
                 console.log(`💬 Mensaje de ${messageData.user?.name || 'unknown'}:`, 
                     messageData.type === 'message' ? messageData.text : `[${messageData.type}]`);
                 
@@ -406,7 +403,6 @@ wss.on('connection', function connection(ws) {
 
     ws.on('close', function() {
         console.log('❌ Cliente desconectado');
-        clearInterval(heartbeatInterval);
         
         const clientData = clients.get(ws);
         if (clientData && clientData.user) {
@@ -424,7 +420,6 @@ wss.on('connection', function connection(ws) {
 
     ws.on('error', function(error) {
         console.error('💥 Error WebSocket:', error);
-        clearInterval(heartbeatInterval);
         
         const clientData = clients.get(ws);
         if (clientData && clientData.user) {
@@ -447,8 +442,6 @@ function broadcastToAll(data, excludeWs = null) {
             sentCount++;
         }
     });
-    
-    console.log(`📤 Broadcast enviado a ${sentCount} clientes:`, data.type);
 }
 
 function broadcastUserCount() {
@@ -486,48 +479,10 @@ function broadcastTypingStatus(clientData, isTyping) {
 
     clients.forEach((data, client) => {
         if (client.readyState === WebSocket.OPEN && client !== clients.keys().next().value) {
-            client.send(JSON.stringify(message));
+            client.send(JSON.stringify(message);
         }
     });
 }
-
-// Limpieza periódica de conexiones inactivas
-setInterval(() => {
-    const now = Date.now();
-    const timeout = 5 * 60 * 1000; // 5 minutos
-    
-    clients.forEach((clientData, client) => {
-        if (now - clientData.lastActivity > timeout) {
-            console.log('🕐 Cerrando conexión inactiva:', clientData.user.name);
-            client.close();
-        }
-    });
-}, 60000); // Revisar cada minuto
-
-// Manejo graceful de shutdown
-process.on('SIGTERM', function() {
-    console.log('🔄 Recibió SIGTERM, cerrando servidor...');
-    broadcastToAll({
-        type: 'system',
-        text: 'El servidor se está reiniciando...',
-        timestamp: new Date().toLocaleTimeString()
-    });
-
-    setTimeout(() => {
-        server.close(function() {
-            console.log('✅ Servidor cerrado exitosamente');
-            process.exit(0);
-        });
-    }, 1000);
-});
-
-process.on('SIGINT', function() {
-    console.log('🔄 Recibió SIGINT, cerrando servidor...');
-    server.close(function() {
-        console.log('✅ Servidor cerrado exitosamente');
-        process.exit(0);
-    });
-});
 
 // Iniciar servidor
 const PORT = process.env.PORT || 3000;
@@ -539,6 +494,4 @@ server.listen(PORT, function() {
     
     const users = loadUsers();
     console.log(`👥 Usuarios registrados: ${users.length}`);
-    console.log(`🌐 Usuarios en línea: ${onlineUsers.size}`);
-    console.log(`🔗 Conexiones activas: ${clients.size}`);
 });
