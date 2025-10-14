@@ -61,6 +61,32 @@
             position: relative;
         }
 
+        /* Pantallas */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-screen {
+            display: flex;
+        }
+
+        .profile-screen {
+            display: none;
+            background: var(--card-bg);
+            z-index: 1000;
+        }
+
+        .profile-screen.active {
+            display: flex;
+            animation: slideIn 0.3s ease;
+        }
+
         /* Header */
         .chat-header {
             background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
@@ -244,23 +270,6 @@
         }
 
         /* Pantalla de perfil - MEJORADA */
-        .profile-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--card-bg);
-            z-index: 1000;
-            display: none;
-            flex-direction: column;
-            animation: slideIn 0.3s ease;
-        }
-
-        .profile-screen.active {
-            display: flex;
-        }
-
         .profile-header {
             background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
             color: white;
@@ -268,6 +277,7 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            flex-shrink: 0;
         }
 
         .back-button {
@@ -286,11 +296,12 @@
 
         .profile-content {
             flex: 1;
-            padding: 30px 20px;
+            padding: 30px 20px 70px; /* Más espacio abajo para los botones */
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 25px;
+            overflow-y: auto;
         }
 
         .profile-picture-section {
@@ -314,6 +325,7 @@
             overflow: hidden;
             border: 4px solid white;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
         }
 
         .profile-picture img {
@@ -379,10 +391,12 @@
         }
 
         .profile-actions {
-            width: 100%;
+            position: fixed;
+            bottom: 20px; /* Movido 2cm hacia arriba */
+            left: 20px;
+            right: 20px;
             max-width: 400px;
-            margin-top: auto;
-            padding: 20px;
+            margin: 0 auto;
             display: flex;
             flex-direction: column;
             gap: 12px;
@@ -683,7 +697,7 @@
             border-left: 3px solid var(--primary-blue);
         }
 
-        /* Área de entrada - CORREGIDA */
+        /* Área de entrada */
         .input-container {
             padding: 10px 12px;
             background: white;
@@ -851,11 +865,17 @@
             }
 
             .profile-content {
-                padding: 20px 15px;
+                padding: 20px 15px 70px;
             }
 
             .profile-form {
                 padding: 20px;
+            }
+
+            .profile-actions {
+                bottom: 15px;
+                left: 15px;
+                right: 15px;
             }
         }
     </style>
@@ -863,7 +883,7 @@
 <body>
     <div class="chat-app" id="chatApp">
         <!-- Pantalla principal de chat -->
-        <div class="chat-screen" id="chatScreen">
+        <div class="screen chat-screen" id="chatScreen">
             <div class="chat-header">
                 <div class="header-info">
                     <div class="avatar" id="userAvatarBtn">
@@ -940,6 +960,7 @@
                 <input type="file" id="imageInput" class="file-input" accept="image/*">
                 <input type="file" id="videoInput" class="file-input" accept="video/*">
                 <input type="file" id="fileInput" class="file-input" accept="*/*">
+                <input type="file" id="profilePictureInput" class="file-input" accept="image/*">
 
                 <textarea id="messageInput" placeholder="Escribe un mensaje..." rows="1" autocomplete="off"></textarea>
 
@@ -957,8 +978,8 @@
             </div>
         </div>
 
-        <!-- Pantalla de perfil - MEJORADA -->
-        <div class="profile-screen" id="profileScreen">
+        <!-- Pantalla de perfil -->
+        <div class="screen profile-screen" id="profileScreen">
             <div class="profile-header">
                 <button class="back-button" id="backButton">
                     <i class="fas fa-arrow-left"></i>
@@ -1028,6 +1049,7 @@
         const usersList = document.getElementById('usersList');
         const profileName = document.getElementById('profileName');
         const editProfilePic = document.getElementById('editProfilePic');
+        const profilePictureInput = document.getElementById('profilePictureInput');
         const deleteAccountBtn = document.getElementById('deleteAccountBtn');
         const logoutBtn = document.getElementById('logoutBtn');
         const confirmModal = document.getElementById('confirmModal');
@@ -1044,7 +1066,7 @@
         const replyUserName = document.getElementById('replyUserName');
         const replyPreview = document.getElementById('replyPreview');
         
-        // Elementos para archivos - NUEVOS
+        // Elementos para archivos
         const clipBtn = document.getElementById('clipBtn');
         const filePanel = document.getElementById('filePanel');
         const closeFilePanel = document.getElementById('closeFilePanel');
@@ -1088,15 +1110,42 @@
         }
 
         function setupEventListeners() {
-            // Navegación
+            // Navegación - CORREGIDO
             userAvatarBtn.addEventListener('click', showProfileScreen);
             backButton.addEventListener('click', showChatScreen);
-            usersBtn.addEventListener('click', toggleUsersPanel);
-            closeUsersPanel.addEventListener('click', closeUsersPanelHandler);
+            
+            // Panel de usuarios - CORREGIDO
+            usersBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                usersPanel.classList.toggle('active');
+            });
+            
+            closeUsersPanel.addEventListener('click', function(e) {
+                e.stopPropagation();
+                usersPanel.classList.remove('active');
+            });
 
-            // Gestión de perfil
-            profileName.addEventListener('change', updateProfile);
-            editProfilePic.addEventListener('click', changeProfilePicture);
+            // Gestión de perfil - CORREGIDO
+            profileName.addEventListener('input', function() {
+                // Guardar automáticamente cuando el usuario deja de escribir
+                clearTimeout(window.profileSaveTimeout);
+                window.profileSaveTimeout = setTimeout(updateProfile, 1000);
+            });
+            
+            profileName.addEventListener('blur', updateProfile);
+            
+            // Foto de perfil - CORREGIDO
+            editProfilePic.addEventListener('click', function() {
+                profilePictureInput.click();
+            });
+            
+            const profilePictureElement = document.getElementById('profilePicture');
+            profilePictureElement.addEventListener('click', function() {
+                profilePictureInput.click();
+            });
+            
+            profilePictureInput.addEventListener('change', handleProfilePictureChange);
+
             deleteAccountBtn.addEventListener('click', showDeleteConfirmation);
             logoutBtn.addEventListener('click', logout);
             cancelDelete.addEventListener('click', hideDeleteConfirmation);
@@ -1113,7 +1162,7 @@
             sendButton.addEventListener('click', sendMessage);
             closeReply.addEventListener('click', closeReplyHandler);
 
-            // Sistema de archivos - CORREGIDO
+            // Sistema de archivos
             clipBtn.addEventListener('click', toggleFilePanel);
             closeFilePanel.addEventListener('click', closeFilePanelHandler);
             fileImageBtn.addEventListener('click', () => imageInput.click());
@@ -1128,8 +1177,8 @@
             messagesContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
             messagesContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
 
-            // Cerrar panels al hacer clic fuera
-            document.addEventListener('click', (e) => {
+            // Cerrar panels al hacer clic fuera - CORREGIDO
+            document.addEventListener('click', function(e) {
                 if (!usersPanel.contains(e.target) && e.target !== usersBtn) {
                     usersPanel.classList.remove('active');
                 }
@@ -1151,14 +1200,6 @@
             setTimeout(() => {
                 messageInput.focus();
             }, 300);
-        }
-
-        function toggleUsersPanel() {
-            usersPanel.classList.toggle('active');
-        }
-
-        function closeUsersPanelHandler() {
-            usersPanel.classList.remove('active');
         }
 
         function toggleFilePanel() {
@@ -1344,7 +1385,7 @@
             }
         }
 
-        // Funciones para manejar archivos - CORREGIDAS
+        // Funciones para manejar archivos
         function handleImageUpload(e) {
             if (e.target.files.length > 0) {
                 sendImage(e.target.files[0]);
@@ -1366,6 +1407,23 @@
                 sendFile(e.target.files[0]);
                 e.target.value = '';
                 closeFilePanelHandler();
+            }
+        }
+
+        // Función para cambiar foto de perfil - CORREGIDA
+        function handleProfilePictureChange(e) {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const newProfilePic = e.target.result;
+                    updateProfilePicture(newProfilePic);
+                    updateProfilePictureServer(newProfilePic);
+                };
+                
+                reader.readAsDataURL(file);
+                e.target.value = '';
             }
         }
 
@@ -1517,9 +1575,12 @@
             }, 100);
         }
 
+        // Función para actualizar perfil - CORREGIDA
         async function updateProfile() {
             const newName = profileName.value.trim();
-            if (!newName) return;
+            if (!newName || newName === currentUser.name) {
+                return;
+            }
 
             try {
                 const response = await fetch('/api/update-profile', {
@@ -1540,6 +1601,9 @@
                     userName.textContent = newName;
                     localStorage.setItem('chatUser', JSON.stringify(currentUser));
                     
+                    // Mostrar mensaje de éxito
+                    showToast('Nombre actualizado correctamente', 'success');
+                    
                     // Actualizar en el WebSocket
                     if (socket && socket.readyState === WebSocket.OPEN) {
                         socket.send(JSON.stringify({
@@ -1547,19 +1611,13 @@
                             user: currentUser
                         }));
                     }
+                } else {
+                    showToast('Error al actualizar nombre', 'error');
                 }
             } catch (error) {
                 console.error('Error updating profile:', error);
+                showToast('Error de conexión', 'error');
             }
-        }
-
-        function changeProfilePicture() {
-            // Simulación de cambio de foto de perfil
-            const newProfilePic = 'https://via.placeholder.com/120/2563eb/ffffff?text=' + currentUser.name.charAt(0);
-            updateProfilePicture(newProfilePic);
-            
-            // Actualizar en servidor
-            updateProfilePictureServer(newProfilePic);
         }
 
         function updateProfilePicture(profilePicture) {
@@ -1585,9 +1643,13 @@
                 if (data.success) {
                     currentUser.profilePicture = profilePicture;
                     localStorage.setItem('chatUser', JSON.stringify(currentUser));
+                    showToast('Foto de perfil actualizada', 'success');
+                } else {
+                    showToast('Error al actualizar foto', 'error');
                 }
             } catch (error) {
                 console.error('Error updating profile picture:', error);
+                showToast('Error de conexión', 'error');
             }
         }
 
@@ -1616,9 +1678,12 @@
                 if (data.success) {
                     localStorage.removeItem('chatUser');
                     window.location.href = '/auth.html';
+                } else {
+                    showToast('Error al eliminar cuenta', 'error');
                 }
             } catch (error) {
                 console.error('Error deleting account:', error);
+                showToast('Error de conexión', 'error');
             }
         }
 
@@ -1628,6 +1693,29 @@
             }
             localStorage.removeItem('chatUser');
             window.location.href = '/auth.html';
+        }
+
+        // Función auxiliar para mostrar mensajes toast
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                background: ${type === 'success' ? 'var(--success)' : 'var(--error)'};
+                color: white;
+                border-radius: 8px;
+                z-index: 3000;
+                animation: slideIn 0.3s ease;
+                max-width: 300px;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
         }
     </script>
 </body>
