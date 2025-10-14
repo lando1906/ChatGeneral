@@ -42,10 +42,10 @@ const onlineUsers = new Map();
 
 // Rutas de API
 app.post('/api/register', (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, name } = req.body;
 
-    if (!username || !password) {
-        return res.json({ success: false, message: 'Usuario y contraseña son requeridos' });
+    if (!username || !password || !name) {
+        return res.json({ success: false, message: 'Todos los campos son requeridos' });
     }
 
     if (password.length < 4) {
@@ -66,7 +66,7 @@ app.post('/api/register', (req, res) => {
         id: Date.now().toString(),
         username: username.trim(),
         password: password,
-        name: username.trim(),
+        name: name.trim(),
         createdAt: new Date().toISOString()
     };
 
