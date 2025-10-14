@@ -38,6 +38,7 @@ function saveUsers(users) {
 
 // Almacenar clientes conectados
 const clients = new Map();
+const onlineUsers = new Map();
 
 // Rutas de API
 app.post('/api/register', (req, res) => {
@@ -114,6 +115,16 @@ app.post('/api/login', (req, res) => {
     }
 });
 
+// Obtener usuarios en línea
+app.get('/api/online-users', (req, res) => {
+    const users = Array.from(onlineUsers.values()).map(user => ({
+        id: user.id,
+        name: user.name,
+        username: user.username
+    }));
+    res.json({ success: true, users });
+});
+
 // Rutas de páginas
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -129,7 +140,8 @@ app.get('/health', (req, res) => {
         status: 'OK', 
         timestamp: new Date().toISOString(),
         connections: clients.size,
-        usersRegistered: loadUsers().length
+        usersRegistered: loadUsers().length,
+        onlineUsers: onlineUsers.size
     });
 });
 
@@ -149,6 +161,8 @@ wss.on('connection', function connection(ws) {
                     user: currentUser,
                     isTyping: false
                 });
+                
+                onlineUsers.set(currentUser.id, currentUser);
 
                 broadcastToAll({
                     type: 'user_join',
@@ -157,6 +171,7 @@ wss.on('connection', function connection(ws) {
                 }, ws);
 
                 broadcastUserCount();
+                broadcastOnlineUsers();
 
             } else if (messageData.type === 'typing') {
                 const clientData = clients.get(ws);
@@ -165,9 +180,10 @@ wss.on('connection', function connection(ws) {
                     broadcastTypingStatus(clientData, messageData.typing);
                 }
 
-            } else if (messageData.type === 'message' || messageData.type === 'image' || messageData.type === 'audio' || messageData.type === 'file') {
+            } else if (messageData.type === 'message' || messageData.type === 'image' || messageData.type === 'audio' || messageData.type === 'file' || messageData.type === 'video') {
                 // Agregar ID único para cada mensaje
                 messageData.messageId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                messageData.timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 broadcastToAll(messageData, ws);
             }
 
@@ -183,7 +199,8 @@ wss.on('connection', function connection(ws) {
     ws.on('close', function() {
         console.log('❌ Cliente desconectado');
         const clientData = clients.get(ws);
-        if (clientData) {
+        if (clientData && clientData.user) {
+            onlineUsers.delete(clientData.user.id);
             broadcastToAll({
                 type: 'user_leave',
                 user: clientData.user,
@@ -192,12 +209,18 @@ wss.on('connection', function connection(ws) {
         }
         clients.delete(ws);
         broadcastUserCount();
+        broadcastOnlineUsers();
     });
 
     ws.on('error', function(error) {
         console.error('💥 Error WebSocket:', error);
+        const clientData = clients.get(ws);
+        if (clientData && clientData.user) {
+            onlineUsers.delete(clientData.user.id);
+        }
         clients.delete(ws);
         broadcastUserCount();
+        broadcastOnlineUsers();
     });
 });
 
@@ -217,6 +240,21 @@ function broadcastUserCount() {
         type: 'user_count',
         count: userCount
     };
+    broadcastToAll(message);
+}
+
+function broadcastOnlineUsers() {
+    const users = Array.from(onlineUsers.values()).map(user => ({
+        id: user.id,
+        name: user.name,
+        username: user.username
+    }));
+    
+    const message = {
+        type: 'online_users',
+        users: users
+    };
+    
     broadcastToAll(message);
 }
 
