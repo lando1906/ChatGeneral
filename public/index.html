@@ -1093,7 +1093,6 @@
 
             currentUser = JSON.parse(savedUser);
             initializeChat();
-            updateCurrentTime();
         });
 
         function initializeChat() {
@@ -1101,7 +1100,6 @@
             userAvatar.textContent = currentUser.name.charAt(0).toUpperCase();
 
             connectWebSocket();
-            initializeAudioRecording();
             setupEventListeners();
         }
 
@@ -1155,47 +1153,86 @@
 
             // Ajuste automático de altura del textarea
             messageInput.addEventListener('input', autoResizeTextarea);
+
+            // Logout
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                if (socket) {
+                    socket.close();
+                }
+                localStorage.removeItem('chatUser');
+                window.location.href = '/auth.html';
+            });
+
+            // Enfocar el input al cargar
+            messageInput.focus();
         }
 
         function connectWebSocket() {
-            // Simulación de conexión WebSocket
-            status.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Conectando al servidor...';
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}`;
             
-            setTimeout(() => {
-                status.innerHTML = '<i class="fas fa-check-circle"></i> Conectado';
-                status.classList.add('connected');
-                
-                // Simular usuarios en línea
-                simulateOnlineUsers();
-                
-                // Simular mensajes iniciales
-                simulateInitialMessages();
-            }, 1500);
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = function(event) {
+                updateStatus('Conectado', 'connected');
+
+                socket.send(JSON.stringify({
+                    type: 'user_join',
+                    user: currentUser
+                }));
+            };
+
+            socket.onmessage = function(event) {
+                const messageData = JSON.parse(event.data);
+
+                if (messageData.type === 'typing') {
+                    handleTypingIndicator(messageData);
+                } else if (messageData.type === 'user_count') {
+                    userCount.textContent = `${messageData.count} usuarios conectados`;
+                } else if (messageData.type === 'user_join') {
+                    displaySystemMessage(`${messageData.user.name} se unió al chat`);
+                } else if (messageData.type === 'user_leave') {
+                    displaySystemMessage(`${messageData.user.name} abandonó el chat`);
+                } else if (messageData.type === 'online_users') {
+                    updateOnlineUsers(messageData.users);
+                } else {
+                    if (messageData.userId !== currentUser.id) {
+                        displayMessage(messageData, 'received');
+                    }
+                    hideTypingIndicator();
+                }
+            };
+
+            socket.onerror = function(event) {
+                updateStatus('Error de conexión', 'error');
+            };
+
+            socket.onclose = function(event) {
+                updateStatus('Desconectado', 'error');
+            };
         }
 
-        function simulateOnlineUsers() {
-            const users = [
-                { id: 1, name: 'Ana García', avatar: 'A', online: true },
-                { id: 2, name: 'Carlos López', avatar: 'C', online: true },
-                { id: 3, name: 'María Rodríguez', avatar: 'M', online: true },
-                { id: 4, name: 'Pedro Sánchez', avatar: 'P', online: false },
-                { id: 5, name: 'Laura Fernández', avatar: 'L', online: true }
-            ];
-            
-            onlineUsers = users.filter(user => user.online);
-            updateUsersList();
-            userCount.textContent = `${onlineUsers.length} usuarios en línea`;
-            onlineCount.textContent = onlineUsers.length;
+        function updateStatus(text, className) {
+            status.innerHTML = className === 'connected' 
+                ? `<i class="fas fa-check-circle"></i><span>${text}</span>`
+                : className === 'error'
+                ? `<i class="fas fa-exclamation-circle"></i><span>${text}</span>`
+                : `<i class="fas fa-circle-notch fa-spin"></i><span>${text}</span>`;
+
+            status.className = `connection-status ${className}`;
         }
 
-        function updateUsersList() {
+        function updateOnlineUsers(users) {
+            onlineUsers = users;
+            onlineCount.textContent = users.length;
+            
             usersList.innerHTML = '';
             
-            onlineUsers.forEach(user => {
+            users.forEach(user => {
                 const userItem = document.createElement('div');
                 userItem.className = 'user-item';
                 userItem.innerHTML = `
-                    <div class="user-avatar">${user.avatar}</div>
+                    <div class="user-avatar">${user.name.charAt(0).toUpperCase()}</div>
                     <div class="user-details">
                         <h4>${user.name}</h4>
                         <div class="user-status">
@@ -1206,15 +1243,6 @@
                 `;
                 usersList.appendChild(userItem);
             });
-        }
-
-        function simulateInitialMessages() {
-            // Simular mensajes iniciales
-            setTimeout(() => {
-                addMessage('Ana García', '¡Hola a todos! ¿Cómo están?', 'received', false, null, '10:15');
-                addMessage('Carlos López', '¡Hola Ana! Todo bien por aquí, ¿y tú?', 'received', false, null, '10:16');
-                addMessage('María Rodríguez', '¡Hola! Estoy probando el nuevo sistema de chat', 'received', false, null, '10:17');
-            }, 500);
         }
 
         function toggleFilePanel() {
@@ -1365,17 +1393,18 @@
         }
 
         function showReplyPanel(messageElement) {
-            const messageText = messageElement.querySelector('.message-text').textContent;
+            const messageText = messageElement.querySelector('.message-text')?.textContent || 'Mensaje';
             const senderName = messageElement.querySelector('.message-sender')?.textContent || 'Usuario';
+            const messageId = messageElement.dataset.messageId || Date.now().toString();
             
             replyingTo = {
-                id: messageElement.id || Date.now(),
+                id: messageId,
                 text: messageText,
                 sender: senderName
             };
             
             replyUserName.textContent = senderName;
-            replyPreview.textContent = messageText;
+            replyPreview.textContent = messageText.length > 50 ? messageText.substring(0, 50) + '...' : messageText;
             replyPanel.classList.add('active');
             
             // Animar el mensaje al que se está respondiendo
@@ -1405,14 +1434,14 @@
             // Indicar que estamos escribiendo
             if (!isTyping) {
                 isTyping = true;
-                // En una aplicación real, enviaríamos un evento al servidor
+                sendTypingStart();
             }
             
             // Reiniciar el temporizador de escritura
             clearTimeout(typingTimer);
             typingTimer = setTimeout(() => {
                 isTyping = false;
-                // En una aplicación real, enviaríamos un evento al servidor
+                sendTypingStop();
             }, 1000);
         }
 
@@ -1433,27 +1462,59 @@
             
             if (message === '' && filesToSend.length === 0) return;
             
-            // Crear mensaje
-            const messageData = {
-                id: Date.now(),
-                text: message,
-                sender: currentUser.name,
-                timestamp: getCurrentTime(),
-                replyTo: replyingTo,
-                files: filesToSend.length > 0 ? [...filesToSend] : null
-            };
+            // Enviar archivos si hay
+            if (filesToSend.length > 0) {
+                filesToSend.forEach(fileObj => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const messageData = {
+                            type: fileObj.type,
+                            [fileObj.type === 'image' ? 'imageData' : 
+                             fileObj.type === 'video' ? 'videoData' : 'fileData']: e.target.result,
+                            timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                            userId: currentUser.id,
+                            user: currentUser,
+                            replyingTo: replyingTo,
+                            fileName: fileObj.file.name,
+                            fileType: fileObj.file.type,
+                            messageId: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+                        };
+                        
+                        if (fileObj.type === 'video') {
+                            messageData.fileName = fileObj.file.name;
+                        }
+                        
+                        displayMessage(messageData, 'sent');
+                        if (socket && socket.readyState === WebSocket.OPEN) {
+                            socket.send(JSON.stringify(messageData));
+                        }
+                    };
+                    
+                    if (fileObj.type === 'image' || fileObj.type === 'video') {
+                        reader.readAsDataURL(fileObj.file);
+                    } else {
+                        reader.readAsDataURL(fileObj.file);
+                    }
+                });
+            }
             
-            // En una aplicación real, enviaríamos el mensaje al servidor
-            // Por ahora, solo lo mostramos localmente
-            addMessage(
-                messageData.sender, 
-                messageData.text, 
-                'sent', 
-                false, 
-                messageData.replyTo, 
-                messageData.timestamp,
-                messageData.files
-            );
+            // Enviar mensaje de texto si hay
+            if (message) {
+                const messageData = {
+                    type: 'message',
+                    text: message,
+                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    userId: currentUser.id,
+                    user: currentUser,
+                    replyingTo: replyingTo,
+                    messageId: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+                };
+                
+                displayMessage(messageData, 'sent');
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify(messageData));
+                }
+            }
             
             // Limpiar inputs
             messageInput.value = '';
@@ -1467,284 +1528,285 @@
                 closePreview();
             }
             
-            // Simular respuesta después de un tiempo
-            if (message && Math.random() > 0.5) {
-                setTimeout(() => {
-                    simulateReply(message);
-                }, 1000 + Math.random() * 2000);
-            }
+            sendTypingStop();
         }
 
-        function simulateReply(originalMessage) {
-            const users = ['Ana García', 'Carlos López', 'María Rodríguez'];
-            const randomUser = users[Math.floor(Math.random() * users.length)];
-            
-            const replies = [
-                '¡Interesante!',
-                'No estoy seguro de eso',
-                '¿Podrías explicar más?',
-                'Estoy de acuerdo',
-                'Eso suena genial',
-                '¿En serio?'
-            ];
-            
-            const randomReply = replies[Math.floor(Math.random() * replies.length)];
-            
-            addMessage(randomUser, randomReply, 'received', false, null, getCurrentTime());
-        }
-
-        function addMessage(sender, text, type, isSystem, replyTo, timestamp, files = null) {
+        function displayMessage(messageData, type) {
             const messageElement = document.createElement('div');
             messageElement.className = `message ${type}`;
-            messageElement.id = `msg-${Date.now()}`;
+            messageElement.dataset.messageId = messageData.messageId;
             
             let messageHTML = '';
             
             // Si es una respuesta, mostrar el contexto
-            if (replyTo) {
+            if (messageData.replyingTo) {
                 messageHTML += `
                     <div class="reply-context">
                         <i class="fas fa-reply reply-indicator"></i>
-                        Respondiendo a ${replyTo.sender}
+                        Respondiendo a ${messageData.replyingTo.sender}
                     </div>
-                    <div class="reply-preview">${replyTo.text}</div>
                 `;
             }
             
             // Si no es un mensaje del sistema, mostrar el remitente
-            if (!isSystem && type === 'received') {
-                messageHTML += `<div class="message-sender">${sender}</div>`;
+            if (type === 'received') {
+                messageHTML += `<div class="message-sender">${messageData.user.name}</div>`;
             }
             
             // Contenido del mensaje
-            messageHTML += `<div class="message-text">${text}</div>`;
-            
-            // Archivos adjuntos
-            if (files && files.length > 0) {
-                files.forEach(fileObj => {
-                    if (fileObj.type === 'image') {
-                        const reader = new FileReader();
-                        reader.onload = function(e) {
-                            messageHTML += `<img src="${e.target.result}" class="message-image" alt="Imagen adjunta">`;
-                            messageElement.innerHTML = messageHTML;
-                        };
-                        reader.readAsDataURL(fileObj.file);
-                    } else if (fileObj.type === 'video') {
-                        const reader = new FileReader();
-                        reader.onload = function(e) {
-                            messageHTML += `
-                                <video controls class="message-video">
-                                    <source src="${e.target.result}" type="${fileObj.file.type}">
-                                    Tu navegador no soporta el elemento de video.
-                                </video>
-                            `;
-                            messageElement.innerHTML = messageHTML;
-                        };
-                        reader.readAsDataURL(fileObj.file);
-                    } else {
-                        messageHTML += `
-                            <div class="file-message">
-                                <i class="fas fa-file"></i>
-                                <span>${fileObj.file.name}</span>
-                                <a href="#" download="${fileObj.file.name}">Descargar</a>
-                            </div>
-                        `;
-                    }
-                });
+            if (messageData.type === 'image') {
+                messageHTML += `
+                    <img src="${messageData.imageData}" class="message-image" alt="Imagen enviada">
+                    <div class="message-time">${messageData.timestamp}</div>
+                `;
+            } else if (messageData.type === 'video') {
+                messageHTML += `
+                    <video controls class="message-video">
+                        <source src="${messageData.videoData}" type="${messageData.fileType || 'video/mp4'}">
+                        Tu navegador no soporta el elemento de video.
+                    </video>
+                    <div class="message-time">${messageData.timestamp}</div>
+                `;
+            } else if (messageData.type === 'file') {
+                messageHTML += `
+                    <div class="file-message">
+                        <i class="fas fa-file"></i>
+                        <span>${messageData.fileName}</span>
+                        <a href="${messageData.fileData}" download="${messageData.fileName}">Descargar</a>
+                    </div>
+                    <div class="message-time">${messageData.timestamp}</div>
+                `;
+            } else if (messageData.type === 'audio') {
+                messageHTML += `
+                    <div class="message-time">${messageData.timestamp}</div>
+                `;
+            } else {
+                messageHTML += `
+                    <div class="message-text">${messageData.text}</div>
+                    <div class="message-time">${messageData.timestamp}</div>
+                `;
             }
-            
-            // Timestamp
-            messageHTML += `<div class="message-time">${timestamp}</div>`;
             
             messageElement.innerHTML = messageHTML;
             
-            // Agregar al contenedor con animación
-            messagesContainer.appendChild(messageElement);
-            
-            // Hacer scroll al último mensaje
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            
-            // Actualizar el indicador de escritura si es necesario
-            if (type === 'received') {
-                hideTypingIndicator();
+            // Añadir reproductor de audio si es un mensaje de audio
+            if (messageData.type === 'audio') {
+                const audioPlayer = createAudioPlayer(messageData.audioData, messageData.messageId);
+                messageElement.querySelector('.message-time').insertAdjacentElement('beforebegin', audioPlayer);
             }
+            
+            messagesContainer.appendChild(messageElement);
+            scrollToBottom();
+        }
+
+        function createAudioPlayer(audioData, messageId) {
+            const audioPlayer = document.createElement('div');
+            audioPlayer.className = 'audio-player-custom';
+            audioPlayer.innerHTML = `
+                <div class="audio-controls">
+                    <button class="audio-btn play-btn">
+                        <i class="fas fa-play"></i>
+                    </button>
+                </div>
+                <div class="audio-progress">
+                    <div class="audio-progress-bar"></div>
+                </div>
+                <div class="audio-time">
+                    <span class="current-time">0:00</span>
+                </div>
+                <div class="audio-volume">
+                    <i class="fas fa-volume-up"></i>
+                    <input type="range" min="0" max="100" value="80" class="volume-slider">
+                </div>
+                <audio class="audio-element" src="${audioData}"></audio>
+            `;
+
+            const audioElement = audioPlayer.querySelector('.audio-element');
+            const playBtn = audioPlayer.querySelector('.play-btn');
+            const progressBar = audioPlayer.querySelector('.audio-progress-bar');
+            const currentTime = audioPlayer.querySelector('.current-time');
+            const volumeSlider = audioPlayer.querySelector('.volume-slider');
+
+            // Configurar eventos del reproductor 
+            playBtn.addEventListener('click', function() {
+                if (audioElement.paused) {
+                    // Pausar cualquier otro audio que esté reproduciéndose
+                    if (activeAudioPlayer && activeAudioPlayer !== audioElement) {
+                        activeAudioPlayer.pause();
+                        const otherPlayBtn = activeAudioPlayer.parentElement.querySelector('.play-btn');
+                        otherPlayBtn.innerHTML = '<i class="fas fa-play"></i>';
+                    }
+                    audioElement.play();
+                    playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                    activeAudioPlayer = audioElement;
+                } else {
+                    audioElement.pause();
+                    playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                }
+            });
+
+            audioElement.addEventListener('loadedmetadata', function() {
+                currentTime.textContent = `0:00 / ${formatTime(audioElement.duration)}`;
+            });
+
+            audioElement.addEventListener('timeupdate', function() {
+                const progress = (audioElement.currentTime / audioElement.duration) * 100;
+                progressBar.style.width = progress + '%';
+                currentTime.textContent = `${formatTime(audioElement.currentTime)} / ${formatTime(audioElement.duration)}`;
+            });
+
+            audioElement.addEventListener('ended', function() {
+                playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                progressBar.style.width = '0%';
+                currentTime.textContent = `0:00 / ${formatTime(audioElement.duration)}`;
+            });
+
+            volumeSlider.addEventListener('input', function() {
+                audioElement.volume = this.value / 100;
+            });
+
+            return audioPlayer;
+        }
+
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
         }
 
         function initializeAudioRecording() {
-            // En una aplicación real, inicializaríamos el MediaRecorder API
-            // Por ahora, solo simulamos la funcionalidad
+            if (!navigator.mediaDevices) {
+                console.warn('Media Devices no soportados');
+                return;
+            }
+
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        sendAudio(audioBlob);
+                        audioChunks = [];
+                    };
+                })
+                .catch(error => {
+                    console.error('Error accediendo al micrófono:', error);
+                });
         }
 
         function startRecording(e) {
             e.preventDefault();
             
-            // En una aplicación real, usaríamos el MediaRecorder API
-            // Por ahora, solo simulamos la grabación
-            
+            if (!mediaRecorder) {
+                alert('El micrófono no está disponible');
+                return;
+            }
+
+            audioChunks = [];
+            mediaRecorder.start();
+            recordingStartTime = Date.now();
             audioBtn.classList.add('recording');
             recordingIndicator.style.display = 'flex';
-            
-            recordingStartTime = Date.now();
-            updateRecordingTime();
-            
-            recordingTimer = setInterval(updateRecordingTime, 1000);
+
+            recordingTimer = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                recordingTime.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
         }
 
         function stopRecording(e) {
             e.preventDefault();
             
-            if (!recordingStartTime) return;
-            
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+
+            mediaRecorder.stop();
             audioBtn.classList.remove('recording');
             recordingIndicator.style.display = 'none';
-            
             clearInterval(recordingTimer);
-            
-            const duration = Math.floor((Date.now() - recordingStartTime) / 1000);
-            recordingStartTime = null;
-            
-            if (duration < 1) {
-                // Mensaje de error si la grabación es demasiado corta
-                addMessage('Sistema', 'La grabación debe durar al menos 1 segundo', 'system', true, null, getCurrentTime());
-                return;
-            }
-            
-            // En una aplicación real, enviaríamos el audio al servidor
-            // Por ahora, simulamos el envío de un mensaje de audio
-            addAudioMessage(duration);
         }
 
-        function updateRecordingTime() {
-            if (!recordingStartTime) return;
-            
-            const seconds = Math.floor((Date.now() - recordingStartTime) / 1000);
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
-            
-            recordingTime.textContent = `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+        function sendAudio(audioBlob) {
+            if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const messageData = {
+                    type: 'audio',
+                    audioData: e.target.result,
+                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    userId: currentUser.id,
+                    user: currentUser,
+                    replyingTo: replyingTo,
+                    messageId: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+                };
+
+                displayMessage(messageData, 'sent');
+                socket.send(JSON.stringify(messageData));
+                closeReplyHandler();
+            };
+            reader.readAsDataURL(audioBlob);
         }
 
-        function addAudioMessage(duration) {
+        function displaySystemMessage(text) {
             const messageElement = document.createElement('div');
-            messageElement.className = 'message sent';
-            messageElement.id = `msg-${Date.now()}`;
-            
-            const minutes = Math.floor(duration / 60);
-            const seconds = duration % 60;
-            const timeString = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-            
+            messageElement.className = 'message system';
             messageElement.innerHTML = `
-                <div class="message-text">Mensaje de voz</div>
-                <div class="audio-player-custom">
-                    <div class="audio-controls">
-                        <button class="audio-btn play-btn">
-                            <i class="fas fa-play"></i>
-                        </button>
-                        <div class="audio-time">${timeString}</div>
-                    </div>
-                    <div class="audio-progress">
-                        <div class="audio-progress-bar" style="width: 0%"></div>
-                    </div>
-                    <div class="audio-volume">
-                        <i class="fas fa-volume-up"></i>
-                        <input type="range" min="0" max="100" value="80" class="volume-slider">
-                    </div>
-                </div>
-                <div class="message-time">${getCurrentTime()}</div>
+                <i class="fas fa-info-circle"></i>
+                <div class="message-text">${text}</div>
             `;
-            
             messagesContainer.appendChild(messageElement);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            
-            // Agregar funcionalidad al reproductor
-            const playBtn = messageElement.querySelector('.play-btn');
-            const progressBar = messageElement.querySelector('.audio-progress-bar');
-            const volumeSlider = messageElement.querySelector('.volume-slider');
-            
-            let isPlaying = false;
-            
-            playBtn.addEventListener('click', () => {
-                if (isPlaying) {
-                    // Pausar
-                    playBtn.innerHTML = '<i class="fas fa-play"></i>';
-                    progressBar.style.width = '0%';
-                } else {
-                    // Reproducir
-                    playBtn.innerHTML = '<i class="fas fa-pause"></i>';
-                    
-                    // Simular reproducción
-                    let progress = 0;
-                    const interval = setInterval(() => {
-                        progress += 1;
-                        progressBar.style.width = `${progress}%`;
-                        
-                        if (progress >= 100) {
-                            clearInterval(interval);
-                            playBtn.innerHTML = '<i class="fas fa-play"></i>';
-                            isPlaying = false;
-                        }
-                    }, duration * 10);
-                }
-                
-                isPlaying = !isPlaying;
-            });
-            
-            volumeSlider.addEventListener('input', (e) => {
-                // En una aplicación real, ajustaríamos el volumen del audio
-            });
+            scrollToBottom();
         }
 
-        function showTypingIndicator(user) {
-            typingText.textContent = `${user} está escribiendo`;
-            typingIndicator.style.display = 'flex';
+        function handleTypingIndicator(data) {
+            if (data.typing && data.userId !== currentUser.id) {
+                typingText.textContent = `${data.user.name} está escribiendo...`;
+                typingIndicator.style.display = 'flex';
+                scrollToBottom();
+            } else {
+                hideTypingIndicator();
+            }
         }
 
         function hideTypingIndicator() {
             typingIndicator.style.display = 'none';
         }
 
-        function getCurrentTime() {
-            const now = new Date();
-            return `${now.getHours()}:${now.getMinutes() < 10 ? '0' : ''}${now.getMinutes()}`;
-        }
-
-        function updateCurrentTime() {
-            // Actualizar la hora cada minuto
-            setInterval(() => {
-                const timeElements = document.querySelectorAll('.message-time');
-                timeElements.forEach(el => {
-                    // En una aplicación real, actualizaríamos la hora de los mensajes
-                    // Por ahora, solo simulamos la funcionalidad
-                });
-            }, 60000);
-        }
-
-        // Simular actividad de otros usuarios
-        setInterval(() => {
-            if (Math.random() > 0.7) {
-                const users = ['Ana García', 'Carlos López', 'María Rodríguez'];
-                const randomUser = users[Math.floor(Math.random() * users.length)];
-                
-                showTypingIndicator(randomUser);
-                
-                setTimeout(() => {
-                    hideTypingIndicator();
-                    
-                    if (Math.random() > 0.3) {
-                        const messages = [
-                            '¡Hola!',
-                            '¿Qué tal?',
-                            'Estoy aquí',
-                            '¿Alguien más está usando el chat?',
-                            'Me encanta esta nueva interfaz'
-                        ];
-                        
-                        const randomMessage = messages[Math.floor(Math.random() * messages.length)];
-                        addMessage(randomUser, randomMessage, 'received', false, null, getCurrentTime());
-                    }
-                }, 1000 + Math.random() * 3000);
+        function sendTypingStart() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'typing',
+                    typing: true,
+                    userId: currentUser.id,
+                    user: currentUser
+                }));
             }
-        }, 8000);
+        }
+
+        function sendTypingStop() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'typing',
+                    typing: false,
+                    userId: currentUser.id,
+                    user: currentUser
+                }));
+            }
+        }
+
+        function scrollToBottom() {
+            setTimeout(() => {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, 100);
+        }
     </script>
 </body>
 </html>
