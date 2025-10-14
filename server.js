@@ -67,6 +67,7 @@ app.post('/api/register', (req, res) => {
         username: username.trim(),
         password: password,
         name: name.trim(),
+        profilePicture: null,
         createdAt: new Date().toISOString()
     };
 
@@ -79,7 +80,8 @@ app.post('/api/register', (req, res) => {
             user: { 
                 id: newUser.id, 
                 name: newUser.name, 
-                username: newUser.username 
+                username: newUser.username,
+                profilePicture: newUser.profilePicture
             }
         });
     } else {
@@ -107,7 +109,8 @@ app.post('/api/login', (req, res) => {
             user: { 
                 id: user.id, 
                 name: user.name, 
-                username: user.username 
+                username: user.username,
+                profilePicture: user.profilePicture
             }
         });
     } else {
@@ -115,12 +118,98 @@ app.post('/api/login', (req, res) => {
     }
 });
 
+// Actualizar perfil de usuario
+app.put('/api/update-profile', (req, res) => {
+    const { userId, name, profilePicture } = req.body;
+
+    if (!userId) {
+        return res.json({ success: false, message: 'ID de usuario requerido' });
+    }
+
+    const users = loadUsers();
+    const userIndex = users.findIndex(u => u.id === userId);
+
+    if (userIndex === -1) {
+        return res.json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    // Actualizar datos
+    if (name) users[userIndex].name = name.trim();
+    if (profilePicture) users[userIndex].profilePicture = profilePicture;
+
+    if (saveUsers(users)) {
+        // Actualizar en usuarios en línea
+        const onlineUser = onlineUsers.get(userId);
+        if (onlineUser) {
+            onlineUser.name = users[userIndex].name;
+            onlineUser.profilePicture = users[userIndex].profilePicture;
+        }
+
+        res.json({ 
+            success: true, 
+            message: 'Perfil actualizado exitosamente',
+            user: { 
+                id: users[userIndex].id, 
+                name: users[userIndex].name, 
+                username: users[userIndex].username,
+                profilePicture: users[userIndex].profilePicture
+            }
+        });
+    } else {
+        res.json({ success: false, message: 'Error al actualizar perfil' });
+    }
+});
+
+// Eliminar cuenta de usuario
+app.delete('/api/delete-account', (req, res) => {
+    const { userId } = req.body;
+
+    if (!userId) {
+        return res.json({ success: false, message: 'ID de usuario requerido' });
+    }
+
+    const users = loadUsers();
+    const userIndex = users.findIndex(u => u.id === userId);
+
+    if (userIndex === -1) {
+        return res.json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    // Eliminar usuario
+    users.splice(userIndex, 1);
+
+    if (saveUsers(users)) {
+        // Eliminar de usuarios en línea
+        onlineUsers.delete(userId);
+
+        res.json({ 
+            success: true, 
+            message: 'Cuenta eliminada exitosamente'
+        });
+    } else {
+        res.json({ success: false, message: 'Error al eliminar cuenta' });
+    }
+});
+
+// Obtener usuarios registrados
+app.get('/api/registered-users', (req, res) => {
+    const users = loadUsers().map(user => ({
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        profilePicture: user.profilePicture,
+        isOnline: onlineUsers.has(user.id)
+    }));
+    res.json({ success: true, users });
+});
+
 // Obtener usuarios en línea
 app.get('/api/online-users', (req, res) => {
     const users = Array.from(onlineUsers.values()).map(user => ({
         id: user.id,
         name: user.name,
-        username: user.username
+        username: user.username,
+        profilePicture: user.profilePicture
     }));
     res.json({ success: true, users });
 });
@@ -134,7 +223,7 @@ app.get('/auth.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'auth.html'));
 });
 
-// Health check para Render
+// Health check
 app.get('/health', (req, res) => {
     res.status(200).json({ 
         status: 'OK', 
@@ -247,7 +336,8 @@ function broadcastOnlineUsers() {
     const users = Array.from(onlineUsers.values()).map(user => ({
         id: user.id,
         name: user.name,
-        username: user.username
+        username: user.username,
+        profilePicture: user.profilePicture
     }));
     
     const message = {
