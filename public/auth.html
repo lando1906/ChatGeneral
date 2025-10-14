@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iniciar Sesión - Chat en Tiempo Real</title>
+    <title>Autenticación - Chat en Tiempo Real</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -32,30 +32,26 @@
         body {
             background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
             height: 100vh;
-            width: 100vw;
-            overflow: hidden;
             display: flex;
-            justify-content: center;
             align-items: center;
-            padding: 15px;
+            justify-content: center;
+            padding: 20px;
         }
 
         .auth-container {
-            width: 100%;
-            max-width: 380px;
-        }
-
-        .auth-card {
             background: var(--card-bg);
             border-radius: 16px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
             overflow: hidden;
+            animation: slideUp 0.5s ease-out;
         }
 
         .auth-header {
             background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
             color: white;
-            padding: 25px;
+            padding: 30px 20px;
             text-align: center;
         }
 
@@ -72,32 +68,49 @@
 
         .auth-tabs {
             display: flex;
-            background: var(--primary-blue);
+            background: var(--bg-color);
         }
 
         .auth-tab {
             flex: 1;
-            padding: 14px;
+            padding: 15px;
             text-align: center;
-            color: white;
-            cursor: pointer;
-            transition: background 0.3s;
+            background: none;
+            border: none;
+            font-size: 0.9rem;
             font-weight: 500;
-            font-size: 0.95rem;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
         }
 
         .auth-tab.active {
-            background: var(--dark-blue);
+            color: var(--primary-blue);
+        }
+
+        .auth-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--primary-blue);
+            border-radius: 3px 3px 0 0;
+        }
+
+        .auth-content {
+            padding: 30px;
         }
 
         .auth-form {
-            padding: 30px;
             display: none;
         }
 
         .auth-form.active {
             display: block;
-            animation: fadeIn 0.4s ease;
+            animation: fadeIn 0.5s ease;
         }
 
         .form-group {
@@ -106,80 +119,90 @@
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
-            color: var(--text-dark);
+            font-size: 0.85rem;
             font-weight: 500;
-            font-size: 0.95rem;
+            color: var(--text-dark);
+            margin-bottom: 8px;
         }
 
         .form-group input {
             width: 100%;
-            padding: 12px 15px;
-            border: 2px solid var(--border-color);
+            padding: 12px 16px;
+            border: 1.5px solid var(--border-color);
             border-radius: 10px;
-            font-size: 1rem;
-            transition: border-color 0.3s;
+            font-size: 0.9rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            outline: none;
         }
 
         .form-group input:focus {
-            outline: none;
             border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
-        .auth-btn {
+        .auth-button {
             width: 100%;
-            padding: 12px;
-            background: var(--primary-blue);
+            padding: 14px;
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
             color: white;
             border: none;
             border-radius: 10px;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 500;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.3s;
             margin-top: 10px;
         }
 
-        .auth-btn:hover {
-            background: var(--dark-blue);
+        .auth-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3);
         }
 
-        .auth-btn:active {
-            transform: translateY(1px);
+        .auth-button:active {
+            transform: translateY(0);
         }
 
-        .auth-message {
-            margin-top: 15px;
-            padding: 10px 12px;
+        .message {
+            padding: 12px 16px;
             border-radius: 8px;
-            text-align: center;
+            margin-bottom: 20px;
             font-size: 0.85rem;
             display: none;
         }
 
-        .auth-message.error {
+        .message.error {
             background: rgba(239, 68, 68, 0.1);
             color: var(--error);
+            border: 1px solid rgba(239, 68, 68, 0.2);
             display: block;
         }
 
-        .auth-message.success {
+        .message.success {
             background: rgba(16, 185, 129, 0.1);
             color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
             display: block;
         }
 
-        .app-info {
-            text-align: center;
-            margin-top: 25px;
-            color: white;
-            font-size: 0.85rem;
-            opacity: 0.9;
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
         }
 
         @media (max-width: 480px) {
@@ -187,11 +210,7 @@
                 max-width: 100%;
             }
             
-            .auth-form {
-                padding: 25px;
-            }
-            
-            .auth-header {
+            .auth-content {
                 padding: 20px;
             }
         }
@@ -199,151 +218,90 @@
 </head>
 <body>
     <div class="auth-container">
-        <div class="auth-card">
-            <div class="auth-header">
-                <h1>Chat en Tiempo Real</h1>
-                <p>Conecta y chatea al instante</p>
-            </div>
-            
-            <div class="auth-tabs">
-                <div class="auth-tab active" data-tab="login">Iniciar Sesión</div>
-                <div class="auth-tab" data-tab="register">Registrarse</div>
-            </div>
-            
-            <div class="auth-form active" id="loginForm">
-                <div class="form-group">
-                    <label for="loginUsername">Usuario</label>
-                    <input type="text" id="loginUsername" placeholder="Tu nombre de usuario" autocomplete="username">
-                </div>
-                <div class="form-group">
-                    <label for="loginPassword">Contraseña</label>
-                    <input type="password" id="loginPassword" placeholder="Tu contraseña" autocomplete="current-password">
-                </div>
-                <button class="auth-btn" id="loginBtn">
-                    <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
-                </button>
-                <div class="auth-message" id="loginMessage"></div>
-            </div>
-            
-            <div class="auth-form" id="registerForm">
-                <div class="form-group">
-                    <label for="registerUsername">Usuario</label>
-                    <input type="text" id="registerUsername" placeholder="Elige un nombre de usuario" autocomplete="username">
-                </div>
-                <div class="form-group">
-                    <label for="registerPassword">Contraseña</label>
-                    <input type="password" id="registerPassword" placeholder="Mínimo 4 caracteres" autocomplete="new-password">
-                </div>
-                <button class="auth-btn" id="registerBtn">
-                    <i class="fas fa-user-plus"></i> Crear Cuenta
-                </button>
-                <div class="auth-message" id="registerMessage"></div>
-            </div>
+        <div class="auth-header">
+            <h1>Chat en Tiempo Real</h1>
+            <p>Conéctate con tus amigos</p>
         </div>
         
-        <div class="app-info">
-            <p>Envía mensajes, imágenes y grabaciones de audio en tiempo real</p>
+        <div class="auth-tabs">
+            <button class="auth-tab active" id="loginTab">Iniciar Sesión</button>
+            <button class="auth-tab" id="registerTab">Registrarse</button>
+        </div>
+        
+        <div class="auth-content">
+            <div class="message" id="message"></div>
+            
+            <form class="auth-form active" id="loginForm">
+                <div class="form-group">
+                    <label for="loginUsername">Usuario</label>
+                    <input type="text" id="loginUsername" placeholder="Ingresa tu usuario" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="loginPassword">Contraseña</label>
+                    <input type="password" id="loginPassword" placeholder="Ingresa tu contraseña" required>
+                </div>
+                
+                <button type="submit" class="auth-button">Iniciar Sesión</button>
+            </form>
+            
+            <form class="auth-form" id="registerForm">
+                <div class="form-group">
+                    <label for="registerUsername">Usuario</label>
+                    <input type="text" id="registerUsername" placeholder="Crea un nombre de usuario" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="registerPassword">Contraseña</label>
+                    <input type="password" id="registerPassword" placeholder="Crea una contraseña" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="registerName">Nombre</label>
+                    <input type="text" id="registerName" placeholder="Tu nombre para mostrar" required>
+                </div>
+                
+                <button type="submit" class="auth-button">Registrarse</button>
+            </form>
         </div>
     </div>
 
     <script>
         // Elementos DOM
-        const authTabs = document.querySelectorAll('.auth-tab');
+        const loginTab = document.getElementById('loginTab');
+        const registerTab = document.getElementById('registerTab');
         const loginForm = document.getElementById('loginForm');
         const registerForm = document.getElementById('registerForm');
-        const loginBtn = document.getElementById('loginBtn');
-        const registerBtn = document.getElementById('registerBtn');
-        const loginMessage = document.getElementById('loginMessage');
-        const registerMessage = document.getElementById('registerMessage');
+        const message = document.getElementById('message');
 
-        // Sistema de pestañas
-        authTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                const tabName = tab.getAttribute('data-tab');
-                
-                authTabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                
-                loginForm.classList.remove('active');
-                registerForm.classList.remove('active');
-                
-                if (tabName === 'login') {
-                    loginForm.classList.add('active');
-                } else {
-                    registerForm.classList.add('active');
-                }
-                
-                loginMessage.style.display = 'none';
-                registerMessage.style.display = 'none';
-            });
+        // Cambiar entre pestañas
+        loginTab.addEventListener('click', () => {
+            loginTab.classList.add('active');
+            registerTab.classList.remove('active');
+            loginForm.classList.add('active');
+            registerForm.classList.remove('active');
+            hideMessage();
         });
 
-        // Registro de usuario
-        registerBtn.addEventListener('click', async () => {
-            const username = document.getElementById('registerUsername').value.trim();
-            const password = document.getElementById('registerPassword').value;
-            
-            if (!username || !password) {
-                showAuthMessage(registerMessage, 'Usuario y contraseña son requeridos', 'error');
-                return;
-            }
-            
-            if (password.length < 4) {
-                showAuthMessage(registerMessage, 'La contraseña debe tener al menos 4 caracteres', 'error');
-                return;
-            }
-            
-            if (username.length < 3) {
-                showAuthMessage(registerMessage, 'El usuario debe tener al menos 3 caracteres', 'error');
-                return;
-            }
-            
-            registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando cuenta...';
-            registerBtn.disabled = true;
-            
-            try {
-                const response = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ username, password })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    showAuthMessage(registerMessage, '¡Cuenta creada! Ahora inicia sesión', 'success');
-                    document.getElementById('registerUsername').value = '';
-                    document.getElementById('registerPassword').value = '';
-                    
-                    // Cambiar a pestaña de login después de 1 segundo
-                    setTimeout(() => {
-                        authTabs[0].click();
-                    }, 1500);
-                } else {
-                    showAuthMessage(registerMessage, data.message, 'error');
-                }
-            } catch (error) {
-                showAuthMessage(registerMessage, 'Error de conexión con el servidor', 'error');
-            } finally {
-                registerBtn.innerHTML = '<i class="fas fa-user-plus"></i> Crear Cuenta';
-                registerBtn.disabled = false;
-            }
+        registerTab.addEventListener('click', () => {
+            registerTab.classList.add('active');
+            loginTab.classList.remove('active');
+            registerForm.classList.add('active');
+            loginForm.classList.remove('active');
+            hideMessage();
         });
 
-        // Inicio de sesión
-        loginBtn.addEventListener('click', async () => {
-            const username = document.getElementById('loginUsername').value.trim();
+        // Manejar envío de formularios
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('loginUsername').value;
             const password = document.getElementById('loginPassword').value;
             
             if (!username || !password) {
-                showAuthMessage(loginMessage, 'Usuario y contraseña requeridos', 'error');
+                showMessage('Por favor completa todos los campos', 'error');
                 return;
             }
-            
-            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando sesión...';
-            loginBtn.disabled = true;
             
             try {
                 const response = await fetch('/api/login', {
@@ -357,45 +315,80 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    showAuthMessage(loginMessage, '¡Inicio de sesión exitoso!', 'success');
                     localStorage.setItem('chatUser', JSON.stringify(data.user));
-                    
-                    // Redirigir al chat después de 1 segundo
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 1000);
+                    window.location.href = '/';
                 } else {
-                    showAuthMessage(loginMessage, data.message, 'error');
+                    showMessage(data.message, 'error');
                 }
             } catch (error) {
-                showAuthMessage(loginMessage, 'Error de conexión con el servidor', 'error');
-            } finally {
-                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Iniciar Sesión';
-                loginBtn.disabled = false;
+                showMessage('Error de conexión', 'error');
             }
         });
 
-        function showAuthMessage(element, message, type) {
-            element.textContent = message;
-            element.className = `auth-message ${type}`;
-            element.style.display = 'block';
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('registerUsername').value;
+            const password = document.getElementById('registerPassword').value;
+            const name = document.getElementById('registerName').value;
+            
+            if (!username || !password || !name) {
+                showMessage('Por favor completa todos los campos', 'error');
+                return;
+            }
+            
+            if (password.length < 4) {
+                showMessage('La contraseña debe tener al menos 4 caracteres', 'error');
+                return;
+            }
+            
+            if (username.length < 3) {
+                showMessage('El usuario debe tener al menos 3 caracteres', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password, name })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('Usuario registrado exitosamente', 'success');
+                    // Cambiar a pestaña de login después de registro exitoso
+                    setTimeout(() => {
+                        loginTab.click();
+                        document.getElementById('loginUsername').value = username;
+                        document.getElementById('loginPassword').value = '';
+                    }, 1500);
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Error de conexión', 'error');
+            }
+        });
+
+        function showMessage(text, type) {
+            message.textContent = text;
+            message.className = `message ${type}`;
         }
 
-        // Enter key support
-        document.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                const activeForm = document.querySelector('.auth-form.active');
-                if (activeForm.id === 'loginForm') {
-                    loginBtn.click();
-                } else {
-                    registerBtn.click();
-                }
-            }
-        });
+        function hideMessage() {
+            message.style.display = 'none';
+        }
 
-        // Auto-focus first input
+        // Verificar si ya está autenticado
         window.addEventListener('load', () => {
-            document.getElementById('loginUsername').focus();
+            const savedUser = localStorage.getItem('chatUser');
+            if (savedUser) {
+                window.location.href = '/';
+            }
         });
     </script>
 </body>
