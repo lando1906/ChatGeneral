@@ -243,7 +243,7 @@
             background: var(--text-light);
         }
 
-        /* Pantalla de perfil */
+        /* Pantalla de perfil - MEJORADA */
         .profile-screen {
             position: absolute;
             top: 0;
@@ -277,30 +277,43 @@
             font-size: 1.2rem;
             cursor: pointer;
             padding: 4px;
+            transition: transform 0.2s;
+        }
+
+        .back-button:hover {
+            transform: scale(1.1);
         }
 
         .profile-content {
             flex: 1;
-            padding: 20px;
+            padding: 30px 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            gap: 25px;
+        }
+
+        .profile-picture-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
         }
 
         .profile-picture {
             width: 120px;
             height: 120px;
             border-radius: 50%;
-            background: var(--bg-color);
+            background: linear-gradient(135deg, var(--light-blue) 0%, var(--primary-blue) 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
-            color: var(--text-light);
-            margin-bottom: 20px;
+            font-size: 2.5rem;
+            color: white;
             position: relative;
             overflow: hidden;
-            border: 4px solid var(--primary-blue);
+            border: 4px solid white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
         .profile-picture img {
@@ -310,25 +323,31 @@
         }
 
         .edit-profile-pic {
-            position: absolute;
-            bottom: 0;
-            right: 0;
             background: var(--primary-blue);
             color: white;
             border: none;
-            border-radius: 50%;
-            width: 36px;
-            height: 36px;
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 0.8rem;
+            cursor: pointer;
             display: flex;
             align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 0.9rem;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .edit-profile-pic:hover {
+            background: var(--dark-blue);
+            transform: translateY(-2px);
         }
 
         .profile-form {
             width: 100%;
             max-width: 400px;
+            background: var(--bg-color);
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
 
         .form-group {
@@ -351,11 +370,12 @@
             font-size: 0.9rem;
             transition: border-color 0.3s, box-shadow 0.3s;
             outline: none;
+            background: white;
         }
 
         .form-group input:focus {
             border-color: var(--primary-blue);
-            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
         .profile-actions {
@@ -363,18 +383,24 @@
             max-width: 400px;
             margin-top: auto;
             padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
         .btn {
             width: 100%;
             padding: 14px;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 0.95rem;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.3s;
-            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
         .btn-danger {
@@ -385,6 +411,7 @@
         .btn-danger:hover {
             background: #dc2626;
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
         }
 
         .btn-secondary {
@@ -395,6 +422,7 @@
         .btn-secondary:hover {
             background: #475569;
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
         }
 
         /* Modal de confirmación */
@@ -418,16 +446,26 @@
         .modal-content {
             background: white;
             padding: 24px;
-            border-radius: 12px;
+            border-radius: 16px;
             max-width: 400px;
             width: 90%;
             text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-content h3 {
+            margin-bottom: 10px;
+            color: var(--text-dark);
+        }
+
+        .modal-content p {
+            color: var(--text-light);
+            margin-bottom: 20px;
         }
 
         .modal-actions {
             display: flex;
             gap: 12px;
-            margin-top: 20px;
         }
 
         .modal-actions .btn {
@@ -645,7 +683,7 @@
             border-left: 3px solid var(--primary-blue);
         }
 
-        /* Área de entrada */
+        /* Área de entrada - CORREGIDA */
         .input-container {
             padding: 10px 12px;
             background: white;
@@ -705,6 +743,55 @@
             display: none;
         }
 
+        /* Panel de archivos */
+        .file-panel {
+            display: none;
+            background: white;
+            padding: 12px 15px;
+            border-top: 1px solid var(--border-color);
+            flex-shrink: 0;
+            animation: slideUp 0.3s ease;
+        }
+
+        .file-panel.active {
+            display: flex;
+        }
+
+        .file-options {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .file-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 10px;
+            transition: all 0.2s;
+            min-width: 60px;
+        }
+
+        .file-option:hover {
+            background: var(--bg-color);
+            transform: translateY(-2px);
+        }
+
+        .file-option i {
+            font-size: 1.2rem;
+            color: var(--primary-blue);
+        }
+
+        .file-option span {
+            font-size: 0.7rem;
+            color: var(--text-dark);
+        }
+
         /* Estados de botones */
         .send-btn { display: none; }
         .audio-btn { display: flex; }
@@ -761,6 +848,14 @@
             .users-panel {
                 width: 100%;
                 border-radius: 0;
+            }
+
+            .profile-content {
+                padding: 20px 15px;
+            }
+
+            .profile-form {
+                padding: 20px;
             }
         }
     </style>
@@ -820,6 +915,27 @@
                 <div class="reply-preview" id="replyPreview"></div>
             </div>
 
+            <!-- Panel de archivos -->
+            <div class="file-panel" id="filePanel">
+                <div class="file-options">
+                    <div class="file-option" id="fileImageBtn">
+                        <i class="fas fa-image"></i>
+                        <span>Imagen</span>
+                    </div>
+                    <div class="file-option" id="fileVideoBtn">
+                        <i class="fas fa-video"></i>
+                        <span>Video</span>
+                    </div>
+                    <div class="file-option" id="fileDocumentBtn">
+                        <i class="fas fa-file"></i>
+                        <span>Archivo</span>
+                    </div>
+                </div>
+                <button class="close-panel" id="closeFilePanel">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
             <div class="input-container">
                 <input type="file" id="imageInput" class="file-input" accept="image/*">
                 <input type="file" id="videoInput" class="file-input" accept="video/*">
@@ -841,7 +957,7 @@
             </div>
         </div>
 
-        <!-- Pantalla de perfil -->
+        <!-- Pantalla de perfil - MEJORADA -->
         <div class="profile-screen" id="profileScreen">
             <div class="profile-header">
                 <button class="back-button" id="backButton">
@@ -851,17 +967,28 @@
             </div>
             
             <div class="profile-content">
-                <div class="profile-picture" id="profilePicture">
-                    <i class="fas fa-user"></i>
+                <div class="profile-picture-section">
+                    <div class="profile-picture" id="profilePicture">
+                        <i class="fas fa-user"></i>
+                    </div>
                     <button class="edit-profile-pic" id="editProfilePic">
                         <i class="fas fa-camera"></i>
+                        Cambiar Foto
                     </button>
                 </div>
                 
                 <div class="profile-form">
                     <div class="form-group">
-                        <label for="profileName">Nombre</label>
-                        <input type="text" id="profileName" placeholder="Tu nombre">
+                        <label for="profileName">
+                            <i class="fas fa-user-edit"></i> Nombre de Usuario
+                        </label>
+                        <input type="text" id="profileName" placeholder="Ingresa tu nombre">
+                    </div>
+                    <div class="form-group">
+                        <label for="profileEmail">
+                            <i class="fas fa-envelope"></i> Correo Electrónico
+                        </label>
+                        <input type="email" id="profileEmail" placeholder="tu@email.com" disabled>
                     </div>
                 </div>
             </div>
@@ -916,6 +1043,17 @@
         const closeReply = document.getElementById('closeReply');
         const replyUserName = document.getElementById('replyUserName');
         const replyPreview = document.getElementById('replyPreview');
+        
+        // Elementos para archivos - NUEVOS
+        const clipBtn = document.getElementById('clipBtn');
+        const filePanel = document.getElementById('filePanel');
+        const closeFilePanel = document.getElementById('closeFilePanel');
+        const fileImageBtn = document.getElementById('fileImageBtn');
+        const fileVideoBtn = document.getElementById('fileVideoBtn');
+        const fileDocumentBtn = document.getElementById('fileDocumentBtn');
+        const imageInput = document.getElementById('imageInput');
+        const videoInput = document.getElementById('videoInput');
+        const fileInput = document.getElementById('fileInput');
 
         // Estado de la aplicación
         let currentUser = null;
@@ -941,9 +1079,7 @@
             profileName.value = currentUser.name;
             
             if (currentUser.profilePicture) {
-                const profilePicElement = document.getElementById('profilePicture');
-                profilePicElement.innerHTML = `<img src="${currentUser.profilePicture}" alt="Profile">`;
-                profilePicElement.innerHTML += `<button class="edit-profile-pic" id="editProfilePic"><i class="fas fa-camera"></i></button>`;
+                updateProfilePicture(currentUser.profilePicture);
             }
 
             connectWebSocket();
@@ -977,6 +1113,17 @@
             sendButton.addEventListener('click', sendMessage);
             closeReply.addEventListener('click', closeReplyHandler);
 
+            // Sistema de archivos - CORREGIDO
+            clipBtn.addEventListener('click', toggleFilePanel);
+            closeFilePanel.addEventListener('click', closeFilePanelHandler);
+            fileImageBtn.addEventListener('click', () => imageInput.click());
+            fileVideoBtn.addEventListener('click', () => videoInput.click());
+            fileDocumentBtn.addEventListener('click', () => fileInput.click());
+            
+            imageInput.addEventListener('change', handleImageUpload);
+            videoInput.addEventListener('change', handleVideoUpload);
+            fileInput.addEventListener('change', handleFileUpload);
+
             // Sistema de deslizamiento para respuestas
             messagesContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
             messagesContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
@@ -985,6 +1132,9 @@
             document.addEventListener('click', (e) => {
                 if (!usersPanel.contains(e.target) && e.target !== usersBtn) {
                     usersPanel.classList.remove('active');
+                }
+                if (!filePanel.contains(e.target) && e.target !== clipBtn) {
+                    filePanel.classList.remove('active');
                 }
             });
         }
@@ -997,6 +1147,10 @@
         function showChatScreen() {
             profileScreen.classList.remove('active');
             chatScreen.style.display = 'flex';
+            // Enfocar el input al regresar
+            setTimeout(() => {
+                messageInput.focus();
+            }, 300);
         }
 
         function toggleUsersPanel() {
@@ -1005,6 +1159,14 @@
 
         function closeUsersPanelHandler() {
             usersPanel.classList.remove('active');
+        }
+
+        function toggleFilePanel() {
+            filePanel.classList.toggle('active');
+        }
+
+        function closeFilePanelHandler() {
+            filePanel.classList.remove('active');
         }
 
         function connectWebSocket() {
@@ -1081,6 +1243,11 @@
         function updateUsersList() {
             usersList.innerHTML = '';
             
+            if (allUsers.length === 0) {
+                usersList.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-light);">No hay usuarios registrados</div>';
+                return;
+            }
+            
             allUsers.forEach(user => {
                 const userItem = document.createElement('div');
                 userItem.className = 'user-item';
@@ -1093,7 +1260,7 @@
                     <div class="user-details">
                         <h4>${user.name}</h4>
                         <div class="user-status">
-                            <span class="user-status-dot ${user.isOnline ? 'online' : 'offline'}"></span>
+                            <span class="user-status-dot ${user.isOnline ? '' : 'offline'}"></span>
                             <span>${user.isOnline ? 'En línea' : 'Desconectado'}</span>
                         </div>
                     </div>
@@ -1177,6 +1344,100 @@
             }
         }
 
+        // Funciones para manejar archivos - CORREGIDAS
+        function handleImageUpload(e) {
+            if (e.target.files.length > 0) {
+                sendImage(e.target.files[0]);
+                e.target.value = '';
+                closeFilePanelHandler();
+            }
+        }
+
+        function handleVideoUpload(e) {
+            if (e.target.files.length > 0) {
+                sendVideo(e.target.files[0]);
+                e.target.value = '';
+                closeFilePanelHandler();
+            }
+        }
+
+        function handleFileUpload(e) {
+            if (e.target.files.length > 0) {
+                sendFile(e.target.files[0]);
+                e.target.value = '';
+                closeFilePanelHandler();
+            }
+        }
+
+        function sendImage(file) {
+            if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const messageData = {
+                    type: 'image',
+                    imageData: e.target.result,
+                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    userId: currentUser.id,
+                    user: currentUser,
+                    replyingTo: replyingTo,
+                    messageId: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+                };
+
+                displayMessage(messageData, 'sent');
+                socket.send(JSON.stringify(messageData));
+                closeReplyHandler();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function sendVideo(file) {
+            if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const messageData = {
+                    type: 'video',
+                    videoData: e.target.result,
+                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    userId: currentUser.id,
+                    user: currentUser,
+                    replyingTo: replyingTo,
+                    fileName: file.name,
+                    messageId: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+                };
+
+                displayMessage(messageData, 'sent');
+                socket.send(JSON.stringify(messageData));
+                closeReplyHandler();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function sendFile(file) {
+            if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const messageData = {
+                    type: 'file',
+                    fileData: e.target.result,
+                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    userId: currentUser.id,
+                    user: currentUser,
+                    replyingTo: replyingTo,
+                    fileName: file.name,
+                    fileType: file.type,
+                    messageId: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+                };
+
+                displayMessage(messageData, 'sent');
+                socket.send(JSON.stringify(messageData));
+                closeReplyHandler();
+            };
+            reader.readAsDataURL(file);
+        }
+
         function displayMessage(messageData, type) {
             const messageElement = document.createElement('div');
             messageElement.className = `message ${type}`;
@@ -1200,10 +1461,34 @@
             }
             
             // Contenido del mensaje
-            content += `
-                <div class="message-text">${messageData.text}</div>
-                <div class="message-time">${messageData.timestamp}</div>
-            `;
+            if (messageData.type === 'image') {
+                content += `
+                    <img src="${messageData.imageData}" class="message-image" alt="Imagen enviada">
+                    <div class="message-time">${messageData.timestamp}</div>
+                `;
+            } else if (messageData.type === 'video') {
+                content += `
+                    <video controls class="message-video">
+                        <source src="${messageData.videoData}" type="video/mp4">
+                        Tu navegador no soporta video.
+                    </video>
+                    <div class="message-time">${messageData.timestamp}</div>
+                `;
+            } else if (messageData.type === 'file') {
+                content += `
+                    <div class="file-message">
+                        <i class="fas fa-file"></i>
+                        <span>${messageData.fileName}</span>
+                        <a href="${messageData.fileData}" download="${messageData.fileName}">Descargar</a>
+                    </div>
+                    <div class="message-time">${messageData.timestamp}</div>
+                `;
+            } else {
+                content += `
+                    <div class="message-text">${messageData.text}</div>
+                    <div class="message-time">${messageData.timestamp}</div>
+                `;
+            }
 
             messageElement.innerHTML = content;
             messagesContainer.appendChild(messageElement);
@@ -1271,19 +1556,18 @@
         function changeProfilePicture() {
             // Simulación de cambio de foto de perfil
             const newProfilePic = 'https://via.placeholder.com/120/2563eb/ffffff?text=' + currentUser.name.charAt(0);
-            
-            const profilePicElement = document.getElementById('profilePicture');
-            profilePicElement.innerHTML = `<img src="${newProfilePic}" alt="Profile">`;
-            profilePicElement.innerHTML += `<button class="edit-profile-pic" id="editProfilePic"><i class="fas fa-camera"></i></button>`;
-            
-            // Re-asignar el event listener
-            document.getElementById('editProfilePic').addEventListener('click', changeProfilePicture);
+            updateProfilePicture(newProfilePic);
             
             // Actualizar en servidor
-            updateProfilePicture(newProfilePic);
+            updateProfilePictureServer(newProfilePic);
         }
 
-        async function updateProfilePicture(profilePicture) {
+        function updateProfilePicture(profilePicture) {
+            const profilePicElement = document.getElementById('profilePicture');
+            profilePicElement.innerHTML = `<img src="${profilePicture}" alt="Profile">`;
+        }
+
+        async function updateProfilePictureServer(profilePicture) {
             try {
                 const response = await fetch('/api/update-profile', {
                     method: 'PUT',
