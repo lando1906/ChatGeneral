@@ -1,299 +1,1829 @@
-const WebSocket = require('ws');
-const http = require('http');
-const express = require('express');
-const path = require('path');
-const fs = require('fs');
-
-const app = express();
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
-
-// Middleware
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Base de datos simple de usuarios
-const USERS_FILE = path.join(__dirname, 'users.json');
-
-function loadUsers() {
-    try {
-        if (fs.existsSync(USERS_FILE)) {
-            return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chat en Tiempo Real</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-blue: #2563eb;
+            --dark-blue: #1d4ed8;
+            --light-blue: #3b82f6;
+            --gradient-start: #667eea;
+            --gradient-end: #764ba2;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --border-color: #e2e8f0;
+            --received-msg: #e2e8f0;
+            --sent-msg: #2563eb;
+            --online: #10b981;
+            --typing: #f59e0b;
+            --error: #ef4444;
+            --success: #10b981;
+            --recording: #ef4444;
+            --reply-bg: #f1f5f9;
+            --system-msg: #6366f1;
         }
-    } catch (error) {
-        console.error('Error loading users:', error);
-    }
-    return [];
-}
 
-function saveUsers(users) {
-    try {
-        fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-        return true;
-    } catch (error) {
-        console.error('Error saving users:', error);
-        return false;
-    }
-}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-// Almacenar clientes conectados
-const clients = new Map();
-const onlineUsers = new Map();
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
 
-// Rutas de API
-app.post('/api/register', (req, res) => {
-    const { username, password, name } = req.body;
+        body {
+            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
 
-    if (!username || !password || !name) {
-        return res.json({ success: false, message: 'Todos los campos son requeridos' });
-    }
+        .chat-app {
+            height: 100vh;
+            width: 100vw;
+            background: var(--card-bg);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
 
-    if (password.length < 4) {
-        return res.json({ success: false, message: 'La contraseña debe tener al menos 4 caracteres' });
-    }
+        /* Header */
+        .chat-header {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
+            color: white;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+            z-index: 100;
+            position: relative;
+        }
 
-    if (username.length < 3) {
-        return res.json({ success: false, message: 'El usuario debe tener al menos 3 caracteres' });
-    }
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-    const users = loadUsers();
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
 
-    if (users.find(user => user.username.toLowerCase() === username.toLowerCase())) {
-        return res.json({ success: false, message: 'El usuario ya está registrado' });
-    }
+        .user-info h2 {
+            font-size: 1rem;
+            font-weight: 600;
+        }
 
-    const newUser = {
-        id: Date.now().toString(),
-        username: username.trim(),
-        password: password,
-        name: name.trim(),
-        createdAt: new Date().toISOString()
-    };
+        .user-info p {
+            font-size: 0.75rem;
+            opacity: 0.9;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
 
-    users.push(newUser);
+        .status-indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--online);
+        }
 
-    if (saveUsers(users)) {
-        res.json({ 
-            success: true, 
-            message: 'Usuario registrado exitosamente',
-            user: { 
-                id: newUser.id, 
-                name: newUser.name, 
-                username: newUser.username 
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .header-actions i {
+            font-size: 1.1rem;
+            cursor: pointer;
+            opacity: 0.9;
+            transition: opacity 0.2s, transform 0.2s;
+            padding: 6px;
+        }
+
+        .header-actions i:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        /* Menú de usuarios en línea */
+        .users-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            width: 280px;
+            background: white;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 99;
+            transform: translateY(-10px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .users-menu.active {
+            transform: translateY(0);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .users-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            color: var(--text-dark);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .users-list {
+            padding: 8px 0;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            transition: background 0.2s;
+        }
+
+        .user-item:hover {
+            background: var(--bg-color);
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 500;
+            font-size: 0.8rem;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-details h4 {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        .user-status {
+            font-size: 0.7rem;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .user-status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--online);
+        }
+
+        /* Indicador de conexión */
+        .connection-status {
+            padding: 6px 12px;
+            text-align: center;
+            font-size: 0.75rem;
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--primary-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .connection-status.connected {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--online);
+        }
+
+        .connection-status.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+        }
+
+        /* Área de mensajes */
+        .messages-container {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 16px;
+            position: relative;
+            word-wrap: break-word;
+            animation: messageAppear 0.3s ease-out;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+            touch-action: pan-y;
+        }
+
+        .message.replying {
+            transform: translateX(-50px);
+            background: rgba(37, 99, 235, 0.1);
+        }
+
+        .received {
+            background: var(--received-msg);
+            color: var(--text-dark);
+            border-bottom-left-radius: 4px;
+            align-self: flex-start;
+        }
+
+        .sent {
+            background: var(--sent-msg);
+            color: white;
+            border-bottom-right-radius: 4px;
+            align-self: flex-end;
+        }
+
+        .system {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--system-msg);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            align-self: center;
+            max-width: 70%;
+            text-align: center;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .message-sender {
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-bottom: 3px;
+            opacity: 0.8;
+        }
+
+        .message-text {
+            font-size: 0.85rem;
+            line-height: 1.3;
+        }
+
+        .message-image, .message-video {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 4px;
+            cursor: pointer;
+            max-height: 200px;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .message-image:hover, .message-video:hover {
+            transform: scale(1.02);
+        }
+
+        .message-audio {
+            margin-top: 4px;
+        }
+
+        .file-message {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            margin-top: 4px;
+        }
+
+        .file-message i {
+            color: var(--primary-blue);
+            font-size: 1.2rem;
+        }
+
+        .file-message a {
+            color: var(--primary-blue);
+            text-decoration: none;
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .file-message a:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .reply-context {
+            font-size: 0.7rem;
+            color: var(--text-light);
+            margin-bottom: 4px;
+            font-style: italic;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .reply-indicator {
+            color: var(--primary-blue);
+        }
+
+        /* Reproductor de audio personalizado */
+        .audio-player-custom {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            min-width: 200px;
+            margin-top: 4px;
+        }
+
+        .audio-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .audio-btn {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .audio-btn:hover {
+            background: var(--dark-blue);
+            transform: scale(1.05);
+        }
+
+        .audio-time {
+            font-size: 0.7rem;
+            color: var(--text-light);
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .audio-progress {
+            flex: 1;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .audio-progress-bar {
+            height: 100%;
+            background: var(--primary-blue);
+            width: 0%;
+            transition: width 0.1s;
+        }
+
+        .audio-volume {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 5px;
+        }
+
+        .audio-volume i {
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        .audio-volume input {
+            width: 60px;
+        }
+
+        .message-time {
+            font-size: 0.65rem;
+            text-align: right;
+            margin-top: 4px;
+            opacity: 0.7;
+        }
+
+        /* Indicador de escritura */
+        .typing-indicator {
+            align-self: flex-start;
+            background: var(--received-msg);
+            color: var(--text-dark);
+            padding: 10px 14px;
+            border-radius: 16px;
+            border-bottom-left-radius: 4px;
+            font-size: 0.8rem;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            animation: typingPulse 2s infinite;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 2px;
+        }
+
+        .typing-dots span {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: var(--text-light);
+            animation: typingPulse 1.5s infinite ease-in-out;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        /* Panel de envío de archivos */
+        .file-panel {
+            display: none;
+            background: white;
+            padding: 12px 15px;
+            border-top: 1px solid var(--border-color);
+            flex-shrink: 0;
+            animation: slideUp 0.3s ease;
+        }
+
+        .file-panel.active {
+            display: flex;
+        }
+
+        .file-options {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .file-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 10px;
+            transition: all 0.2s;
+            min-width: 60px;
+        }
+
+        .file-option:hover {
+            background: var(--bg-color);
+            transform: translateY(-2px);
+        }
+
+        .file-option i {
+            font-size: 1.2rem;
+            color: var(--primary-blue);
+        }
+
+        .file-option span {
+            font-size: 0.7rem;
+            color: var(--text-dark);
+        }
+
+        .close-panel {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 5px;
+            transition: transform 0.2s;
+        }
+
+        .close-panel:hover {
+            transform: rotate(90deg);
+        }
+
+        /* Panel de respuesta */
+        .reply-panel {
+            display: none;
+            background: var(--reply-bg);
+            padding: 8px 12px;
+            border-top: 1px solid var(--border-color);
+            flex-shrink: 0;
+            position: relative;
+            animation: slideUp 0.2s ease;
+        }
+
+        .reply-panel.active {
+            display: block;
+        }
+
+        .reply-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 5px;
+        }
+
+        .reply-text {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            flex: 1;
+            margin-right: 10px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .reply-close {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 2px;
+            transition: transform 0.2s;
+        }
+
+        .reply-close:hover {
+            transform: scale(1.1);
+        }
+
+        .reply-preview {
+            font-size: 0.75rem;
+            color: var(--text-dark);
+            padding: 4px 8px;
+            background: white;
+            border-radius: 6px;
+            border-left: 3px solid var(--primary-blue);
+        }
+
+        /* Área de entrada */
+        .input-container {
+            padding: 10px 12px;
+            background: white;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            flex-shrink: 0;
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1.5px solid var(--border-color);
+            border-radius: 20px;
+            outline: none;
+            font-size: 0.85rem;
+            resize: none;
+            max-height: 100px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            line-height: 1.3;
+            -webkit-appearance: none;
+        }
+
+        #messageInput:focus {
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+        }
+
+        .input-actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .action-btn {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .action-btn:hover {
+            background: var(--dark-blue);
+            transform: scale(1.05);
+        }
+
+        .action-btn:active {
+            transform: scale(0.95);
+        }
+
+        .action-btn.recording {
+            background: var(--recording);
+            animation: pulse 1s infinite;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        /* Grabación de audio */
+        .recording-indicator {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 16px;
+            color: var(--recording);
+            font-size: 0.8rem;
+            margin-right: 8px;
+            animation: pulse 1.5s infinite;
+        }
+
+        .recording-time {
+            font-weight: 600;
+        }
+
+        .recording-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--recording);
+            animation: blink 1s infinite;
+        }
+
+        /* Estados de botones */
+        .send-btn { display: none; }
+        .audio-btn { display: flex; }
+
+        #messageInput:not(:placeholder-shown) ~ .input-actions .send-btn {
+            display: flex;
+        }
+
+        #messageInput:not(:placeholder-shown) ~ .input-actions .audio-btn {
+            display: none;
+        }
+
+        /* Previsualización de archivos */
+        .preview-container {
+            display: none;
+            padding: 10px;
+            background: var(--bg-color);
+            border-top: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .preview-container.active {
+            display: block;
+            animation: slideUp 0.3s ease;
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .preview-title {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        .preview-close {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .preview-items {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .preview-item {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .preview-image, .preview-video {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .preview-remove {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--error);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+
+        /* Animaciones */
+        @keyframes messageAppear {
+            from { 
+                opacity: 0; 
+                transform: translateY(8px) scale(0.96); 
             }
-        });
-    } else {
-        res.json({ success: false, message: 'Error al guardar usuario' });
-    }
-});
-
-app.post('/api/login', (req, res) => {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-        return res.json({ success: false, message: 'Usuario y contraseña requeridos' });
-    }
-
-    const users = loadUsers();
-    const user = users.find(u => 
-        u.username.toLowerCase() === username.toLowerCase() && 
-        u.password === password
-    );
-
-    if (user) {
-        res.json({ 
-            success: true, 
-            message: 'Login exitoso',
-            user: { 
-                id: user.id, 
-                name: user.name, 
-                username: user.username 
+            to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
             }
+        }
+
+        @keyframes typingPulse {
+            0%, 60%, 100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+            30% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Scrollbar personalizado */
+        .messages-container::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .messages-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 10px;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb:hover {
+            background: var(--text-light);
+        }
+
+        .users-menu::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .users-menu::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .users-menu::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 10px;
+        }
+
+        .preview-items::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .preview-items::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .preview-items::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 10px;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .chat-header {
+                padding: 10px 12px;
+            }
+
+            .messages-container {
+                padding: 12px;
+            }
+
+            .input-container {
+                padding: 8px 10px;
+            }
+
+            .message {
+                max-width: 90%;
+                padding: 8px 12px;
+            }
+
+            .file-options {
+                gap: 10px;
+            }
+
+            .file-option {
+                min-width: 50px;
+                padding: 6px 8px;
+            }
+
+            .audio-player-custom {
+                min-width: 180px;
+            }
+
+            .users-menu {
+                width: 100%;
+                border-radius: 0;
+            }
+        }
+
+        /* Mejoras para Chrome móvil */
+        @media (max-width: 768px) {
+            body {
+                -webkit-text-size-adjust: 100%;
+            }
+            
+            .chat-app {
+                height: 100vh;
+                height: -webkit-fill-available;
+            }
+            
+            .messages-container {
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+            
+            .input-container {
+                padding-bottom: calc(10px + env(safe-area-inset-bottom));
+            }
+        }
+
+        /* Soporte para notch y áreas seguras */
+        @supports(padding: max(0px)) {
+            .messages-container, .input-container {
+                padding-left: max(12px, env(safe-area-inset-left));
+                padding-right: max(12px, env(safe-area-inset-right));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-app" id="chatApp">
+        <div class="chat-header">
+            <div class="header-info">
+                <div class="avatar" id="userAvatar">U</div>
+                <div class="user-info">
+                    <h2 id="userName">Usuario</h2>
+                    <p><span class="status-indicator"></span> <span id="userCount">Conectando...</span></p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <i class="fas fa-users" id="usersBtn" title="Usuarios en línea"></i>
+                <i class="fas fa-cog" id="settingsBtn" title="Configuración"></i>
+                <i class="fas fa-sign-out-alt" id="logoutBtn" title="Cerrar sesión"></i>
+            </div>
+        </div>
+
+        <!-- Menú de usuarios en línea -->
+        <div class="users-menu" id="usersMenu">
+            <div class="users-header">
+                <span>Usuarios en línea</span>
+                <span id="onlineCount">0</span>
+            </div>
+            <div class="users-list" id="usersList">
+                <!-- Los usuarios se cargarán aquí dinámicamente -->
+            </div>
+        </div>
+
+        <div class="connection-status" id="status">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <span>Conectando al servidor...</span>
+        </div>
+
+        <div class="messages-container" id="messagesContainer">
+            <div class="message system">
+                <i class="fas fa-info-circle"></i>
+                <div class="message-text">¡Bienvenido al chat! Desliza un mensaje hacia la izquierda para responder.</div>
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            <span id="typingText">Alguien está escribiendo</span>
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+
+        <!-- Panel de respuesta -->
+        <div class="reply-panel" id="replyPanel">
+            <div class="reply-info">
+                <div class="reply-text">Respondiendo a <span id="replyUserName">Usuario</span></div>
+                <button class="reply-close" id="closeReply">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="reply-preview" id="replyPreview"></div>
+        </div>
+
+        <!-- Panel de envío de archivos -->
+        <div class="file-panel" id="filePanel">
+            <div class="file-options">
+                <div class="file-option" id="fileImageBtn">
+                    <i class="fas fa-image"></i>
+                    <span>Imagen</span>
+                </div>
+                <div class="file-option" id="fileVideoBtn">
+                    <i class="fas fa-video"></i>
+                    <span>Video</span>
+                </div>
+                <div class="file-option" id="fileDocumentBtn">
+                    <i class="fas fa-file"></i>
+                    <span>Archivo</span>
+                </div>
+            </div>
+            <button class="close-panel" id="closeFilePanel">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="input-container">
+            <input type="file" id="imageInput" class="file-input" accept="image/*" multiple>
+            <input type="file" id="videoInput" class="file-input" accept="video/*" multiple>
+            <input type="file" id="fileInput" class="file-input" accept="*/*">
+
+            <textarea id="messageInput" placeholder="Escribe un mensaje..." rows="1" autocomplete="off"></textarea>
+
+            <div class="recording-indicator" id="recordingIndicator">
+                <div class="recording-dot"></div>
+                <span class="recording-time" id="recordingTime">0:00</span>
+                <span>Grabando...</span>
+            </div>
+
+            <div class="input-actions">
+                <button class="action-btn" id="clipBtn" title="Enviar archivo">
+                    <i class="fas fa-paperclip"></i>
+                </button>
+                <button class="action-btn audio-btn" id="audioBtn" title="Grabar audio">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <button class="action-btn send-btn" id="sendButton" title="Enviar mensaje">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Elementos DOM
+        const chatApp = document.getElementById('chatApp');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const audioBtn = document.getElementById('audioBtn');
+        const clipBtn = document.getElementById('clipBtn');
+        const status = document.getElementById('status');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const typingText = document.getElementById('typingText');
+        const userCount = document.getElementById('userCount');
+        const userName = document.getElementById('userName');
+        const userAvatar = document.getElementById('userAvatar');
+        const filePanel = document.getElementById('filePanel');
+        const closeFilePanel = document.getElementById('closeFilePanel');
+        const fileImageBtn = document.getElementById('fileImageBtn');
+        const fileVideoBtn = document.getElementById('fileVideoBtn');
+        const fileDocumentBtn = document.getElementById('fileDocumentBtn');
+        const imageInput = document.getElementById('imageInput');
+        const videoInput = document.getElementById('videoInput');
+        const fileInput = document.getElementById('fileInput');
+        const replyPanel = document.getElementById('replyPanel');
+        const closeReply = document.getElementById('closeReply');
+        const replyUserName = document.getElementById('replyUserName');
+        const replyPreview = document.getElementById('replyPreview');
+        const recordingIndicator = document.getElementById('recordingIndicator');
+        const recordingTime = document.getElementById('recordingTime');
+        const usersBtn = document.getElementById('usersBtn');
+        const usersMenu = document.getElementById('usersMenu');
+        const usersList = document.getElementById('usersList');
+        const onlineCount = document.getElementById('onlineCount');
+
+        // Estado de la aplicación
+        let currentUser = null;
+        let isTyping = false;
+        let typingTimer;
+        let socket = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let recordingStartTime = null;
+        let recordingTimer = null;
+        let replyingTo = null;
+        let touchStartX = null;
+        let activeAudioPlayer = null;
+        let onlineUsers = [];
+
+        // Verificar autenticación al cargar
+        window.addEventListener('load', () => {
+            const savedUser = localStorage.getItem('chatUser');
+            if (!savedUser) {
+                window.location.href = '/auth.html';
+                return;
+            }
+
+            currentUser = JSON.parse(savedUser);
+            initializeChat();
         });
-    } else {
-        res.json({ success: false, message: 'Usuario o contraseña incorrectos' });
-    }
-});
 
-// Obtener usuarios en línea
-app.get('/api/online-users', (req, res) => {
-    const users = Array.from(onlineUsers.values()).map(user => ({
-        id: user.id,
-        name: user.name,
-        username: user.username
-    }));
-    res.json({ success: true, users });
-});
+        function initializeChat() {
+            userName.textContent = currentUser.name;
+            userAvatar.textContent = currentUser.name.charAt(0).toUpperCase();
 
-// Rutas de páginas
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+            connectWebSocket();
+            initializeAudioRecording();
+            setupEventListeners();
+            
+            // Ajustar altura inicial del textarea
+            autoResizeTextarea();
+        }
 
-app.get('/auth.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'auth.html'));
-});
+        function setupEventListeners() {
+            // Panel de archivos
+            clipBtn.addEventListener('click', toggleFilePanel);
+            closeFilePanel.addEventListener('click', closeFilePanelHandler);
+            fileImageBtn.addEventListener('click', () => imageInput.click());
+            fileVideoBtn.addEventListener('click', () => videoInput.click());
+            fileDocumentBtn.addEventListener('click', () => fileInput.click());
 
-// Health check para Render
-app.get('/health', (req, res) => {
-    res.status(200).json({ 
-        status: 'OK', 
-        timestamp: new Date().toISOString(),
-        connections: clients.size,
-        usersRegistered: loadUsers().length,
-        onlineUsers: onlineUsers.size
-    });
-});
+            // Inputs de archivo - envío automático
+            imageInput.addEventListener('change', handleImageUpload);
+            videoInput.addEventListener('change', handleVideoUpload);
+            fileInput.addEventListener('change', handleFileUpload);
 
-// WebSocket connection
-wss.on('connection', function connection(ws) {
-    console.log('✅ Nuevo cliente conectado');
+            // Panel de respuesta
+            closeReply.addEventListener('click', closeReplyHandler);
 
-    let currentUser = null;
+            // Menú de usuarios
+            usersBtn.addEventListener('click', toggleUsersMenu);
+            document.addEventListener('click', (e) => {
+                if (!usersMenu.contains(e.target) && e.target !== usersBtn) {
+                    usersMenu.classList.remove('active');
+                }
+            });
 
-    ws.on('message', function incoming(data) {
-        try {
-            const messageData = JSON.parse(data);
+            // Mensajes - sistema de deslizamiento
+            messagesContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
+            messagesContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
 
-            if (messageData.type === 'user_join') {
-                currentUser = messageData.user;
-                clients.set(ws, {
-                    user: currentUser,
-                    isTyping: false
-                });
-                
-                onlineUsers.set(currentUser.id, currentUser);
+            // Para desktop - hover effects
+            messagesContainer.addEventListener('mouseover', handleMouseOver);
+            messagesContainer.addEventListener('mouseout', handleMouseOut);
 
-                broadcastToAll({
-                    type: 'user_join',
-                    user: currentUser,
-                    timestamp: new Date().toLocaleTimeString()
-                }, ws);
+            // Envío de mensajes
+            sendButton.addEventListener('click', sendMessage);
 
-                broadcastUserCount();
-                broadcastOnlineUsers();
+            messageInput.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    sendMessage();
+                }
+            });
 
-            } else if (messageData.type === 'typing') {
-                const clientData = clients.get(ws);
-                if (clientData) {
-                    clientData.isTyping = messageData.typing;
-                    broadcastTypingStatus(clientData, messageData.typing);
+            messageInput.addEventListener('input', function() {
+                if (!isTyping) {
+                    isTyping = true;
+                    sendTypingStart();
                 }
 
-            } else if (messageData.type === 'message' || messageData.type === 'image' || messageData.type === 'audio' || messageData.type === 'file' || messageData.type === 'video') {
-                // Agregar ID único para cada mensaje
-                messageData.messageId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-                messageData.timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                broadcastToAll(messageData, ws);
-            }
+                clearTimeout(typingTimer);
+                typingTimer = setTimeout(function() {
+                    isTyping = false;
+                    sendTypingStop();
+                }, 1000);
 
-        } catch (error) {
-            console.error('❌ Error procesando mensaje:', error);
-            ws.send(JSON.stringify({
-                type: 'error',
-                text: 'Error procesando mensaje'
-            }));
-        }
-    });
+                autoResizeTextarea();
+            });
 
-    ws.on('close', function() {
-        console.log('❌ Cliente desconectado');
-        const clientData = clients.get(ws);
-        if (clientData && clientData.user) {
-            onlineUsers.delete(clientData.user.id);
-            broadcastToAll({
-                type: 'user_leave',
-                user: clientData.user,
-                timestamp: new Date().toLocaleTimeString()
+            // Grabación de audio - mejorado para móvil
+            audioBtn.addEventListener('mousedown', startRecording);
+            audioBtn.addEventListener('mouseup', stopRecording);
+            audioBtn.addEventListener('mouseleave', stopRecording);
+
+            audioBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                startRecording();
+            });
+
+            audioBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                stopRecording();
+            });
+
+            audioBtn.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                stopRecording();
+            });
+
+            // Logout
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                if (socket) {
+                    socket.close();
+                }
+                localStorage.removeItem('chatUser');
+                window.location.href = '/auth.html';
+            });
+
+            // Enfocar el input al cargar
+            messageInput.focus();
+            
+            // Prevenir zoom en input en iOS
+            messageInput.addEventListener('touchstart', function(e) {
+                e.target.style.fontSize = '16px';
+            });
+            
+            messageInput.addEventListener('blur', function(e) {
+                e.target.style.fontSize = '';
             });
         }
-        clients.delete(ws);
-        broadcastUserCount();
-        broadcastOnlineUsers();
-    });
 
-    ws.on('error', function(error) {
-        console.error('💥 Error WebSocket:', error);
-        const clientData = clients.get(ws);
-        if (clientData && clientData.user) {
-            onlineUsers.delete(clientData.user.id);
+        function handleTouchStart(e) {
+            const message = e.target.closest('.message');
+            if (message) {
+                touchStartX = e.touches[0].clientX;
+                message.style.transition = 'none';
+            }
         }
-        clients.delete(ws);
-        broadcastUserCount();
-        broadcastOnlineUsers();
-    });
-});
 
-// Función para broadcast a todos excepto al remitente especificado
-function broadcastToAll(data, excludeWs = null) {
-    const message = JSON.stringify(data);
-    clients.forEach((clientData, client) => {
-        if (client !== excludeWs && client.readyState === WebSocket.OPEN) {
-            client.send(message);
+        function handleTouchEnd(e) {
+            if (!touchStartX) return;
+
+            const touchEndX = e.changedTouches[0].clientX;
+            const diffX = touchStartX - touchEndX;
+
+            const message = e.target.closest('.message');
+            if (message && diffX > 50) {
+                showReplyPanel(message);
+            }
+
+            touchStartX = null;
+
+            // Restaurar transición
+            if (message) {
+                message.style.transition = 'transform 0.3s ease';
+                setTimeout(() => {
+                    message.style.transform = '';
+                }, 300);
+            }
         }
-    });
-}
 
-function broadcastUserCount() {
-    const userCount = clients.size;
-    const message = {
-        type: 'user_count',
-        count: userCount
-    };
-    broadcastToAll(message);
-}
-
-function broadcastOnlineUsers() {
-    const users = Array.from(onlineUsers.values()).map(user => ({
-        id: user.id,
-        name: user.name,
-        username: user.username
-    }));
-    
-    const message = {
-        type: 'online_users',
-        users: users
-    };
-    
-    broadcastToAll(message);
-}
-
-function broadcastTypingStatus(clientData, isTyping) {
-    const message = {
-        type: 'typing',
-        typing: isTyping,
-        userId: clientData.user.id,
-        user: clientData.user
-    };
-
-    clients.forEach((data, client) => {
-        if (client.readyState === WebSocket.OPEN && client !== clients.keys().next().value) {
-            client.send(JSON.stringify(message));
+        function handleMouseOver(e) {
+            const message = e.target.closest('.message');
+            if (message && !message.classList.contains('sent')) {
+                message.style.cursor = 'grab';
+            }
         }
-    });
-}
 
-// Manejo graceful de shutdown
-process.on('SIGTERM', function() {
-    console.log('🔄 Recibió SIGTERM, cerrando servidor...');
-    broadcastToAll({
-        type: 'system',
-        text: 'El servidor se está reiniciando...',
-        timestamp: new Date().toLocaleTimeString()
-    });
+        function handleMouseOut(e) {
+            const message = e.target.closest('.message');
+            if (message) {
+                message.style.cursor = 'default';
+            }
+        }
 
-    server.close(function() {
-        console.log('✅ Servidor cerrado exitosamente');
-        process.exit(0);
-    });
-});
+        function showReplyPanel(message) {
+            const messageId = message.dataset.messageId;
+            const sender = message.querySelector('.message-sender')?.textContent || 'Usuario';
 
-// Iniciar servidor
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, function() {
-    console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
-    console.log(`📍 Salud: http://localhost:${PORT}/health`);
-    console.log(`🔐 Auth: http://localhost:${PORT}/auth.html`);
-    console.log(`💬 Chat: http://localhost:${PORT}/`);
-    console.log(`👥 Usuarios registrados: ${loadUsers().length}`);
-});
+            // Obtener contenido del mensaje
+            let content = '';
+            const textElement = message.querySelector('.message-text');
+            const imageElement = message.querySelector('.message-image');
+            const audioElement = message.querySelector('.audio-player-custom');
+            const videoElement = message.querySelector('.message-video');
+            const fileElement = message.querySelector('.file-message');
+
+            if (textElement) {
+                content = textElement.textContent;
+            } else if (imageElement) {
+                content = '🖼️ Imagen';
+            } else if (audioElement) {
+                content = '🎵 Audio';
+            } else if (videoElement) {
+                content = '🎥 Video';
+            } else if (fileElement) {
+                content = '📄 Archivo';
+            } else {
+                content = 'Mensaje';
+            }
+
+            replyingTo = messageId;
+            replyUserName.textContent = sender;
+            replyPreview.textContent = content.length > 50 ? content.substring(0, 50) + '...' : content;
+            replyPanel.classList.add('active');
+
+            // Scroll to input
+            setTimeout(() => {
+                messageInput.focus();
+            }, 300);
+        }
+
+        function closeReplyHandler() {
+            replyPanel.classList.remove('active');
+            replyingTo = null;
+        }
+
+        function toggleFilePanel() {
+            filePanel.classList.toggle('active');
+        }
+
+        function closeFilePanelHandler() {
+            filePanel.classList.remove('active');
+        }
+
+        function autoResizeTextarea() {
+            messageInput.style.height = 'auto';
+            messageInput.style.height = (messageInput.scrollHeight) + 'px';
+        }
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}`;
+            
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = function(event) {
+                updateStatus('Conectado', 'connected');
+
+                socket.send(JSON.stringify({
+                    type: 'user_join',
+                    user: currentUser
+                }));
+            };
+
+            socket.onmessage = function(event) {
+                const messageData = JSON.parse(event.data);
+
+                if (messageData.type === 'typing') {
+                    handleTypingIndicator(messageData);
+                } else if (messageData.type === 'user_count') {
+                    userCount.textContent = `${messageData.count} usuarios conectados`;
+                } else if (messageData.type === 'user_join') {
+                    displaySystemMessage(`${messageData.user.name} se unió al chat`);
+                } else if (messageData.type === 'user_leave') {
+                    displaySystemMessage(`${messageData.user.name} abandonó el chat`);
+                } else if (messageData.type === 'online_users') {
+                    updateOnlineUsers(messageData.users);
+                } else {
+                    if (messageData.userId !== currentUser.id) {
+                        displayMessage(messageData, 'received');
+                    }
+                    hideTypingIndicator();
+                }
+            };
+
+            socket.onerror = function(event) {
+                updateStatus('Error de conexión', 'error');
+            };
+
+            socket.onclose = function(event) {
+                updateStatus('Desconectado', 'error');
+                // Intentar reconectar después de 3 segundos
+                setTimeout(() => {
+                    if (!socket || socket.readyState === WebSocket.CLOSED) {
+                        connectWebSocket();
+                    }
+                }, 3000);
+            };
+        }
+
+        function updateStatus(text, className) {
+            status.innerHTML = className === 'connected' 
+                ? `<i class="fas fa-check-circle"></i><span>${text}</span>`
+                : className === 'error'
+                ? `<i class="fas fa-exclamation-circle"></i><span>${text}</span>`
+                : `<i class="fas fa-circle-notch fa-spin"></i><span>${text}</span>`;
+
+            status.className = `connection-status ${className}`;
+        }
+
+        function updateOnlineUsers(users) {
+            onlineUsers = users;
+            onlineCount.textContent = users.length;
+            
+            usersList.innerHTML = '';
+            
+            users.forEach(user => {
+                const userItem = document.createElement('div');
+                userItem.className = 'user-item';
+                userItem.innerHTML = `
+                    <div class="user-avatar">${user.name.charAt(0).toUpperCase()}</div>
+                    <div class="user-details">
+                        <h4>${user.name}</h4>
+                        <div class="user-status">
+                            <span class="user-status-dot"></span>
+                            <span>En línea</span>
+                        </div>
+                    </div>
+                `;
+                usersList.appendChild(userItem);
+            });
+        }
+
+        function toggleUsersMenu() {
+            usersMenu.classList.toggle('active');
+        }
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message && socket && socket.readyState === WebSocket.OPEN) {
+                const messageData = {
+                    type: 'message',
+                    text: message,
+                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    userId: currentUser.id,
+                    user: currentUser,
+                    replyingTo: replyingTo,
+                    messageId: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+                };
+
+                displayMessage(messageData, 'sent');
+                socket.send(JSON.stringify(messageData));
+
+                messageInput.value = '';
+                autoResizeTextarea();
+                sendTypingStop();
+                closeReplyHandler();
+            }
+        }
+
+        function handleImageUpload(e) {
+            if (e.target.files.length > 0) {
+                sendImage(e.target.files[0]);
+                e.target.value = '';
+                closeFilePanelHandler();
+            }
+        }
+
+        function handleVideoUpload(e) {
+            if (e.target.files.length > 0) {
+                sendVideo(e.target.files[0]);
+                e.target.value = '';
+                closeFilePanelHandler();
+            }
+        }
+
+        function handleFileUpload(e) {
+            if (e.target.files.length > 0) {
+                sendFile(e.target.files[0]);
+                e.target.value = '';
+                closeFilePanelHandler();
+            }
+        }
+
+        function sendImage(file) {
+            if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const messageData = {
+                    type: 'image',
+                    imageData: e.target.result,
+                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    userId: currentUser.id,
+                    user: currentUser,
+                    replyingTo: replyingTo,
+                    messageId: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+                };
+
+                displayMessage(messageData, 'sent');
+                socket.send(JSON.stringify(messageData));
+                closeReplyHandler();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function sendVideo(file) {
+            if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const messageData = {
+                    type: 'video',
+                    videoData: e.target.result,
+                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    userId: currentUser.id,
+                    user: currentUser,
+                    replyingTo: replyingTo,
+                    fileName: file.name,
+                    messageId: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+                };
+
+                displayMessage(messageData, 'sent');
+                socket.send(JSON.stringify(messageData));
+                closeReplyHandler();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function sendFile(file) {
+            if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const messageData = {
+                    type: 'file',
+                    fileData: e.target.result,
+                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    userId: currentUser.id,
+                    user: currentUser,
+                    replyingTo: replyingTo,
+                    fileName: file.name,
+                    fileType: file.type,
+                    messageId: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+                };
+
+                displayMessage(messageData, 'sent');
+                socket.send(JSON.stringify(messageData));
+                closeReplyHandler();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function createAudioPlayer(audioData, messageId) {
+            const audioPlayer = document.createElement('div');
+            audioPlayer.className = 'audio-player-custom';
+            audioPlayer.innerHTML = `
+                <div class="audio-controls">
+                    <button class="audio-btn play-btn">
+                        <i class="fas fa-play"></i>
+                    </button>
+                </div>
+                <div class="audio-progress">
+                    <div class="audio-progress-bar"></div>
+                </div>
+                <div class="audio-time">
+                    <span class="current-time">0:00</span>
+                </div>
+                <div class="audio-volume">
+                    <i class="fas fa-volume-up"></i>
+                    <input type="range" min="0" max="100" value="80" class="volume-slider">
+                </div>
+                <audio class="audio-element" src="${audioData}"></audio>
+            `;
+
+            const audioElement = audioPlayer.querySelector('.audio-element');
+            const playBtn = audioPlayer.querySelector('.play-btn');
+            const progressBar = audioPlayer.querySelector('.audio-progress-bar');
+            const currentTime = audioPlayer.querySelector('.current-time');
+            const volumeSlider = audioPlayer.querySelector('.volume-slider');
+
+            // Configurar eventos del reproductor 
+            playBtn.addEventListener('click', function() {
+                if (audioElement.paused) {
+                    // Pausar cualquier otro audio que esté reproduciéndose
+                    if (activeAudioPlayer && activeAudioPlayer !== audioElement) {
+                        activeAudioPlayer.pause();
+                        const otherPlayBtn = activeAudioPlayer.parentElement.querySelector('.play-btn');
+                        otherPlayBtn.innerHTML = '<i class="fas fa-play"></i>';
+                    }
+                    audioElement.play();
+                    playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                    activeAudioPlayer = audioElement;
+                } else {
+                    audioElement.pause();
+                    playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                }
+            });
+
+            audioElement.addEventListener('loadedmetadata', function() {
+                currentTime.textContent = `0:00 / ${formatTime(audioElement.duration)}`;
+            });
+
+            audioElement.addEventListener('timeupdate', function() {
+                const progress = (audioElement.currentTime / audioElement.duration) * 100;
+                progressBar.style.width = progress + '%';
+                currentTime.textContent = `${formatTime(audioElement.currentTime)} / ${formatTime(audioElement.duration)}`;
+            });
+
+            audioElement.addEventListener('ended', function() {
+                playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                progressBar.style.width = '0%';
+                currentTime.textContent = `0:00 / ${formatTime(audioElement.duration)}`;
+            });
+
+            volumeSlider.addEventListener('input', function() {
+                audioElement.volume = this.value / 100;
+            });
+
+            return audioPlayer;
+        }
+
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function displayMessage(messageData, type) {
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${type}`;
+            messageElement.dataset.messageId = messageData.messageId || Date.now().toString();
+
+            let content = '';
+            const replyContext = messageData.replyingTo ? '<div class="reply-context">↪ Respondiendo</div>' : '';
+
+            if (messageData.type === 'image') {
+                content = `
+                    ${type === 'received' ? `<div class="message-sender">${messageData.user.name}</div>` : ''}
+                    ${replyContext}
+                    <img src="${messageData.imageData}" class="message-image" alt="Imagen enviada">
+                    <div class="message-time">${messageData.timestamp}</div>
+                `;
+            } else if (messageData.type === 'video') {
+                content = `
+                    ${type === 'received' ? `<div class="message-sender">${messageData.user.name}</div>` : ''}
+                    ${replyContext}
+                    <video controls class="message-video">
+                        <source src="${messageData.videoData}" type="video/mp4">
+                        Tu navegador no soporta video.
+                    </video>
+                    <div class="message-time">${messageData.timestamp}</div>
+                `;
+            } else if (messageData.type === 'file') {
+                content = `
+                    ${type === 'received' ? `<div class="message-sender">${messageData.user.name}</div>` : ''}
+                    ${replyContext}
+                    <div class="file-message">
+                        <i class="fas fa-file"></i>
+                        <span>${messageData.fileName}</span>
+                        <a href="${messageData.fileData}" download="${messageData.fileName}">Descargar</a>
+                    </div>
+                    <div class="message-time">${messageData.timestamp}</div>
+                `;
+            } else if (messageData.type === 'audio') {
+                content = `
+                    ${type === 'received' ? `<div class="message-sender">${messageData.user.name}</div>` : ''}
+                    ${replyContext}
+                    <div class="message-time">${messageData.timestamp}</div>
+                `;
+            } else {
+                content = `
+                    ${type === 'received' ? `<div class="message-sender">${messageData.user.name}</div>` : ''}
+                    ${replyContext}
+                    <div class="message-text">${messageData.text}</div>
+                    <div class="message-time">${messageData.timestamp}</div>
+                `;
+            }
+
+            messageElement.innerHTML = content;
+
+            // Añadir reproductor de audio si es un mensaje de audio
+            if (messageData.type === 'audio') {
+                const audioPlayer = createAudioPlayer(messageData.audioData, messageData.messageId);
+                messageElement.querySelector('.message-time').insertAdjacentElement('beforebegin', audioPlayer);
+            }
+
+            messagesContainer.appendChild(messageElement);
+            scrollToBottom();
+        }
+
+        function initializeAudioRecording() {
+            if (!navigator.mediaDevices) {
+                console.warn('Media Devices no soportados');
+                audioBtn.style.display = 'none';
+                return;
+            }
+
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        sendAudio(audioBlob);
+                        audioChunks = [];
+                    };
+                })
+                .catch(error => {
+                    console.error('Error accediendo al micrófono:', error);
+                    audioBtn.style.display = 'none';
+                });
+        }
+
+        function startRecording(e) {
+            if (!mediaRecorder) {
+                alert('El micrófono no está disponible');
+                return;
+            }
+
+            audioChunks = [];
+            mediaRecorder.start();
+            recordingStartTime = Date.now();
+            audioBtn.classList.add('recording');
+            recordingIndicator.style.display = 'flex';
+
+            recordingTimer = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                recordingTime.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function stopRecording() {
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+
+            mediaRecorder.stop();
+            audioBtn.classList.remove('recording');
+            recordingIndicator.style.display = 'none';
+            clearInterval(recordingTimer);
+        }
+
+        function sendAudio(audioBlob) {
+            if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const messageData = {
+                    type: 'audio',
+                    audioData: e.target.result,
+                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    userId: currentUser.id,
+                    user: currentUser,
+                    replyingTo: replyingTo,
+                    messageId: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+                };
+
+                displayMessage(messageData, 'sent');
+                socket.send(JSON.stringify(messageData));
+                closeReplyHandler();
+            };
+            reader.readAsDataURL(audioBlob);
+        }
+
+        function displaySystemMessage(text) {
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message system';
+            messageElement.innerHTML = `
+                <i class="fas fa-info-circle"></i>
+                <div class="message-text">${text}</div>
+            `;
+            messagesContainer.appendChild(messageElement);
+            scrollToBottom();
+        }
+
+        function handleTypingIndicator(data) {
+            if (data.typing && data.userId !== currentUser.id) {
+                typingText.textContent = `${data.user.name} está escribiendo...`;
+                typingIndicator.style.display = 'flex';
+                scrollToBottom();
+            } else {
+                hideTypingIndicator();
+            }
+        }
+
+        function hideTypingIndicator() {
+            typingIndicator.style.display = 'none';
+        }
+
+        function sendTypingStart() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'typing',
+                    typing: true,
+                    userId: currentUser.id,
+                    user: currentUser
+                }));
+            }
+        }
+
+        function sendTypingStop() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'typing',
+                    typing: false,
+                    userId: currentUser.id,
+                    user: currentUser
+                }));
+            }
+        }
+
+        function scrollToBottom() {
+            setTimeout(() => {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, 100);
+        }
+
+        // Ajustar para Chrome móvil
+        function adjustForMobileChrome() {
+            // Prevenir zoom en inputs
+            document.addEventListener('touchstart', function(e) {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                    e.target.style.fontSize = '16px';
+                }
+            });
+            
+            document.addEventListener('touchend', function(e) {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                    setTimeout(() => {
+                        e.target.style.fontSize = '';
+                    }, 1000);
+                }
+            });
+            
+            // Ajustar altura para áreas seguras
+            const appHeight = () => {
+                const doc = document.documentElement;
+                doc.style.setProperty('--app-height', `${window.innerHeight}px`);
+            }
+            window.addEventListener('resize', appHeight);
+            window.addEventListener('orientationchange', appHeight);
+            appHeight();
+        }
+
+        // Inicializar ajustes para móvil
+        adjustForMobileChrome();
+    </script>
+</body>
+</html>
