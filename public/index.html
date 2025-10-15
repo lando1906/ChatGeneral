@@ -6,6 +6,7 @@
     <title>Chat en Tiempo Real</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.4.0/purify.min.js"></script>
     <style>
         :root {
             --primary-blue: #2563eb;
@@ -28,6 +29,7 @@
             --reply-bg: #f1f5f9;
             --system-msg: #6366f1;
             --edit-msg: #fef3c7;
+            --read-indicator: #3b82f6;
         }
 
         * {
@@ -63,7 +65,6 @@
             position: relative;
         }
 
-        /* Pantallas */
         .screen {
             position: absolute;
             top: 0;
@@ -74,17 +75,11 @@
             flex-direction: column;
         }
 
-        .chat-screen {
-            display: flex;
-        }
-
-        .profile-screen {
+        .chat-screen, .profile-screen, .private-chat-screen {
             display: none;
-            background: var(--card-bg);
-            z-index: 1000;
         }
 
-        .profile-screen.active {
+        .chat-screen.active, .profile-screen.active, .private-chat-screen.active {
             display: flex;
             animation: slideInRight 0.3s ease;
         }
@@ -94,8 +89,7 @@
             to { transform: translateX(0); opacity: 1; }
         }
 
-        /* Header */
-        .chat-header {
+        .chat-header, .private-chat-header {
             background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
             color: white;
             padding: 12px 16px;
@@ -105,7 +99,6 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             flex-shrink: 0;
             z-index: 100;
-            position: relative;
         }
 
         .header-info {
@@ -173,7 +166,7 @@
             gap: 12px;
         }
 
-        .header-actions i {
+        .header-actions i, .back-button {
             font-size: 1.1rem;
             cursor: pointer;
             opacity: 0.9;
@@ -183,13 +176,12 @@
             background: rgba(255, 255, 255, 0.1);
         }
 
-        .header-actions i:hover {
+        .header-actions i:hover, .back-button:hover {
             opacity: 1;
             transform: scale(1.1);
             background: rgba(255, 255, 255, 0.2);
         }
 
-        /* Menú de usuarios en línea */
         .users-panel {
             position: absolute;
             top: 100%;
@@ -219,9 +211,6 @@
             border-bottom: 1px solid var(--border-color);
             font-weight: 600;
             color: var(--text-dark);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             background: var(--bg-color);
             border-radius: 16px 16px 0 0;
         }
@@ -247,10 +236,6 @@
             background: var(--border-color);
         }
 
-        .users-list {
-            padding: 8px 0;
-        }
-
         .user-item {
             display: flex;
             align-items: center;
@@ -259,10 +244,6 @@
             transition: all 0.3s ease;
             cursor: pointer;
             border-bottom: 1px solid var(--border-color);
-        }
-
-        .user-item:last-child {
-            border-bottom: none;
         }
 
         .user-item:hover {
@@ -324,7 +305,6 @@
             animation: none;
         }
 
-        /* Pantalla de perfil */
         .profile-header {
             background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
             color: white;
@@ -344,17 +324,11 @@
             cursor: pointer;
             padding: 8px;
             border-radius: 12px;
-            transition: all 0.3s ease;
             width: 40px;
             height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-
-        .back-button:hover {
-            transform: scale(1.1);
-            background: rgba(255, 255, 255, 0.3);
         }
 
         .profile-content {
@@ -377,14 +351,8 @@
         }
 
         @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .profile-picture {
@@ -508,6 +476,11 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+
         .btn:active {
             transform: translateY(2px);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -518,22 +491,16 @@
             color: white;
         }
 
-        .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
-        }
-
         .btn-secondary {
             background: linear-gradient(135deg, var(--text-light) 0%, #475569 100%);
             color: white;
         }
 
-        .btn-secondary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(100, 116, 139, 0.4);
+        .btn-read {
+            background: var(--read-indicator);
+            color: white;
         }
 
-        /* Indicador de conexión */
         .connection-status {
             padding: 10px 16px;
             text-align: center;
@@ -558,7 +525,6 @@
             color: var(--error);
         }
 
-        /* Área de mensajes */
         .messages-container {
             flex: 1;
             padding: 16px;
@@ -584,17 +550,12 @@
             display: flex;
             align-items: flex-start;
             gap: 10px;
+            role: listitem;
         }
 
         @keyframes messageAppear {
-            from {
-                opacity: 0;
-                transform: translateY(20px) scale(0.9);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
+            from { opacity: 0; transform: translateY(20px) scale(0.9); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
         .message.replying {
@@ -696,7 +657,13 @@
             word-wrap: break-word;
         }
 
-        /* Mensajes con respuesta */
+        .message-text.edited::after {
+            content: ' (editado)';
+            font-size: 0.7rem;
+            opacity: 0.7;
+            margin-left: 4px;
+        }
+
         .reply-context {
             font-size: 0.7rem;
             color: var(--text-light);
@@ -779,9 +746,16 @@
             text-align: right;
             margin-top: 6px;
             opacity: 0.7;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
-        /* Botones de edición/eliminación */
+        .read-indicator {
+            color: var(--read-indicator);
+            font-size: 0.7rem;
+        }
+
         .message-actions {
             position: absolute;
             top: -10px;
@@ -820,12 +794,16 @@
             color: white;
         }
 
+        .read-btn {
+            background: var(--read-indicator);
+            color: white;
+        }
+
         .message-action-btn:hover {
             transform: scale(1.1);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
-        /* Panel de respuesta */
         .reply-panel {
             display: none;
             background: var(--reply-bg);
@@ -888,7 +866,6 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
-        /* Área de entrada */
         .input-container {
             padding: 12px 16px;
             background: white;
@@ -956,7 +933,6 @@
             display: none;
         }
 
-        /* Panel de archivos */
         .file-panel {
             display: none;
             background: white;
@@ -1007,7 +983,6 @@
             font-weight: 500;
         }
 
-        /* Estados de botones */
         .send-btn { display: none; }
         .audio-btn { display: flex; }
 
@@ -1019,18 +994,6 @@
             display: none;
         }
 
-        /* Animaciones generales */
-        @keyframes slideUp {
-            from { transform: translateY(100%); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        @keyframes slideIn {
-            from { transform: translateX(-100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        /* Toast notifications */
         .toast {
             position: fixed;
             top: 20px;
@@ -1052,9 +1015,68 @@
             background: var(--error);
         }
 
-        /* Responsive */
+        .file-preview {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            z-index: 2000;
+            max-width: 90%;
+            text-align: center;
+        }
+
+        .file-preview img, .file-preview video {
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 12px;
+        }
+
+        .file-preview-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .modal-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
         @media (max-width: 480px) {
-            .chat-header {
+            .chat-header, .private-chat-header {
                 padding: 10px 12px;
             }
 
@@ -1097,13 +1119,12 @@
             }
         }
 
-        /* Soporte para áreas seguras en móviles */
         @supports(padding: max(0px)) {
             .messages-container, .input-container {
                 padding-left: max(12px, env(safe-area-inset-left));
                 padding-right: max(12px, env(safe-area-inset-right));
             }
-            
+
             .input-container {
                 padding-bottom: max(12px, env(safe-area-inset-bottom));
             }
@@ -1113,10 +1134,10 @@
 <body>
     <div class="chat-app" id="chatApp">
         <!-- Pantalla principal de chat -->
-        <div class="screen chat-screen" id="chatScreen">
+        <div class="screen chat-screen active" id="chatScreen">
             <div class="chat-header">
                 <div class="header-info">
-                    <div class="avatar" id="userAvatarBtn">
+                    <div class="avatar" id="userAvatarBtn" aria-label="Ver perfil">
                         <i class="fas fa-user"></i>
                     </div>
                     <div class="user-info">
@@ -1125,21 +1146,18 @@
                     </div>
                 </div>
                 <div class="header-actions">
-                    <i class="fas fa-users" id="usersBtn" title="Usuarios registrados"></i>
+                    <i class="fas fa-users" id="usersBtn" title="Usuarios registrados" aria-label="Ver usuarios registrados"></i>
                 </div>
             </div>
 
-            <!-- Panel de usuarios en línea -->
             <div class="users-panel" id="usersPanel">
                 <div class="users-header">
                     <span>Usuarios Registrados</span>
-                    <button class="close-panel" id="closeUsersPanel">
+                    <button class="close-panel" id="closeUsersPanel" aria-label="Cerrar panel de usuarios">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="users-list" id="usersList">
-                    <!-- Los usuarios se cargarán aquí dinámicamente -->
-                </div>
+                <div class="users-list" id="usersList"></div>
             </div>
 
             <div class="connection-status" id="status">
@@ -1147,61 +1165,59 @@
                 <span>Conectando al servidor...</span>
             </div>
 
-            <div class="messages-container" id="messagesContainer">
+            <div class="messages-container" id="messagesContainer" role="list">
                 <div class="message system">
                     <i class="fas fa-info-circle"></i>
                     <div class="message-text">¡Bienvenido al chat! Desliza un mensaje hacia la derecha para responder.</div>
                 </div>
             </div>
 
-            <!-- Panel de respuesta -->
             <div class="reply-panel" id="replyPanel">
                 <div class="reply-info">
                     <div class="reply-text">Respondiendo a <span id="replyUserName">Usuario</span></div>
-                    <button class="reply-close" id="closeReply">
+                    <button class="reply-close" id="closeReply" aria-label="Cerrar respuesta">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="reply-preview" id="replyPreview"></div>
             </div>
 
-            <!-- Panel de archivos -->
             <div class="file-panel" id="filePanel">
                 <div class="file-options">
-                    <div class="file-option" id="fileImageBtn">
+                    <div class="file-option" id="fileImageBtn" aria-label="Enviar imagen">
                         <i class="fas fa-image"></i>
                         <span>Imagen</span>
                     </div>
-                    <div class="file-option" id="fileVideoBtn">
+                    <div class="file-option" id="fileVideoBtn" aria-label="Enviar video">
                         <i class="fas fa-video"></i>
                         <span>Video</span>
                     </div>
-                    <div class="file-option" id="fileDocumentBtn">
+                    <div class="file-option" id="fileDocumentBtn" aria-label="Enviar archivo">
                         <i class="fas fa-file"></i>
                         <span>Archivo</span>
                     </div>
                 </div>
-                <button class="close-panel" id="closeFilePanel">
+                <button class="close-panel" id="closeFilePanel" aria-label="Cerrar panel de archivos">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
             <div class="input-container">
-                <input type="file" id="imageInput" class="file-input" accept="image/*">
-                <input type="file" id="videoInput" class="file-input" accept="video/*">
+                <input type="file" id="imageInput" class="file-input" accept="image/jpeg,image/png,image/gif">
+                <input type="file" id="videoInput" class="file-input" accept="video/mp4,video/webm">
                 <input type="file" id="fileInput" class="file-input" accept="*/*">
-                <input type="file" id="profilePictureInput" class="file-input" accept="image/*">
+                <input type="file" id="profilePictureInput" class="file-input" accept="image/jpeg,image/png,image/gif">
 
-                <textarea id="messageInput" placeholder="Escribe un mensaje..." rows="1" autocomplete="off"></textarea>
+                <textarea id="messageInput" placeholder="Escribe un mensaje..." rows="1" autocomplete="off" aria-label="Escribir mensaje"></textarea>
 
                 <div class="input-actions">
-                    <button class="action-btn" id="clipBtn" title="Enviar archivo">
+                    <button class="action-btn" id="clipBtn" title="Enviar archivo" aria-label="Enviar archivo">
                         <i class="fas fa-paperclip"></i>
                     </button>
-                    <button class="action-btn audio-btn" id="audioBtn" title="Grabar audio">
+                    <button class="action-btn audio-btn" id="audioBtn" title="Grabar audio" aria-label="Grabar audio">
                         <i class="fas fa-microphone"></i>
                     </button>
-                    <button class="action-btn send-btn" id="sendButton" title="Enviar mensaje">
+                    <button class="action-btn send-btn" id="sendButton" title="Enviar mensaje" aria-label="Enviar mensaje">
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
@@ -1211,97 +1227,146 @@
         <!-- Pantalla de perfil -->
         <div class="screen profile-screen" id="profileScreen">
             <div class="profile-header">
-                <button class="back-button" id="backButton">
+                <button class="back-button" id="backButton" aria-label="Volver al chat">
                     <i class="fas fa-arrow-left"></i>
                 </button>
                 <h2>Mi Perfil</h2>
             </div>
-            
+
             <div class="profile-content">
                 <div class="profile-picture-section">
-                    <div class="profile-picture" id="profilePicture">
+                    <div class="profile-picture" id="profilePicture" aria-label="Foto de perfil">
                         <i class="fas fa-user"></i>
                     </div>
-                    <button class="edit-profile-pic" id="editProfilePic">
-                        <i class="fas fa-camera"></i>
-                        Cambiar Foto
+                    <button class="edit-profile-pic" id="editProfilePic" aria-label="Cambiar foto de perfil">
+                        <i class="fas fa-camera"></i> Cambiar Foto
                     </button>
                 </div>
-                
+
                 <div class="profile-form">
                     <div class="form-group">
                         <label for="profileName">
                             <i class="fas fa-user-edit"></i> Nombre de Usuario
                         </label>
-                        <input type="text" id="profileName" placeholder="Ingresa tu nombre">
+                        <input type="text" id="profileName" placeholder="Ingresa tu nombre" aria-label="Nombre de usuario">
                     </div>
                 </div>
             </div>
-            
+
             <div class="profile-actions">
-                <button class="btn btn-danger" id="deleteAccountBtn">
+                <button class="btn btn-danger" id="deleteAccountBtn" aria-label="Eliminar cuenta">
                     <i class="fas fa-trash"></i> Eliminar Cuenta
                 </button>
-                <button class="btn btn-secondary" id="logoutBtn">
+                <button class="btn btn-secondary" id="logoutBtn" aria-label="Cerrar sesión">
                     <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
                 </button>
             </div>
         </div>
 
+        <!-- Pantalla de chat privado -->
+        <div class="screen private-chat-screen" id="privateChatScreen">
+            <div class="private-chat-header">
+                <button class="back-button" id="privateChatBackButton" aria-label="Volver al chat principal">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="header-info">
+                    <div class="user-avatar" id="privateChatAvatar"></div>
+                    <div class="user-info">
+                        <h2 id="privateChatUserName"></h2>
+                        <p><span class="user-status-dot" id="privateChatStatus"></span> <span id="privateChatStatusText"></span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="messages-container" id="privateMessagesContainer" role="list">
+                <div class="message system">
+                    <i class="fas fa-info-circle"></i>
+                    <div class="message-text">Inicia una conversación privada</div>
+                </div>
+            </div>
+
+            <div class="reply-panel" id="privateReplyPanel">
+                <div class="reply-info">
+                    <div class="reply-text">Respondiendo a <span id="privateReplyUserName">Usuario</span></div>
+                    <button class="reply-close" id="privateCloseReply" aria-label="Cerrar respuesta">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="reply-preview" id="privateReplyPreview"></div>
+            </div>
+
+            <div class="file-panel" id="privateFilePanel">
+                <div class="file-options">
+                    <div class="file-option" id="privateFileImageBtn" aria-label="Enviar imagen">
+                        <i class="fas fa-image"></i>
+                        <span>Imagen</span>
+                    </div>
+                    <div class="file-option" id="privateFileVideoBtn" aria-label="Enviar video">
+                        <i class="fas fa-video"></i>
+                        <span>Video</span>
+                    </div>
+                    <div class="file-option" id="privateFileDocumentBtn" aria-label="Enviar archivo">
+                        <i class="fas fa-file"></i>
+                        <span>Archivo</span>
+                    </div>
+                </div>
+                <button class="close-panel" id="privateCloseFilePanel" aria-label="Cerrar panel de archivos">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="input-container">
+                <textarea id="privateMessageInput" placeholder="Escribe un mensaje..." rows="1" autocomplete="off" aria-label="Escribir mensaje privado"></textarea>
+                <div class="input-actions">
+                    <button class="action-btn" id="privateClipBtn" title="Enviar archivo" aria-label="Enviar archivo">
+                        <i class="fas fa-paperclip"></i>
+                    </button>
+                    <button class="action-btn audio-btn" id="privateAudioBtn" title="Grabar audio" aria-label="Grabar audio">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button class="action-btn send-btn" id="privateSendButton" title="Enviar mensaje" aria-label="Enviar mensaje privado">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal de confirmación -->
-        <div class="confirm-modal" id="confirmModal">
+        <div class="modal" id="confirmModal">
             <div class="modal-content">
-                <h3>¿Eliminar cuenta?</h3>
-                <p>Esta acción no se puede deshacer. Se perderán todos tus datos y mensajes.</p>
+                <h3 id="confirmModalTitle">¿Eliminar cuenta?</h3>
+                <p id="confirmModalText">Esta acción no se puede deshacer. Se perderán todos tus datos y mensajes.</p>
                 <div class="modal-actions">
-                    <button class="btn btn-secondary" id="cancelDelete">Cancelar</button>
-                    <button class="btn btn-danger" id="confirmDelete">Eliminar</button>
+                    <button class="btn btn-secondary" id="cancelModal" aria-label="Cancelar">Cancelar</button>
+                    <button class="btn btn-danger" id="confirmModalAction" aria-label="Confirmar acción">Eliminar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de vista previa de archivos -->
+        <div class="modal" id="filePreviewModal">
+            <div class="file-preview">
+                <div id="filePreviewContent"></div>
+                <div class="file-preview-actions">
+                    <button class="btn btn-secondary" id="cancelFilePreview" aria-label="Cancelar">Cancelar</button>
+                    <button class="btn btn-primary" id="confirmFilePreview" aria-label="Enviar archivo">Enviar</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Elementos DOM
-        const chatScreen = document.getElementById('chatScreen');
-        const profileScreen = document.getElementById('profileScreen');
-        const userAvatarBtn = document.getElementById('userAvatarBtn');
-        const backButton = document.getElementById('backButton');
-        const usersBtn = document.getElementById('usersBtn');
-        const usersPanel = document.getElementById('usersPanel');
-        const closeUsersPanel = document.getElementById('closeUsersPanel');
-        const usersList = document.getElementById('usersList');
-        const profileName = document.getElementById('profileName');
-        const editProfilePic = document.getElementById('editProfilePic');
-        const profilePictureInput = document.getElementById('profilePictureInput');
-        const deleteAccountBtn = document.getElementById('deleteAccountBtn');
-        const logoutBtn = document.getElementById('logoutBtn');
-        const confirmModal = document.getElementById('confirmModal');
-        const cancelDelete = document.getElementById('cancelDelete');
-        const confirmDelete = document.getElementById('confirmDelete');
-        const messagesContainer = document.getElementById('messagesContainer');
-        const messageInput = document.getElementById('messageInput');
-        const sendButton = document.getElementById('sendButton');
-        const status = document.getElementById('status');
-        const userCount = document.getElementById('userCount');
-        const userName = document.getElementById('userName');
-        const replyPanel = document.getElementById('replyPanel');
-        const closeReply = document.getElementById('closeReply');
-        const replyUserName = document.getElementById('replyUserName');
-        const replyPreview = document.getElementById('replyPreview');
-        
-        // Elementos para archivos
-        const clipBtn = document.getElementById('clipBtn');
-        const filePanel = document.getElementById('filePanel');
-        const closeFilePanel = document.getElementById('closeFilePanel');
-        const fileImageBtn = document.getElementById('fileImageBtn');
-        const fileVideoBtn = document.getElementById('fileVideoBtn');
-        const fileDocumentBtn = document.getElementById('fileDocumentBtn');
-        const imageInput = document.getElementById('imageInput');
-        const videoInput = document.getElementById('videoInput');
-        const fileInput = document.getElementById('fileInput');
+        const MESSAGE_TYPES = {
+            TEXT: 'message',
+            IMAGE: 'image',
+            VIDEO: 'video',
+            FILE: 'file'
+        };
 
-        // Estado de la aplicación
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+        const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
+        const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm'];
+
         let currentUser = null;
         let socket = null;
         let replyingTo = null;
@@ -1310,8 +1375,73 @@
         let allUsers = [];
         let longPressTimer = null;
         let selectedMessage = null;
+        let currentChat = { type: 'group', recipientId: null };
+        let pendingFile = null;
+        let typingTimeout = null;
 
-        // Verificar autenticación al cargar
+        const elements = {
+            chatScreen: document.getElementById('chatScreen'),
+            profileScreen: document.getElementById('profileScreen'),
+            privateChatScreen: document.getElementById('privateChatScreen'),
+            userAvatarBtn: document.getElementById('userAvatarBtn'),
+            backButton: document.getElementById('backButton'),
+            privateChatBackButton: document.getElementById('privateChatBackButton'),
+            usersBtn: document.getElementById('usersBtn'),
+            usersPanel: document.getElementById('usersPanel'),
+            closeUsersPanel: document.getElementById('closeUsersPanel'),
+            usersList: document.getElementById('usersList'),
+            profileName: document.getElementById('profileName'),
+            editProfilePic: document.getElementById('editProfilePic'),
+            profilePictureInput: document.getElementById('profilePictureInput'),
+            deleteAccountBtn: document.getElementById('deleteAccountBtn'),
+            logoutBtn: document.getElementById('logoutBtn'),
+            confirmModal: document.getElementById('confirmModal'),
+            confirmModalTitle: document.getElementById('confirmModalTitle'),
+            confirmModalText: document.getElementById('confirmModalText'),
+            cancelModal: document.getElementById('cancelModal'),
+            confirmModalAction: document.getElementById('confirmModalAction'),
+            messagesContainer: document.getElementById('messagesContainer'),
+            privateMessagesContainer: document.getElementById('privateMessagesContainer'),
+            messageInput: document.getElementById('messageInput'),
+            privateMessageInput: document.getElementById('privateMessageInput'),
+            sendButton: document.getElementById('sendButton'),
+            privateSendButton: document.getElementById('privateSendButton'),
+            status: document.getElementById('status'),
+            userCount: document.getElementById('userCount'),
+            userName: document.getElementById('userName'),
+            privateChatUserName: document.getElementById('privateChatUserName'),
+            privateChatStatus: document.getElementById('privateChatStatus'),
+            privateChatStatusText: document.getElementById('privateChatStatusText'),
+            privateChatAvatar: document.getElementById('privateChatAvatar'),
+            replyPanel: document.getElementById('replyPanel'),
+            privateReplyPanel: document.getElementById('privateReplyPanel'),
+            closeReply: document.getElementById('closeReply'),
+            privateCloseReply: document.getElementById('privateCloseReply'),
+            replyUserName: document.getElementById('replyUserName'),
+            privateReplyUserName: document.getElementById('privateReplyUserName'),
+            replyPreview: document.getElementById('replyPreview'),
+            privateReplyPreview: document.getElementById('privateReplyPreview'),
+            clipBtn: document.getElementById('clipBtn'),
+            privateClipBtn: document.getElementById('privateClipBtn'),
+            filePanel: document.getElementById('filePanel'),
+            privateFilePanel: document.getElementById('privateFilePanel'),
+            closeFilePanel: document.getElementById('closeFilePanel'),
+            privateCloseFilePanel: document.getElementById('privateCloseFilePanel'),
+            fileImageBtn: document.getElementById('fileImageBtn'),
+            fileVideoBtn: document.getElementById('fileVideoBtn'),
+            fileDocumentBtn: document.getElementById('fileDocumentBtn'),
+            privateFileImageBtn: document.getElementById('privateFileImageBtn'),
+            privateFileVideoBtn: document.getElementById('privateFileVideoBtn'),
+            privateFileDocumentBtn: document.getElementById('privateFileDocumentBtn'),
+            imageInput: document.getElementById('imageInput'),
+            videoInput: document.getElementById('videoInput'),
+            fileInput: document.getElementById('fileInput'),
+            filePreviewModal: document.getElementById('filePreviewModal'),
+            filePreviewContent: document.getElementById('filePreviewContent'),
+            cancelFilePreview: document.getElementById('cancelFilePreview'),
+            confirmFilePreview: document.getElementById('confirmFilePreview')
+        };
+
         window.addEventListener('load', () => {
             const savedUser = localStorage.getItem('chatUser');
             if (!savedUser) {
@@ -1324,9 +1454,8 @@
         });
 
         function initializeChat() {
-            userName.textContent = currentUser.name;
-            profileName.value = currentUser.name;
-            
+            elements.userName.textContent = currentUser.name;
+            elements.profileName.value = currentUser.name;
             if (currentUser.profilePicture) {
                 updateProfilePicture(currentUser.profilePicture);
             }
@@ -1338,837 +1467,919 @@
         }
 
         function setupEventListeners() {
-            // Navegación
-            userAvatarBtn.addEventListener('click', showProfileScreen);
-            backButton.addEventListener('click', showChatScreen);
-            
-            // Panel de usuarios - CORREGIDO
-            usersBtn.addEventListener('click', function(e) {
+            elements.userAvatarBtn.addEventListener('click', showProfileScreen);
+            elements.backButton.addEventListener('click', showChatScreen);
+            elements.privateChatBackButton.addEventListener('click', showChatScreen);
+            elements.usersBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                usersPanel.classList.toggle('active');
+                elements.usersPanel.classList.toggle('active');
             });
-            
-            closeUsersPanel.addEventListener('click', function(e) {
-                e.stopPropagation();
-                usersPanel.classList.remove('active');
-            });
+            elements.closeUsersPanel.addEventListener('click', () => elements.usersPanel.classList.remove('active'));
 
-            // Gestión de perfil
-            profileName.addEventListener('input', function() {
+            elements.profileName.addEventListener('input', () => {
                 clearTimeout(window.profileSaveTimeout);
                 window.profileSaveTimeout = setTimeout(updateProfile, 1000);
             });
-            
-            profileName.addEventListener('blur', updateProfile);
-            
-            // Foto de perfil
-            editProfilePic.addEventListener('click', function() {
-                profilePictureInput.click();
-            });
-            
-            const profilePictureElement = document.getElementById('profilePicture');
-            profilePictureElement.addEventListener('click', function() {
-                profilePictureInput.click();
-            });
-            
-            profilePictureInput.addEventListener('change', handleProfilePictureChange);
+            elements.profileName.addEventListener('blur', updateProfile);
+            elements.editProfilePic.addEventListener('click', () => elements.profilePictureInput.click());
+            elements.profilePicture.addEventListener('click', () => elements.profilePictureInput.click());
+            elements.profilePictureInput.addEventListener('change', handleProfilePictureChange);
+            elements.deleteAccountBtn.addEventListener('click', () => showConfirmModal('deleteAccount', '¿Eliminar cuenta?', 'Esta acción no se puede deshacer. Se perderán todos tus datos y mensajes.'));
+            elements.logoutBtn.addEventListener('click', logout);
+            elements.cancelModal.addEventListener('click', hideConfirmModal);
 
-            deleteAccountBtn.addEventListener('click', showDeleteConfirmation);
-            logoutBtn.addEventListener('click', logout);
-            cancelDelete.addEventListener('click', hideDeleteConfirmation);
-            confirmDelete.addEventListener('click', deleteAccount);
-
-            // Mensajes
-            messageInput.addEventListener('input', autoResizeTextarea);
-            messageInput.addEventListener('keypress', function(event) {
-                if (event.key === 'Enter' && !event.shiftKey) {
-                    event.preventDefault();
+            elements.messageInput.addEventListener('input', () => {
+                autoResizeTextarea(elements.messageInput);
+                sendTypingStatus(true);
+            });
+            elements.messageInput.addEventListener('blur', () => sendTypingStatus(false));
+            elements.messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
                     sendMessage();
                 }
             });
-            sendButton.addEventListener('click', sendMessage);
-            closeReply.addEventListener('click', closeReplyHandler);
+            elements.sendButton.addEventListener('click', sendMessage);
+            elements.closeReply.addEventListener('click', () => closeReplyHandler(elements.replyPanel, elements.messageInput));
 
-            // Sistema de archivos
-            clipBtn.addEventListener('click', toggleFilePanel);
-            closeFilePanel.addEventListener('click', closeFilePanelHandler);
-            fileImageBtn.addEventListener('click', () => imageInput.click());
-            fileVideoBtn.addEventListener('click', () => videoInput.click());
-            fileDocumentBtn.addEventListener('click', () => fileInput.click());
-            
-            imageInput.addEventListener('change', handleImageUpload);
-            videoInput.addEventListener('change', handleVideoUpload);
-            fileInput.addEventListener('change', handleFileUpload);
-
-            // Sistema de deslizamiento para respuestas - CAMBIADO A DERECHA
-            messagesContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
-            messagesContainer.addEventListener('touchmove', handleTouchMove, { passive: true });
-            messagesContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
-
-            // Sistema de presión larga para editar/eliminar
-            messagesContainer.addEventListener('touchstart', handleLongPressStart, { passive: true });
-            messagesContainer.addEventListener('touchend', handleLongPressEnd, { passive: true });
-            messagesContainer.addEventListener('touchcancel', handleLongPressEnd, { passive: true });
-
-            // Cerrar panels al hacer clic fuera
-            document.addEventListener('click', function(e) {
-                if (!usersPanel.contains(e.target) && e.target !== usersBtn) {
-                    usersPanel.classList.remove('active');
-                }
-                if (!filePanel.contains(e.target) && e.target !== clipBtn) {
-                    filePanel.classList.remove('active');
+            elements.privateMessageInput.addEventListener('input', () => {
+                autoResizeTextarea(elements.privateMessageInput);
+                sendTypingStatus(true, currentChat.recipientId);
+            });
+            elements.privateMessageInput.addEventListener('blur', () => sendTypingStatus(false, currentChat.recipientId));
+            elements.privateMessageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendPrivateMessage();
                 }
             });
+            elements.privateSendButton.addEventListener('click', sendPrivateMessage);
+            elements.privateCloseReply.addEventListener('click', () => closeReplyHandler(elements.privateReplyPanel, elements.privateMessageInput));
 
-            // Prevenir zoom en inputs en iOS
-            messageInput.addEventListener('touchstart', function(e) {
-                e.target.style.fontSize = '16px';
+            elements.clipBtn.addEventListener('click', () => toggleFilePanel(elements.filePanel));
+            elements.privateClipBtn.addEventListener('click', () => toggleFilePanel(elements.privateFilePanel));
+            elements.closeFilePanel.addEventListener('click', () => toggleFilePanel(elements.filePanel));
+            elements.privateCloseFilePanel.addEventListener('click', () => toggleFilePanel(elements.privateFilePanel));
+            elements.fileImageBtn.addEventListener('click', () => elements.imageInput.click());
+            elements.fileVideoBtn.addEventListener('click', () => elements.videoInput.click());
+            elements.fileDocumentBtn.addEventListener('click', () => elements.fileInput.click());
+            elements.privateFileImageBtn.addEventListener('click', () => elements.imageInput.click());
+            elements.privateFileVideoBtn.addEventListener('click', () => elements.videoInput.click());
+            elements.privateFileDocumentBtn.addEventListener('click', () => elements.fileInput.click());
+            elements.imageInput.addEventListener('change', (e) => handleFileSelection(e, 'image'));
+            elements.videoInput.addEventListener('change', (e) => handleFileSelection(e, 'video'));
+            elements.fileInput.addEventListener('change', (e) => handleFileSelection(e, 'file'));
+            elements.cancelFilePreview.addEventListener('click', closeFilePreview);
+            elements.confirmFilePreview.addEventListener('click', sendFileMessage);
+
+            elements.messagesContainer.addEventListener('touchstart', handleTouchStart);
+            elements.messagesContainer.addEventListener('touchmove', handleTouchMove);
+            elements.messagesContainer.addEventListener('touchend', handleTouchEnd);
+            elements.privateMessagesContainer.addEventListener('touchstart', handleTouchStart);
+            elements.privateMessagesContainer.addEventListener('touchmove', handleTouchMove);
+            elements.privateMessagesContainer.addEventListener('touchend', handleTouchEnd);
+
+            document.addEventListener('click', (e) => {
+                if (!elements.usersPanel.contains(e.target) && !elements.usersBtn.contains(e.target)) {
+                    elements.usersPanel.classList.remove('active');
+                }
+            });
+        }
+
+        function connectWebSocket() {
+            socket = new WebSocket(`ws://${window.location.host}`);
+
+            socket.onopen = () => {
+                elements.status.classList.add('connected');
+                elements.status.innerHTML = '<i class="fas fa-check-circle"></i> Conectado al servidor';
+                socket.send(JSON.stringify({
+                    type: 'user_join',
+                    user: currentUser,
+                    token: localStorage.getItem('token')
+                }));
+            };
+
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    switch (data.type) {
+                        case 'chat_history':
+                            displayChatHistory(data.messages);
+                            break;
+                        case 'user_join':
+                            showToast(`${data.user.name} se unió al chat`);
+                            addSystemMessage(`${data.user.name} se unió al chat`, data.timestamp);
+                            break;
+                        case 'user_leave':
+                            showToast(`${data.user.name} salió del chat`);
+                            addSystemMessage(`${data.user.name} salió del chat`, data.timestamp);
+                            break;
+                        case 'user_count':
+                            elements.userCount.textContent = `${data.count} usuario${data.count !== 1 ? 's' : ''} en línea`;
+                            break;
+                        case 'online_users':
+                            allUsers = data.users;
+                            updateUsersList();
+                            updatePrivateChatStatus();
+                            break;
+                        case 'typing':
+                            handleTypingStatus(data);
+                            break;
+                        case 'message':
+                        case 'image':
+                        case 'video':
+                        case 'file':
+                            addMessage(data);
+                            break;
+                        case 'message_edited':
+                            updateMessage(data.messageId, data.text);
+                            break;
+                        case 'message_deleted':
+                            deleteMessage(data.messageId);
+                            break;
+                        case 'messages_read':
+                            updateReadStatus(data.messageIds);
+                            break;
+                        case 'error':
+                            showToast(data.text, true);
+                            break;
+                    }
+                } catch (error) {
+                    console.error('Error procesando mensaje del servidor:', error);
+                    showToast('Error procesando mensaje del servidor', true);
+                }
+            };
+
+            socket.onclose = () => {
+                elements.status.classList.remove('connected');
+                elements.status.classList.add('error');
+                elements.status.innerHTML = '<i class="fas fa-exclamation-circle"></i> Desconectado. Intentando reconectar...';
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            socket.onerror = (error) => {
+                console.error('Error WebSocket:', error);
+                showToast('Error de conexión', true);
+            };
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${isError ? 'error' : ''}`;
+            toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i> ${DOMPurify.sanitize(message)}`;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function addSystemMessage(text, timestamp) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message system';
+            messageDiv.innerHTML = `
+                <i class="fas fa-info-circle"></i>
+                <div class="message-text">${DOMPurify.sanitize(text)}</div>
+                <div class="message-time">${timestamp}</div>
+            `;
+            const container = currentChat.type === 'private' ? elements.privateMessagesContainer : elements.messagesContainer;
+            container.appendChild(messageDiv);
+            scrollToBottom(container);
+        }
+
+        function addMessage(data) {
+            if (data.recipientId && data.recipientId !== currentUser.id && data.userId !== currentUser.id) {
+                return;
+            }
+
+            const isPrivate = data.recipientId || currentChat.type === 'private';
+            const container = isPrivate ? elements.privateMessagesContainer : elements.messagesContainer;
+
+            if (isPrivate && currentChat.type !== 'private') {
+                return;
+            }
+
+            if (currentChat.type === 'private' && (data.recipientId !== currentChat.recipientId && data.userId !== currentChat.recipientId)) {
+                return;
+            }
+
+            const isOwnMessage = data.userId === currentUser.id;
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isOwnMessage ? 'sent' : 'received'}`;
+            messageDiv.dataset.messageId = data.messageId;
+            messageDiv.dataset.userId = data.userId;
+
+            const avatarInitial = data.user?.name?.charAt(0).toUpperCase() || 'U';
+            const avatarHtml = data.user?.profilePicture
+                ? `<img src="${DOMPurify.sanitize(data.user.profilePicture)}" alt="Avatar de ${DOMPurify.sanitize(data.user.name)}">`
+                : avatarInitial;
+
+            let contentHtml = '';
+            if (data.type === MESSAGE_TYPES.TEXT) {
+                contentHtml = `<div class="message-text${data.edited ? ' edited' : ''}">${DOMPurify.sanitize(data.text)}</div>`;
+            } else if (data.type === MESSAGE_TYPES.IMAGE) {
+                contentHtml = `<img class="message-image" src="${DOMPurify.sanitize(data.fileData)}" alt="Imagen enviada">`;
+            } else if (data.type === MESSAGE_TYPES.VIDEO) {
+                contentHtml = `<video class="message-video" controls><source src="${DOMPurify.sanitize(data.fileData)}" type="${data.fileType}"></video>`;
+            } else if (data.type === MESSAGE_TYPES.FILE) {
+                contentHtml = `
+                    <div class="file-message">
+                        <i class="fas fa-file"></i>
+                        <a href="${DOMPurify.sanitize(data.fileData)}" download="${DOMPurify.sanitize(data.fileName)}">${DOMPurify.sanitize(data.fileName)}</a>
+                    </div>`;
+            }
+
+            let replyHtml = '';
+            if (data.replyTo) {
+                const repliedMessage = findMessageById(data.replyTo);
+                const replyText = repliedMessage
+                    ? (repliedMessage.type === MESSAGE_TYPES.TEXT ? repliedMessage.text : `[${repliedMessage.type}]`)
+                    : 'Mensaje no encontrado';
+                replyHtml = `
+                    <div class="reply-context">
+                        <i class="fas fa-reply reply-indicator"></i>
+                        <span class="reply-preview">${DOMPurify.sanitize(replyText)}</span>
+                    </div>`;
+            }
+
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${avatarHtml}</div>
+                <div class="message-content">
+                    <div class="message-sender">${DOMPurify.sanitize(data.user?.name || 'Usuario')}</div>
+                    ${replyHtml}
+                    ${contentHtml}
+                    <div class="message-time">
+                        ${data.timestamp}
+                        ${isOwnMessage ? `<span class="read-indicator">${data.read ? '<i class="fas fa-check-double"></i>' : '<i class="fas fa-check"></i>'}</span>` : ''}
+                    </div>
+                    ${isOwnMessage ? `
+                        <div class="message-actions">
+                            <button class="message-action-btn edit-btn" title="Editar mensaje" aria-label="Editar mensaje"><i class="fas fa-edit"></i></button>
+                            <button class="message-action-btn delete-btn" title="Eliminar mensaje" aria-label="Eliminar mensaje"><i class="fas fa-trash"></i></button>
+                        </div>` : ''}
+                    ${!isOwnMessage && data.recipientId === currentUser.id && !data.read ? `
+                        <div class="message-actions">
+                            <button class="message-action-btn read-btn" title="Marcar como leído" aria-label="Marcar como leído"><i class="fas fa-check-double"></i></button>
+                        </div>` : ''}
+            `;
+
+            container.appendChild(messageDiv);
+            scrollToBottom(container);
+
+            if (!isOwnMessage && data.recipientId === currentUser.id && !data.read) {
+                markMessagesAsRead([data.messageId]);
+            }
+
+            messageDiv.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', () => editMessage(data.messageId)));
+            messageDiv.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', () => deleteMessage(data.messageId)));
+            messageDiv.querySelectorAll('.read-btn').forEach(btn => btn.addEventListener('click', () => markMessagesAsRead([data.messageId])));
+        }
+
+        function displayChatHistory(messages) {
+            const container = currentChat.type === 'private' ? elements.privateMessagesContainer : elements.messagesContainer;
+            container.innerHTML = `
+                <div class="message system">
+                    <i class="fas fa-info-circle"></i>
+                    <div class="message-text">¡Bienvenido al chat! Desliza un mensaje hacia la derecha para responder.</div>
+                </div>`;
+            messages.forEach(addMessage);
+        }
+
+        function updateMessage(messageId, text) {
+            const messageDiv = document.querySelector(`.message[data-message-id="${messageId}"]`);
+            if (messageDiv) {
+                const textElement = messageDiv.querySelector('.message-text');
+                if (textElement) {
+                    textElement.textContent = DOMPurify.sanitize(text);
+                    textElement.classList.add('edited');
+                }
+                showToast('Mensaje editado');
+            }
+        }
+
+        function deleteMessage(messageId) {
+            const messageDiv = document.querySelector(`.message[data-message-id="${messageId}"]`);
+            if (messageDiv) {
+                messageDiv.remove();
+                showToast('Mensaje eliminado');
+                fetch('/api/message/' + messageId, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: currentUser.id })
+                }).catch(error => showToast('Error al eliminar mensaje', true));
+            }
+        }
+
+        function updateReadStatus(messageIds) {
+            messageIds.forEach(messageId => {
+                const messageDiv = document.querySelector(`.message[data-message-id="${messageId}"]`);
+                if (messageDiv) {
+                    const readIndicator = messageDiv.querySelector('.read-indicator');
+                    if (readIndicator) {
+                        readIndicator.innerHTML = '<i class="fas fa-check-double"></i>';
+                    }
+                    const readBtn = messageDiv.querySelector('.read-btn');
+                    if (readBtn) {
+                        readBtn.parentElement.remove();
+                    }
+                }
+            });
+        }
+
+        function markMessagesAsRead(messageIds) {
+            fetch('/api/mark-read', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: currentUser.id, messageIds })
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      socket.send(JSON.stringify({
+                          type: 'messages_read',
+                          messageIds,
+                          userId: currentUser.id,
+                          timestamp: new Date().toLocaleTimeString()
+                      }));
+                  } else {
+                      showToast('Error al marcar mensajes como leídos', true);
+                  }
+              })
+              .catch(error => showToast('Error al marcar mensajes', true));
+        }
+
+        function findMessageById(messageId) {
+            const container = currentChat.type === 'private' ? elements.privateMessagesContainer : elements.messagesContainer;
+            const messageDiv = container.querySelector(`.message[data-message-id="${messageId}"]`);
+            if (messageDiv) {
+                const textElement = messageDiv.querySelector('.message-text');
+                return {
+                    type: messageDiv.querySelector('.message-image') ? 'image' :
+                          messageDiv.querySelector('.message-video') ? 'video' :
+                          messageDiv.querySelector('.file-message') ? 'file' : 'message',
+                    text: textElement ? textElement.textContent.replace(' (editado)', '') : ''
+                };
+            }
+            return null;
+        }
+
+        function sendMessage() {
+            const text = elements.messageInput.value.trim();
+            if (!text && !pendingFile) return;
+
+            const messageData = {
+                type: pendingFile ? pendingFile.type : MESSAGE_TYPES.TEXT,
+                userId: currentUser.id,
+                user: currentUser,
+                messageId: generateUUID(),
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                replyTo: replyingTo ? replyingTo.messageId : null
+            };
+
+            if (pendingFile) {
+                messageData.fileData = pendingFile.data;
+                messageData.fileName = pendingFile.name;
+                messageData.fileType = pendingFile.fileType;
+            } else {
+                messageData.text = text;
+            }
+
+            socket.send(JSON.stringify(messageData));
+            elements.messageInput.value = '';
+            autoResizeTextarea(elements.messageInput);
+            closeReplyHandler(elements.replyPanel, elements.messageInput);
+            closeFilePreview();
+            scrollToBottom(elements.messagesContainer);
+            sendTypingStatus(false);
+        }
+
+        function sendPrivateMessage() {
+            const text = elements.privateMessageInput.value.trim();
+            if (!text && !pendingFile) return;
+
+            const messageData = {
+                type: pendingFile ? pendingFile.type : MESSAGE_TYPES.TEXT,
+                userId: currentUser.id,
+                user: currentUser,
+                recipientId: currentChat.recipientId,
+                messageId: generateUUID(),
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                replyTo: replyingTo ? replyingTo.messageId : null
+            };
+
+            if (pendingFile) {
+                messageData.fileData = pendingFile.data;
+                messageData.fileName = pendingFile.name;
+                messageData.fileType = pendingFile.fileType;
+            } else {
+                messageData.text = text;
+            }
+
+            socket.send(JSON.stringify(messageData));
+            elements.privateMessageInput.value = '';
+            autoResizeTextarea(elements.privateMessageInput);
+            closeReplyHandler(elements.privateReplyPanel, elements.privateMessageInput);
+            closeFilePreview();
+            scrollToBottom(elements.privateMessagesContainer);
+            sendTypingStatus(false, currentChat.recipientId);
+        }
+
+        function sendFileMessage() {
+            if (!pendingFile) return;
+            const messageData = {
+                type: pendingFile.type,
+                userId: currentUser.id,
+                user: currentUser,
+                messageId: generateUUID(),
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                fileData: pendingFile.data,
+                fileName: pendingFile.name,
+                fileType: pendingFile.fileType,
+                replyTo: replyingTo ? replyingTo.messageId : null
+            };
+
+            if (currentChat.type === 'private') {
+                messageData.recipientId = currentChat.recipientId;
+            }
+
+            socket.send(JSON.stringify(messageData));
+            closeFilePreview();
+            const container = currentChat.type === 'private' ? elements.privateMessagesContainer : elements.messagesContainer;
+            const input = currentChat.type === 'private' ? elements.privateMessageInput : elements.messageInput;
+            const replyPanel = currentChat.type === 'private' ? elements.privateReplyPanel : elements.replyPanel;
+            closeReplyHandler(replyPanel, input);
+            scrollToBottom(container);
+        }
+
+        function handleFileSelection(event, type) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.size > MAX_FILE_SIZE) {
+                showToast('El archivo es demasiado grande (máx. 5MB)', true);
+                event.target.value = '';
+                return;
+            }
+
+            if (type === 'image' && !ALLOWED_IMAGE_TYPES.includes(file.type)) {
+                showToast('Formato de imagen no permitido', true);
+                event.target.value = '';
+                return;
+            }
+
+            if (type === 'video' && !ALLOWED_VIDEO_TYPES.includes(file.type)) {
+                showToast('Formato de video no permitido', true);
+                event.target.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                pendingFile = {
+                    type,
+                    data: reader.result,
+                    name: file.name,
+                    fileType: file.type
+                };
+                showFilePreview();
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+            toggleFilePanel(currentChat.type === 'private' ? elements.privateFilePanel : elements.filePanel);
+        }
+
+        function showFilePreview() {
+            let content;
+            if (pendingFile.type === 'image') {
+                content = `<img src="${pendingFile.data}" alt="Vista previa de la imagen">`;
+            } else if (pendingFile.type === 'video') {
+                content = `<video controls><source src="${pendingFile.data}" type="${pendingFile.fileType}"></video>`;
+            } else {
+                content = `<div><i class="fas fa-file"></i> ${DOMPurify.sanitize(pendingFile.name)}</div>`;
+            }
+            elements.filePreviewContent.innerHTML = content;
+            elements.filePreviewModal.classList.add('active');
+        }
+
+        function closeFilePreview() {
+            elements.filePreviewModal.classList.remove('active');
+            elements.filePreviewContent.innerHTML = '';
+            pendingFile = null;
+        }
+
+        function toggleFilePanel(panel) {
+            panel.classList.toggle('active');
+        }
+
+        function handleTypingStatus(data) {
+            if (data.recipientId && data.recipientId !== currentUser.id) return;
+            if (currentChat.type === 'private' && data.userId !== currentChat.recipientId) return;
+
+            const container = currentChat.type === 'private' ? elements.privateMessagesContainer : elements.messagesContainer;
+            let typingMessage = container.querySelector('.message.typing');
+            if (data.typing) {
+                if (!typingMessage) {
+                    typingMessage = document.createElement('div');
+                    typingMessage.className = 'message received typing';
+                    typingMessage.innerHTML = `
+                        <div class="message-avatar">${data.user?.profilePicture ? `<img src="${DOMPurify.sanitize(data.user.profilePicture)}" alt="Avatar de ${DOMPurify.sanitize(data.user.name)}">` : data.user?.name?.charAt(0).toUpperCase() || 'U'}</div>
+                        <div class="message-content">
+                            <div class="message-sender">${DOMPurify.sanitize(data.user?.name || 'Usuario')}</div>
+                            <div class="message-text"><i class="fas fa-circle-notch fa-spin"></i> Escribiendo...</div>
+                        </div>`;
+                    container.appendChild(typingMessage);
+                    scrollToBottom(container);
+                }
+            } else if (typingMessage) {
+                typingMessage.remove();
+            }
+
+            if (currentChat.type === 'private' && data.userId === currentChat.recipientId) {
+                elements.privateChatStatusText.textContent = data.typing ? 'Escribiendo...' : (allUsers.find(u => u.id === currentChat.recipientId)?.isOnline ? 'En línea' : 'Desconectado');
+                elements.privateChatStatus.classList.toggle('typing', data.typing);
+            }
+        }
+
+        function sendTypingStatus(isTyping, recipientId = null) {
+            clearTimeout(typingTimeout);
+            socket.send(JSON.stringify({
+                type: 'typing',
+                typing: isTyping,
+                userId: currentUser.id,
+                user: currentUser,
+                recipientId
+            }));
+            if (isTyping) {
+                typingTimeout = setTimeout(() => sendTypingStatus(false, recipientId), 3000);
+            }
+        }
+
+        function updateProfile() {
+            const newName = elements.profileName.value.trim();
+            if (!newName) {
+                showToast('El nombre no puede estar vacío', true);
+                elements.profileName.value = currentUser.name;
+                return;
+            }
+
+            if (newName === currentUser.name) return;
+
+            fetch('/api/update-profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: currentUser.id, name: newName })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        currentUser.name = data.user.name;
+                        localStorage.setItem('chatUser', JSON.stringify(currentUser));
+                        elements.userName.textContent = currentUser.name;
+                        showToast('Nombre actualizado');
+                    } else {
+                        showToast(data.message, true);
+                    }
+                })
+                .catch(error => showToast('Error al actualizar perfil', true));
+        }
+
+        function handleProfilePictureChange(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.size > MAX_FILE_SIZE) {
+                showToast('La imagen es demasiado grande (máx. 5MB)', true);
+                return;
+            }
+
+            if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+                showToast('Formato de imagen no permitido', true);
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                const profilePicture = reader.result;
+                fetch('/api/update-profile', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: currentUser.id, profilePicture })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            currentUser.profilePicture = profilePicture;
+                            localStorage.setItem('chatUser', JSON.stringify(currentUser));
+                            updateProfilePicture(profilePicture);
+                            showToast('Foto de perfil actualizada');
+                        } else {
+                            showToast(data.message, true);
+                        }
+                    })
+                    .catch(error => showToast('Error al actualizar foto', true));
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        function updateProfilePicture(pictureUrl) {
+            const avatarElements = [elements.userAvatarBtn, elements.profilePicture];
+            avatarElements.forEach(el => {
+                el.innerHTML = `<img src="${DOMPurify.sanitize(pictureUrl)}" alt="Foto de perfil">`;
             });
         }
 
         function showProfileScreen() {
-            chatScreen.style.display = 'none';
-            profileScreen.classList.add('active');
+            elements.chatScreen.classList.remove('active');
+            elements.privateChatScreen.classList.remove('active');
+            elements.profileScreen.classList.add('active');
         }
 
         function showChatScreen() {
-            profileScreen.classList.remove('active');
-            chatScreen.style.display = 'flex';
-            setTimeout(() => {
-                messageInput.focus();
-            }, 300);
+            currentChat = { type: 'group', recipientId: null };
+            elements.profileScreen.classList.remove('active');
+            elements.privateChatScreen.classList.remove('active');
+            elements.chatScreen.classList.add('active');
+            loadChatHistory();
+            scrollToBottom(elements.messagesContainer);
         }
 
-        function toggleFilePanel() {
-            filePanel.classList.toggle('active');
+        function showPrivateChatScreen(recipientId) {
+            const recipient = allUsers.find(u => u.id === recipientId);
+            if (!recipient) return;
+
+            currentChat = { type: 'private', recipientId };
+            elements.chatScreen.classList.remove('active');
+            elements.profileScreen.classList.remove('active');
+            elements.privateChatScreen.classList.add('active');
+            elements.privateChatUserName.textContent = recipient.name;
+            elements.privateChatAvatar.innerHTML = recipient.profilePicture
+                ? `<img src="${DOMPurify.sanitize(recipient.profilePicture)}" alt="Avatar de ${DOMPurify.sanitize(recipient.name)}">`
+                : recipient.name.charAt(0).toUpperCase();
+            updatePrivateChatStatus();
+            loadPrivateChatHistory(recipientId);
+            scrollToBottom(elements.privateMessagesContainer);
         }
 
-        function closeFilePanelHandler() {
-            filePanel.classList.remove('active');
-        }
-
-        function connectWebSocket() {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}`;
-            
-            socket = new WebSocket(wsUrl);
-
-            socket.onopen = function(event) {
-                updateStatus('Conectado', 'connected');
-
-                socket.send(JSON.stringify({
-                    type: 'user_join',
-                    user: currentUser
-                }));
-            };
-
-            socket.onmessage = function(event) {
-                const messageData = JSON.parse(event.data);
-
-                if (messageData.type === 'user_count') {
-                    userCount.textContent = `${messageData.count} usuarios conectados`;
-                } else if (messageData.type === 'user_join') {
-                    displaySystemMessage(`${messageData.user.name} se unió al chat`);
-                    updateUsersList();
-                } else if (messageData.type === 'user_leave') {
-                    displaySystemMessage(`${messageData.user.name} abandonó el chat`);
-                    updateUsersList();
-                } else if (messageData.type === 'online_users') {
-                    updateOnlineUsers(messageData.users);
-                } else if (messageData.type === 'chat_history') {
-                    displayChatHistory(messageData.messages);
-                } else if (messageData.type === 'message_deleted') {
-                    removeMessage(messageData.messageId);
-                } else {
-                    if (messageData.userId !== currentUser.id) {
-                        displayMessage(messageData, 'received');
-                    }
-                }
-            };
-
-            socket.onerror = function(event) {
-                updateStatus('Error de conexión', 'error');
-            };
-
-            socket.onclose = function(event) {
-                updateStatus('Desconectado', 'error');
-                setTimeout(() => {
-                    if (!socket || socket.readyState === WebSocket.CLOSED) {
-                        connectWebSocket();
-                    }
-                }, 3000);
-            };
-        }
-
-        function updateStatus(text, className) {
-            status.innerHTML = className === 'connected' 
-                ? `<i class="fas fa-check-circle"></i><span>${text}</span>`
-                : `<i class="fas fa-exclamation-circle"></i><span>${text}</span>`;
-
-            status.className = `connection-status ${className}`;
-        }
-
-        async function loadRegisteredUsers() {
-            try {
-                const response = await fetch('/api/registered-users');
-                const data = await response.json();
-                
-                if (data.success) {
-                    allUsers = data.users;
-                    updateUsersList();
-                }
-            } catch (error) {
-                console.error('Error loading users:', error);
+        function updatePrivateChatStatus() {
+            const recipient = allUsers.find(u => u.id === currentChat.recipientId);
+            if (recipient) {
+                elements.privateChatStatusText.textContent = recipient.isOnline ? 'En línea' : 'Desconectado';
+                elements.privateChatStatus.classList.toggle('offline', !recipient.isOnline);
             }
         }
 
-        async function loadChatHistory() {
-            try {
-                const response = await fetch('/api/chat-history');
-                const data = await response.json();
-                
-                if (data.success && data.messages.length > 0) {
-                    displayChatHistory(data.messages);
-                }
-            } catch (error) {
-                console.error('Error loading chat history:', error);
-            }
+        function loadRegisteredUsers() {
+            fetch('/api/registered-users')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        allUsers = data.users;
+                        updateUsersList();
+                    }
+                })
+                .catch(error => showToast('Error al cargar usuarios', true));
         }
 
         function updateUsersList() {
-            usersList.innerHTML = '';
-            
-            if (allUsers.length === 0) {
-                usersList.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-light);">No hay usuarios registrados</div>';
-                return;
-            }
-            
+            elements.usersList.innerHTML = '';
             allUsers.forEach(user => {
+                if (user.id === currentUser.id) return;
                 const userItem = document.createElement('div');
                 userItem.className = 'user-item';
+                userItem.dataset.userId = user.id;
                 userItem.innerHTML = `
-                    <div class="user-avatar">
-                        ${user.profilePicture ? 
-                            `<img src="${user.profilePicture}" alt="${user.name}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : 
-                            user.name.charAt(0).toUpperCase()}
-                    </div>
+                    <div class="user-avatar">${user.profilePicture ? `<img src="${DOMPurify.sanitize(user.profilePicture)}" alt="Avatar de ${DOMPurify.sanitize(user.name)}">` : user.name.charAt(0).toUpperCase()}</div>
                     <div class="user-details">
-                        <h4>${user.name}</h4>
+                        <h4>${DOMPurify.sanitize(user.name)}</h4>
                         <div class="user-status">
                             <span class="user-status-dot ${user.isOnline ? '' : 'offline'}"></span>
-                            <span>${user.isOnline ? 'En línea' : 'Desconectado'}</span>
+                            ${user.isOnline ? 'En línea' : 'Desconectado'}
                         </div>
-                    </div>
-                `;
-                usersList.appendChild(userItem);
+                    </div>`;
+                userItem.addEventListener('click', () => {
+                    elements.usersPanel.classList.remove('active');
+                    showPrivateChatScreen(user.id);
+                });
+                elements.usersList.appendChild(userItem);
             });
         }
 
-        function updateOnlineUsers(onlineUsers) {
-            allUsers.forEach(user => {
-                user.isOnline = onlineUsers.some(onlineUser => onlineUser.id === user.id);
-            });
-            updateUsersList();
+        function loadChatHistory() {
+            fetch('/api/chat-history')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayChatHistory(data.messages);
+                    }
+                })
+                .catch(error => showToast('Error al cargar historial', true));
         }
 
-        // Sistema de deslizamiento - CAMBIADO A DERECHA
+        function loadPrivateChatHistory(recipientId) {
+            fetch(`/api/chat-history?userId=${currentUser.id}&recipientId=${recipientId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        elements.privateMessagesContainer.innerHTML = `
+                            <div class="message system">
+                                <i class="fas fa-info-circle"></i>
+                                <div class="message-text">Inicia una conversación privada</div>
+                            </div>`;
+                        data.messages.forEach(addMessage);
+                        const unreadMessageIds = data.messages
+                            .filter(m => m.recipientId === currentUser.id && !m.read)
+                            .map(m => m.messageId);
+                        if (unreadMessageIds.length > 0) {
+                            markMessagesAsRead(unreadMessageIds);
+                        }
+                    }
+                })
+                .catch(error => showToast('Error al cargar historial privado', true));
+        }
+
+        function scrollToBottom(container) {
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+        }
+
         function handleTouchStart(e) {
+            const messageDiv = e.target.closest('.message:not(.system):not(.typing)');
+            if (!messageDiv) return;
+
             touchStartX = e.touches[0].clientX;
             touchStartY = e.touches[0].clientY;
+            longPressTimer = setTimeout(() => {
+                showMessageActions(messageDiv);
+            }, 500);
         }
 
         function handleTouchMove(e) {
-            if (!touchStartX) return;
-            
+            if (!touchStartX || !touchStartY) return;
+
             const touchX = e.touches[0].clientX;
             const touchY = e.touches[0].clientY;
-            const diffX = touchX - touchStartX;
-            const diffY = Math.abs(touchY - touchStartY);
-            
-            // Solo activar si el movimiento es principalmente horizontal (derecha) y no vertical
-            if (diffX > 30 && diffY < 20) {
-                const messageElement = e.target.closest('.message');
-                if (messageElement && !messageElement.classList.contains('system')) {
-                    messageElement.style.transform = `translateX(${Math.min(diffX, 80)}px)`;
-                    messageElement.style.transition = 'none';
+            const deltaX = touchStartX - touchX;
+            const deltaY = Math.abs(touchStartY - touchY);
+
+            if (deltaX > 50 && deltaY < 50) {
+                const messageDiv = e.target.closest('.message:not(.system):not(.typing)');
+                if (messageDiv) {
+                    startReply(messageDiv);
                 }
+                clearTimeout(longPressTimer);
             }
         }
 
-        function handleTouchEnd(e) {
-            if (!touchStartX) return;
-            
-            const touchEndX = e.changedTouches[0].clientX;
-            const diffX = touchEndX - touchStartX;
-            
-            // Si el deslizamiento es lo suficientemente largo hacia la DERECHA
-            if (diffX > 50) {
-                const messageElement = e.target.closest('.message');
-                if (messageElement && !messageElement.classList.contains('system')) {
-                    showReplyPanel(messageElement);
-                }
-            }
-            
-            // Restaurar posición
-            const messageElement = e.target.closest('.message');
-            if (messageElement) {
-                messageElement.style.transform = '';
-                messageElement.style.transition = 'transform 0.3s ease';
-            }
-            
+        function handleTouchEnd() {
             touchStartX = null;
             touchStartY = null;
+            clearTimeout(longPressTimer);
         }
 
-        // Sistema de presión larga
-        function handleLongPressStart(e) {
-            const messageElement = e.target.closest('.message');
-            if (messageElement && messageElement.classList.contains('sent')) {
-                selectedMessage = messageElement;
-                longPressTimer = setTimeout(() => {
-                    showMessageActions(messageElement);
-                }, 1750); // 1.75 segundos
+        function showMessageActions(messageDiv) {
+            const existingActions = document.querySelectorAll('.message-actions.active');
+            existingActions.forEach(actions => actions.classList.remove('active'));
+
+            const actions = messageDiv.querySelector('.message-actions');
+            if (actions) {
+                actions.classList.add('active');
+                setTimeout(() => {
+                    document.addEventListener('click', () => actions.classList.remove('active'), { once: true });
+                }, 100);
             }
         }
 
-        function handleLongPressEnd(e) {
-            if (longPressTimer) {
-                clearTimeout(longPressTimer);
-                longPressTimer = null;
-            }
+        function startReply(messageDiv) {
+            const messageId = messageDiv.dataset.messageId;
+            const userId = messageDiv.dataset.userId;
+            const message = findMessageById(messageId);
+            if (!message) return;
+
+            const user = allUsers.find(u => u.id === userId) || currentUser;
+            replyingTo = { messageId, userId };
+
+            const replyPanel = currentChat.type === 'private' ? elements.privateReplyPanel : elements.replyPanel;
+            const replyUserName = currentChat.type === 'private' ? elements.privateReplyUserName : elements.replyUserName;
+            const replyPreview = currentChat.type === 'private' ? elements.privateReplyPreview : elements.replyPreview;
+            const input = currentChat.type === 'private' ? elements.privateMessageInput : elements.messageInput;
+
+            replyUserName.textContent = user.name;
+            replyPreview.textContent = message.type === MESSAGE_TYPES.TEXT ? DOMPurify.sanitize(message.text) : `[${message.type}]`;
+            replyPanel.classList.add('active');
+            input.focus();
         }
 
-        function showMessageActions(messageElement) {
-            // Remover acciones anteriores
-            const existingActions = messageElement.querySelector('.message-actions');
-            if (existingActions) {
-                existingActions.remove();
-            }
-
-            const messageId = messageElement.dataset.messageId;
-            const actionsHTML = `
-                <div class="message-actions">
-                    <button class="message-action-btn edit-btn" onclick="editMessage('${messageId}')">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="message-action-btn delete-btn" onclick="deleteMessage('${messageId}')">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            `;
-            
-            messageElement.style.position = 'relative';
-            messageElement.insertAdjacentHTML('beforeend', actionsHTML);
-            
-            const actions = messageElement.querySelector('.message-actions');
-            actions.style.display = 'flex';
-            
-            // Ocultar acciones después de 3 segundos
-            setTimeout(() => {
-                if (actions.parentNode === messageElement) {
-                    actions.remove();
-                }
-            }, 3000);
+        function closeReplyHandler(replyPanel, input) {
+            replyPanel.classList.remove('active');
+            replyingTo = null;
+            input.value = '';
+            autoResizeTextarea(input);
         }
 
         function editMessage(messageId) {
-            const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-            const messageText = messageElement.querySelector('.message-text').textContent;
-            
-            messageInput.value = messageText;
-            messageInput.focus();
-            selectedMessage = messageElement;
-            
-            // Marcar mensaje como en edición
-            messageElement.classList.add('editing');
-            
-            showToast('Edita el mensaje y presiona enviar', 'success');
-        }
+            const messageDiv = document.querySelector(`.message[data-message-id="${messageId}"]`);
+            if (!messageDiv) return;
 
-        async function deleteMessage(messageId) {
-            try {
-                const response = await fetch(`/api/message/${messageId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        userId: currentUser.id
+            const textElement = messageDiv.querySelector('.message-text');
+            if (!textElement) return;
+
+            const currentText = textElement.textContent.replace(' (editado)', '');
+            const input = currentChat.type === 'private' ? elements.privateMessageInput : elements.messageInput;
+            input.value = currentText;
+            input.focus();
+            autoResizeTextarea(input);
+
+            messageDiv.classList.add('editing');
+            selectedMessage = messageId;
+
+            const sendButton = currentChat.type === 'private' ? elements.privateSendButton : elements.sendButton;
+            const originalSendText = sendButton.innerHTML;
+            sendButton.innerHTML = '<i class="fas fa-save"></i>';
+
+            function saveEdit() {
+                const newText = input.value.trim();
+                if (newText) {
+                    fetch(`/api/message/${messageId}/edit`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: currentUser.id, text: newText })
                     })
-                });
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    showToast('Mensaje eliminado', 'success');
-                } else {
-                    showToast('Error al eliminar mensaje', 'error');
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                socket.send(JSON.stringify({
+                                    type: 'message_edited',
+                                    messageId,
+                                    text: newText,
+                                    timestamp: new Date().toLocaleTimeString()
+                                }));
+                                messageDiv.classList.remove('editing');
+                                selectedMessage = null;
+                                input.value = '';
+                                autoResizeTextarea(input);
+                                sendButton.innerHTML = originalSendText;
+                            } else {
+                                showToast(data.message, true);
+                            }
+                        })
+                        .catch(error => showToast('Error al editar mensaje', true));
                 }
-            } catch (error) {
-                console.error('Error deleting message:', error);
-                showToast('Error de conexión', 'error');
             }
-        }
 
-        function removeMessage(messageId) {
-            const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-            if (messageElement) {
-                messageElement.style.animation = 'messageAppear 0.3s ease reverse';
-                setTimeout(() => {
-                    messageElement.remove();
-                }, 300);
-            }
-        }
-
-        function showReplyPanel(messageElement) {
-            const messageText = messageElement.querySelector('.message-text')?.textContent || 'Mensaje';
-            const senderName = messageElement.querySelector('.message-sender')?.textContent || 'Usuario';
-            const messageId = messageElement.dataset.messageId || Date.now().toString();
-            
-            replyingTo = {
-                id: messageId,
-                text: messageText,
-                sender: senderName
+            sendButton.onclick = saveEdit;
+            input.onkeypress = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    saveEdit();
+                }
             };
-            
-            replyUserName.textContent = senderName;
-            replyPreview.textContent = messageText.length > 50 ? messageText.substring(0, 50) + '...' : messageText;
-            replyPanel.classList.add('active');
-            
-            // Animación de respuesta
-            messageElement.classList.add('replying');
-            setTimeout(() => {
-                messageElement.classList.remove('replying');
-            }, 2000);
-            
-            setTimeout(() => {
-                messageInput.focus();
-            }, 300);
         }
 
-        function closeReplyHandler() {
-            replyPanel.classList.remove('active');
-            replyingTo = null;
-        }
+        function showConfirmModal(action, title, text) {
+            elements.confirmModalTitle.textContent = title;
+            elements.confirmModalText.textContent = text;
+            elements.confirmModal.classList.add('active');
 
-        function sendMessage() {
-            const message = messageInput.value.trim();
-            
-            // Si hay un mensaje seleccionado para editar
-            if (selectedMessage && selectedMessage.classList.contains('editing')) {
-                const messageId = selectedMessage.dataset.messageId;
-                deleteMessage(messageId);
-                selectedMessage.classList.remove('editing');
-                selectedMessage = null;
-            }
-            
-            if (message && socket && socket.readyState === WebSocket.OPEN) {
-                const messageData = {
-                    type: 'message',
-                    text: message,
-                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-                    userId: currentUser.id,
-                    user: currentUser,
-                    replyingTo: replyingTo,
-                    messageId: Date.now().toString() + Math.random().toString(36).substr(2, 9)
-                };
-
-                displayMessage(messageData, 'sent');
-                socket.send(JSON.stringify(messageData));
-
-                messageInput.value = '';
-                autoResizeTextarea();
-                closeReplyHandler();
-            }
-        }
-
-        // Funciones para manejar archivos
-        function handleImageUpload(e) {
-            if (e.target.files.length > 0) {
-                sendImage(e.target.files[0]);
-                e.target.value = '';
-                closeFilePanelHandler();
-            }
-        }
-
-        function handleVideoUpload(e) {
-            if (e.target.files.length > 0) {
-                sendVideo(e.target.files[0]);
-                e.target.value = '';
-                closeFilePanelHandler();
-            }
-        }
-
-        function handleFileUpload(e) {
-            if (e.target.files.length > 0) {
-                sendFile(e.target.files[0]);
-                e.target.value = '';
-                closeFilePanelHandler();
-            }
-        }
-
-        // Función para cambiar foto de perfil
-        function handleProfilePictureChange(e) {
-            if (e.target.files.length > 0) {
-                const file = e.target.files[0];
-                const reader = new FileReader();
-                
-                reader.onload = function(e) {
-                    const newProfilePic = e.target.result;
-                    updateProfilePicture(newProfilePic);
-                    updateProfilePictureServer(newProfilePic);
-                };
-                
-                reader.readAsDataURL(file);
-                e.target.value = '';
-            }
-        }
-
-        function sendImage(file) {
-            if (!socket || socket.readyState !== WebSocket.OPEN) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const messageData = {
-                    type: 'image',
-                    imageData: e.target.result,
-                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-                    userId: currentUser.id,
-                    user: currentUser,
-                    replyingTo: replyingTo,
-                    messageId: Date.now().toString() + Math.random().toString(36).substr(2, 9)
-                };
-
-                displayMessage(messageData, 'sent');
-                socket.send(JSON.stringify(messageData));
-                closeReplyHandler();
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function sendVideo(file) {
-            if (!socket || socket.readyState !== WebSocket.OPEN) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const messageData = {
-                    type: 'video',
-                    videoData: e.target.result,
-                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-                    userId: currentUser.id,
-                    user: currentUser,
-                    replyingTo: replyingTo,
-                    fileName: file.name,
-                    messageId: Date.now().toString() + Math.random().toString(36).substr(2, 9)
-                };
-
-                displayMessage(messageData, 'sent');
-                socket.send(JSON.stringify(messageData));
-                closeReplyHandler();
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function sendFile(file) {
-            if (!socket || socket.readyState !== WebSocket.OPEN) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const messageData = {
-                    type: 'file',
-                    fileData: e.target.result,
-                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-                    userId: currentUser.id,
-                    user: currentUser,
-                    replyingTo: replyingTo,
-                    fileName: file.name,
-                    fileType: file.type,
-                    messageId: Date.now().toString() + Math.random().toString(36).substr(2, 9)
-                };
-
-                displayMessage(messageData, 'sent');
-                socket.send(JSON.stringify(messageData));
-                closeReplyHandler();
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function displayMessage(messageData, type) {
-            const messageElement = document.createElement('div');
-            messageElement.className = `message ${type}`;
-            messageElement.dataset.messageId = messageData.messageId;
-
-            const userAvatar = messageData.user?.profilePicture ? 
-                `<img src="${messageData.user.profilePicture}" alt="${messageData.user.name}">` : 
-                `<i class="fas fa-user"></i>`;
-
-            let content = '';
-            
-            // Avatar (solo para mensajes recibidos)
-            if (type === 'received') {
-                content += `<div class="message-avatar">${userAvatar}</div>`;
-            }
-            
-            content += `<div class="message-content">`;
-            
-            // Remitente (solo para mensajes recibidos)
-            if (type === 'received') {
-                content += `<div class="message-sender">${messageData.user.name}</div>`;
-            }
-            
-            // Contexto de respuesta
-            if (messageData.replyingTo) {
-                content += `
-                    <div class="reply-context">
-                        <i class="fas fa-reply reply-indicator"></i>
-                        <span class="reply-preview">${messageData.replyingTo.text}</span>
-                    </div>
-                `;
-            }
-            
-            // Contenido del mensaje
-            if (messageData.type === 'image') {
-                content += `
-                    <img src="${messageData.imageData}" class="message-image" alt="Imagen enviada">
-                    <div class="message-time">${messageData.timestamp}</div>
-                `;
-            } else if (messageData.type === 'video') {
-                content += `
-                    <video controls class="message-video">
-                        <source src="${messageData.videoData}" type="video/mp4">
-                        Tu navegador no soporta video.
-                    </video>
-                    <div class="message-time">${messageData.timestamp}</div>
-                `;
-            } else if (messageData.type === 'file') {
-                content += `
-                    <div class="file-message">
-                        <i class="fas fa-file"></i>
-                        <span>${messageData.fileName}</span>
-                        <a href="${messageData.fileData}" download="${messageData.fileName}">Descargar</a>
-                    </div>
-                    <div class="message-time">${messageData.timestamp}</div>
-                `;
-            } else {
-                content += `
-                    <div class="message-text">${messageData.text}</div>
-                    <div class="message-time">${messageData.timestamp}</div>
-                `;
-            }
-            
-            content += `</div>`;
-            
-            // Avatar para mensajes enviados (a la derecha)
-            if (type === 'sent') {
-                content += `<div class="message-avatar">${userAvatar}</div>`;
-            }
-
-            messageElement.innerHTML = content;
-            messagesContainer.appendChild(messageElement);
-            scrollToBottom();
-        }
-
-        function displayChatHistory(messages) {
-            // Limpiar mensajes existentes excepto el de bienvenida
-            const existingMessages = messagesContainer.querySelectorAll('.message:not(.system)');
-            existingMessages.forEach(msg => msg.remove());
-            
-            // Mostrar historial
-            messages.forEach(messageData => {
-                const type = messageData.userId === currentUser.id ? 'sent' : 'received';
-                displayMessage(messageData, type);
-            });
-        }
-
-        function displaySystemMessage(text) {
-            const messageElement = document.createElement('div');
-            messageElement.className = 'message system';
-            messageElement.innerHTML = `
-                <i class="fas fa-info-circle"></i>
-                <div class="message-text">${text}</div>
-            `;
-            messagesContainer.appendChild(messageElement);
-            scrollToBottom();
-        }
-
-        function autoResizeTextarea() {
-            messageInput.style.height = 'auto';
-            messageInput.style.height = (messageInput.scrollHeight) + 'px';
-        }
-
-        function scrollToBottom() {
-            setTimeout(() => {
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            }, 100);
-        }
-
-        // Función para actualizar perfil
-        async function updateProfile() {
-            const newName = profileName.value.trim();
-            if (!newName || newName === currentUser.name) {
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/update-profile', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        userId: currentUser.id,
-                        name: newName
+            elements.confirmModalAction.onclick = () => {
+                if (action === 'deleteAccount') {
+                    fetch('/api/delete-account', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: currentUser.id })
                     })
-                });
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    currentUser.name = newName;
-                    userName.textContent = newName;
-                    localStorage.setItem('chatUser', JSON.stringify(currentUser));
-                    
-                    // Actualizar avatar del header
-                    updateHeaderAvatar();
-                    
-                    showToast('Nombre actualizado correctamente', 'success');
-                    
-                    // Actualizar en el WebSocket
-                    if (socket && socket.readyState === WebSocket.OPEN) {
-                        socket.send(JSON.stringify({
-                            type: 'user_join',
-                            user: currentUser
-                        }));
-                    }
-                } else {
-                    showToast('Error al actualizar nombre', 'error');
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                logout();
+                            } else {
+                                showToast(data.message, true);
+                            }
+                        })
+                        .catch(error => showToast('Error al eliminar cuenta', true));
                 }
-            } catch (error) {
-                console.error('Error updating profile:', error);
-                showToast('Error de conexión', 'error');
-            }
+                hideConfirmModal();
+            };
         }
 
-        function updateProfilePicture(profilePicture) {
-            const profilePicElement = document.getElementById('profilePicture');
-            profilePicElement.innerHTML = `<img src="${profilePicture}" alt="Profile">`;
-            
-            // Actualizar también el avatar del header
-            updateHeaderAvatar(profilePicture);
-        }
-
-        function updateHeaderAvatar(profilePicture = null) {
-            const avatar = profilePicture || currentUser.profilePicture;
-            const avatarElement = document.getElementById('userAvatarBtn');
-            
-            if (avatar) {
-                avatarElement.innerHTML = `<img src="${avatar}" alt="${currentUser.name}">`;
-            } else {
-                avatarElement.innerHTML = `<i class="fas fa-user"></i>`;
-            }
-        }
-
-        async function updateProfilePictureServer(profilePicture) {
-            try {
-                const response = await fetch('/api/update-profile', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        userId: currentUser.id,
-                        profilePicture: profilePicture
-                    })
-                });
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    currentUser.profilePicture = profilePicture;
-                    localStorage.setItem('chatUser', JSON.stringify(currentUser));
-                    showToast('Foto de perfil actualizada', 'success');
-                } else {
-                    showToast('Error al actualizar foto', 'error');
-                }
-            } catch (error) {
-                console.error('Error updating profile picture:', error);
-                showToast('Error de conexión', 'error');
-            }
-        }
-
-        function showDeleteConfirmation() {
-            confirmModal.classList.add('active');
-        }
-
-        function hideDeleteConfirmation() {
-            confirmModal.classList.remove('active');
-        }
-
-        async function deleteAccount() {
-            try {
-                const response = await fetch('/api/delete-account', {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        userId: currentUser.id
-                    })
-                });
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    localStorage.removeItem('chatUser');
-                    window.location.href = '/auth.html';
-                } else {
-                    showToast('Error al eliminar cuenta', 'error');
-                }
-            } catch (error) {
-                console.error('Error deleting account:', error);
-                showToast('Error de conexión', 'error');
-            }
+        function hideConfirmModal() {
+            elements.confirmModal.classList.remove('active');
         }
 
         function logout() {
-            if (socket) {
-                socket.close();
-            }
             localStorage.removeItem('chatUser');
+            localStorage.removeItem('token');
             window.location.href = '/auth.html';
         }
 
-        // Función auxiliar para mostrar mensajes toast
-        function showToast(message, type) {
-            const toast = document.createElement('div');
-            toast.className = `toast ${type === 'error' ? 'error' : ''}`;
-            toast.innerHTML = `
-                <i class="fas ${type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle'}"></i>
-                <span>${message}</span>
-            `;
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.style.animation = 'slideIn 0.3s ease reverse';
-                setTimeout(() => {
-                    toast.remove();
-                }, 300);
-            }, 3000);
+        function generateUUID() {
+            return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+                (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+            );
         }
-
-        // Ajustar para Chrome móvil
-        function adjustForMobileChrome() {
-            const appHeight = () => {
-                const doc = document.documentElement;
-                doc.style.setProperty('--app-height', `${window.innerHeight}px`);
-            }
-            window.addEventListener('resize', appHeight);
-            window.addEventListener('orientationchange', appHeight);
-            appHeight();
-        }
-
-        // Inicializar ajustes para móvil
-        adjustForMobileChrome();
     </script>
 </body>
 </html>
