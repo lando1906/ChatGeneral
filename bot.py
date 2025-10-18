@@ -3,8 +3,8 @@ import email
 from email.header import decode_header
 import time
 import smtplib
-from email.mime.text import MimeText
-from email.mime.multipart import MimeMultipart
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import os
 
 # Configuración - USA VARIABLES DE ENTORNO PARA SEGURIDAD
@@ -46,20 +46,24 @@ def check_and_reply():
                 msg = email.message_from_bytes(raw_email)
 
                 # Decodificar información del remitente y asunto
-                subject, encoding = decode_header(msg["Subject"])[0] if msg["Subject"] else ("Sin asunto", None)
-                if isinstance(subject, bytes):
-                    subject = subject.decode(encoding if encoding else "utf-8")
+                subject = "Sin asunto"
+                if msg["Subject"]:
+                    subject, encoding = decode_header(msg["Subject"])[0]
+                    if isinstance(subject, bytes):
+                        subject = subject.decode(encoding if encoding else "utf-8")
                 
-                from_, encoding = decode_header(msg.get("From"))[0]
-                if isinstance(from_, bytes):
-                    from_ = from_.decode(encoding if encoding else "utf-8")
+                from_ = "Desconocido"
+                if msg.get("From"):
+                    from_, encoding = decode_header(msg.get("From"))[0]
+                    if isinstance(from_, bytes):
+                        from_ = from_.decode(encoding if encoding else "utf-8")
 
                 # Extraer la dirección de correo del remitente
                 sender_email = from_
                 if "<" in from_ and ">" in from_:
                     sender_email = from_.split("<")[1].split(">")[0]
-                else:
-                    sender_email = from_.split()[-1] if " " in from_ else from_
+                elif " " in from_:
+                    sender_email = from_.split()[-1]
 
                 sender_email = sender_email.strip("<>").strip()
 
@@ -89,7 +93,7 @@ def send_auto_reply(to_email, original_subject):
     """
     try:
         # Crear el mensaje de respuesta
-        reply = MimeMultipart()
+        reply = MIMEMultipart()
         reply["From"] = EMAIL
         reply["To"] = to_email
         reply["Subject"] = "Re: " + original_subject
@@ -108,7 +112,7 @@ def send_auto_reply(to_email, original_subject):
         Bot Automático
         """
         
-        reply.attach(MimeText(body.strip(), "plain"))
+        reply.attach(MIMEText(body.strip(), "plain"))
 
         # Enviar el correo
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
