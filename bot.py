@@ -14,6 +14,12 @@ import sys
 import json
 from email.utils import parseaddr, formatdate
 import uuid
+import sqlite3
+from dotenv import load_dotenv
+import instaloader
+
+# Cargar variables de entorno
+load_dotenv()
 
 # Configuración de logging mejorada con rotación
 logging.basicConfig(
@@ -46,13 +52,29 @@ app = Flask(__name__)
 # =============================================================================
 # CONFIGURACIÓN PARA GMAIL
 # =============================================================================
-EMAIL_ACCOUNT = "videodown797@gmail.com"
-EMAIL_PASSWORD = ""
+EMAIL_ACCOUNT = os.environ.get("EMAIL_ACCOUNT", "videodown797@gmail.com")
+EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD")
 IMAP_SERVER = "imap.gmail.com"
 IMAP_PORT = 993
 SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 145
+SMTP_PORT = 587
 CHECK_INTERVAL = 3
+
+# Verificar credenciales
+if not EMAIL_PASSWORD:
+    structured_logger.error("EMAIL_PASSWORD no configurado")
+    sys.exit(1)
+
+# Inicializar base de datos SQLite
+def init_db():
+    conn = sqlite3.connect('processed_emails.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS processed_emails
+                 (email_id TEXT PRIMARY KEY, timestamp DATETIME)''')
+    conn.commit()
+    conn.close()
+
+init_db()
 
 # =============================================================================
 # Manejador de señales para cerrar conexiones limpiamente
@@ -73,7 +95,6 @@ class YouChatBot:
     def __init__(self):
         self.is_running = False
         self.last_check = None
-        self.processed_emails = set()
         self.total_processed = 0
         self.emails_sent_today = 0
         self.last_reset = datetime.now().date()
@@ -143,6 +164,8 @@ class YouChatBot:
         """Verifica la conectividad con el servidor SMTP"""
         try:
             with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as servidor:
+                servidor.starttls()
+                servidor.login(EMAIL_ACCOUNT, EMAIL_PASSWORD)
                 servidor.noop()
             structured_logger.info("Servidor SMTP accesible")
             return True
@@ -183,7 +206,38 @@ class YouChatBot:
             structured_logger.error("Error extrayendo email del remitente", {"error": str(e), "remitente": remitente})
             return None
 
-    def construir_mensaje_raw_youchat(self, destinatario, msg_id_original=None, youchat_profile_headers=None, asunto_original=None):
+    def extraer_cuerpo_email(self, mensaje):
+        """Extrae el cuerpo del email en texto plano"""
+        try:
+            if mensaje.is_multipart():
+                for part in mensaje.walk():
+                    if part.get_content_type() == "text/plain":
+                        return part.get_payload(decode=True).decode('utf-8', errors='ignore')
+            else:
+                return mensaje.get_payload(decode=True).decode('utf-8', errors='ignore')
+            return ""
+        except Exception as e:
+            structured_logger.error("Error extrayendo cuerpo del email", {"error": str(e)})
+            return ""
+
+    def descargar_reel(self, url, destinatario):
+        """Descarga un Reel de Instagram desde una URL"""
+        try:
+            os.makedirs("downloads", exist_ok=True)
+            L = instaloader.Instaloader()
+            shortcode = url.split("/")[-2]
+            post = instaloader.Post.from_shortcode(L.context, shortcode)
+            if post.is_video:
+                L.download_post(post, target=f"downloads/{shortcode}")
+                structured_logger.info("Reel descargado", {"url": url, "destinatario": destinatario})
+                return f"Reel descargado exitosamente: {url}"
+            else:
+                return "El enlace no es un Reel de Instagram"
+        except Exception as e:
+            structured_logger.error("Error descargando Reel", {"url": url, "error": str(e)})
+            return f"Error descargando el Reel: {str(e)}"
+
+    def construir_mensaje_raw_youchat(self, destinatario, msg_id_original=None, youchat_profile_headers=None, asunto_original=None, mensaje_texto=None):
         """Construye el mensaje en formato RAW optimizado para YouChat"""
         try:
             structured_logger.info("Construyendo mensaje RAW", {"destinatario": destinatario})
@@ -236,7 +290,8 @@ class YouChatBot:
                 else:
                     asunto = asunto_original
 
-            mensaje_texto = "¡Hola! Soy un bot en desarrollo. Pronto podré descargar tus Reels de Instagram."
+            if not mensaje_texto:
+                mensaje_texto = "¡Hola! Soy un bot en desarrollo. Pronto podré descargar tus Reels de Instagram."
 
             mail_raw = (
                 f"From: {EMAIL_ACCOUNT}\r\n" +
@@ -253,12 +308,12 @@ class YouChatBot:
             structured_logger.error("Error construyendo mensaje RAW", {"error": str(e), "traceback": traceback.format_exc()})
             return None
 
-    def enviar_respuesta_raw(self, destinatario, msg_id_original=None, youchat_profile_headers=None, asunto_original=None):
+    def enviar_respuesta_raw(self, destinatario, msg_id_original=None, youchat_profile_headers=None, asunto_original=None, mensaje_texto=None):
         """Envía respuesta usando formato RAW con reintentos"""
         try:
             structured_logger.info("Iniciando envío de respuesta RAW", {"destinatario": destinatario})
             mensaje_raw = self.construir_mensaje_raw_youchat(
-                destinatario, msg_id_original, youchat_profile_headers, asunto_original
+                destinatario, msg_id_original, youchat_profile_headers, asunto_original, mensaje_texto
             )
             if not mensaje_raw:
                 structured_logger.error("No se pudo construir el mensaje RAW")
@@ -283,6 +338,18 @@ class YouChatBot:
                     structured_logger.info("Respuesta RAW enviada exitosamente", {"destinatario": destinatario})
                     self.emails_sent_today += 1
                     return True
+                except smtplib.SMTPDataError as e:
+                    if "Daily sending quota exceeded" in str(e):
+                        structured_logger.error("Límite diario de Gmail alcanzado")
+                        return False
+                    structured_logger.error(f"Error en intento {attempt + 1}", {"error": str(e)})
+                    if attempt < retries - 1:
+                        sleep_time = 2 ** attempt
+                        structured_logger.info(f"Reintentando en {sleep_time} segundos")
+                        time.sleep(sleep_time)
+                    else:
+                        structured_logger.error("Falló tras todos los reintentos")
+                        return False
                 except (smtplib.SMTPException, OSError) as e:
                     structured_logger.error(f"Error en intento {attempt + 1}", {"error": str(e)})
                     if attempt < retries - 1:
@@ -295,6 +362,32 @@ class YouChatBot:
         except Exception as e:
             structured_logger.error("Error inesperado enviando respuesta", {"error": str(e), "traceback": traceback.format_exc()})
             return False
+
+    def is_email_processed(self, email_id):
+        """Verifica si un email ya fue procesado"""
+        conn = sqlite3.connect('processed_emails.db')
+        c = conn.cursor()
+        c.execute("SELECT 1 FROM processed_emails WHERE email_id = ?", (email_id,))
+        result = c.fetchone()
+        conn.close()
+        return result is not None
+
+    def add_processed_email(self, email_id):
+        """Agrega un email procesado a la base de datos"""
+        conn = sqlite3.connect('processed_emails.db')
+        c = conn.cursor()
+        c.execute("INSERT OR IGNORE INTO processed_emails VALUES (?, ?)", (email_id, datetime.now()))
+        conn.commit()
+        conn.close()
+
+    def limpiar_emails_procesados(self, max_age_hours=24):
+        """Limpia emails procesados antiguos"""
+        conn = sqlite3.connect('processed_emails.db')
+        c = conn.cursor()
+        cutoff = datetime.now() - timedelta(hours=max_age_hours)
+        c.execute("DELETE FROM processed_emails WHERE timestamp < ?", (cutoff,))
+        conn.commit()
+        conn.close()
 
     def procesar_emails_no_leidos(self):
         """Procesa emails no leídos con manejo robusto"""
@@ -318,7 +411,7 @@ class YouChatBot:
         for id_email in ids_emails:
             try:
                 email_id = id_email.decode()
-                if email_id in self.processed_emails:
+                if self.is_email_processed(email_id):
                     structured_logger.info("Email ya procesado", {"email_id": email_id})
                     continue
 
@@ -360,6 +453,18 @@ class YouChatBot:
                     structured_logger.error("No se pudo extraer email del remitente", {"remitente": remitente})
                     continue
 
+                # Extraer cuerpo y buscar URLs
+                cuerpo = self.extraer_cuerpo_email(mensaje)
+                mensaje_respuesta = "¡Hola! Soy un bot en desarrollo. Por favor, envía una URL válida de un Reel de Instagram."
+                url_encontrada = None
+                for palabra in cuerpo.split():
+                    if "instagram.com/reels/" in palabra or "instagram.com/p/" in palabra:
+                        url_encontrada = palabra
+                        break
+
+                if url_encontrada:
+                    mensaje_respuesta = self.descargar_reel(url_encontrada, email_remitente)
+
                 structured_logger.info("Procesando mensaje", {"remitente": email_remitente, "asunto": asunto_original})
                 headers_youchat = self.extraer_headers_youchat(mensaje)
                 msg_id_original = mensaje.get('Message-ID') or headers_youchat.get('Message-ID')
@@ -371,11 +476,12 @@ class YouChatBot:
                     email_remitente,
                     msg_id_original=msg_id_original,
                     youchat_profile_headers=headers_youchat,
-                    asunto_original=asunto_original
+                    asunto_original=asunto_original,
+                    mensaje_texto=mensaje_respuesta
                 )
 
                 if exito:
-                    self.processed_emails.add(email_id)
+                    self.add_processed_email(email_id)
                     self.total_processed += 1
                     structured_logger.info(f"Respuesta #{self.total_processed} enviada exitosamente", {"remitente": email_remitente})
                 else:
@@ -383,12 +489,6 @@ class YouChatBot:
 
             except Exception as e:
                 structured_logger.error("Error procesando email", {"email_id": email_id, "error": str(e), "traceback": traceback.format_exc()})
-
-    def limpiar_emails_procesados(self, max_age_hours=24):
-        """Limpia emails procesados para evitar consumo excesivo de memoria"""
-        if len(self.processed_emails) > 1000:
-            structured_logger.info("Limpiando emails procesados antiguos")
-            self.processed_emails.clear()
 
     def run_bot(self):
         """Ejecuta el bot en un bucle continuo"""
@@ -436,14 +536,16 @@ def home():
     return jsonify({
         "status": "online",
         "service": "YouChat Bot - Conexión Robusta",
-        "version": "2.4",
+        "version": "2.5",
         "features": [
             "Conexión IMAP persistente",
             "Reconexión automática",
             "Manejo robusto de errores",
             "Logging estructurado y rotación",
             "Reintentos SMTP",
-            "Headers optimizados"
+            "Headers optimizados",
+            "Descarga de Reels de Instagram",
+            "Persistencia con SQLite"
         ],
         "interval": f"{CHECK_INTERVAL} segundos",
         "email_account": EMAIL_ACCOUNT,
@@ -462,7 +564,7 @@ def health():
         "bot_running": youchat_bot.is_running,
         "imap_connected": youchat_bot.imap_connection is not None,
         "smtp_reachable": youchat_bot.check_smtp_health(),
-        "memory_usage": f"{len(youchat_bot.processed_emails)} emails procesados"
+        "memory_usage": "Usando SQLite para emails procesados"
     })
 
 @app.route('/smtp_health')
@@ -510,7 +612,6 @@ def status():
         "total_processed": youchat_bot.total_processed,
         "emails_sent_today": youchat_bot.emails_sent_today,
         "check_interval": CHECK_INTERVAL,
-        "processed_emails_count": len(youchat_bot.processed_emails),
         "imap_connected": youchat_bot.imap_connection is not None,
         "smtp_reachable": youchat_bot.check_smtp_health()
     })
@@ -522,14 +623,16 @@ def inicializar_bot():
     """Inicializa el bot automáticamente al cargar la aplicación"""
     global bot_thread
     structured_logger.info("Iniciando bot automáticamente", {
-        "version": "2.4",
+        "version": "2.5",
         "features": [
             "Conexión IMAP persistente",
             "Reconexión automática",
             "Manejo robusto de errores",
             "Logging estructurado",
             "Reintentos SMTP",
-            "Headers optimizados"
+            "Headers optimizados",
+            "Descarga de Reels de Instagram",
+            "Persistencia con SQLite"
         ]
     })
     youchat_bot.is_running = True
