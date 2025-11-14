@@ -1,2 +1,4 @@
 Flask
-yt-dlp
+flask-socketio
+eventlet
+python-socketio
