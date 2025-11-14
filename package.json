@@ -1,7 +1,7 @@
 {
-  "name": "chat-completo-render",
+  "name": "real-time-audio-call",
   "version": "1.0.0",
-  "description": "Sistema completo de chat con autenticación y grabación de audio",
+  "description": "Aplicación de llamadas de audio en tiempo real",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -9,12 +9,9 @@
   },
   "dependencies": {
     "express": "^4.18.2",
-    "ws": "^8.13.0"
+    "socket.io": "^4.7.2"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
-  },
-  "engines": {
-    "node": ">=18.0.0"
   }
 }
