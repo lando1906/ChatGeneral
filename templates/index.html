@@ -408,6 +408,40 @@
       margin-bottom: 1rem;
       opacity: 0.5;
     }
+
+    /* Indicador de audio para llamadas de audio */
+    .audio-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+
+    .audio-bars {
+      display: flex;
+      gap: 3px;
+      align-items: end;
+      height: 30px;
+    }
+
+    .audio-bar {
+      width: 4px;
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+      border-radius: 2px;
+      animation: audioPulse 1.5s ease-in-out infinite;
+    }
+
+    .audio-bar:nth-child(1) { height: 8px; animation-delay: 0s; }
+    .audio-bar:nth-child(2) { height: 15px; animation-delay: 0.2s; }
+    .audio-bar:nth-child(3) { height: 20px; animation-delay: 0.4s; }
+    .audio-bar:nth-child(4) { height: 15px; animation-delay: 0.6s; }
+    .audio-bar:nth-child(5) { height: 8px; animation-delay: 0.8s; }
+
+    @keyframes audioPulse {
+      0%, 100% { transform: scaleY(1); }
+      50% { transform: scaleY(0.3); }
+    }
   </style>
 </head>
 <body>
@@ -466,6 +500,16 @@
         <div class="call-status">Llamada de audio con</div>
         <div class="call-timer" id="audio-timer">00:00</div>
         <h2 id="audio-callee">Usuario</h2>
+        <div class="audio-indicator">
+          <div class="audio-bars">
+            <div class="audio-bar"></div>
+            <div class="audio-bar"></div>
+            <div class="audio-bar"></div>
+            <div class="audio-bar"></div>
+            <div class="audio-bar"></div>
+          </div>
+          <span>Transmitiendo audio...</span>
+        </div>
       </div>
       <div class="call-controls">
         <button class="control-btn mute" onclick="toggleMute()">
@@ -505,9 +549,12 @@
     let currentCall = null;
     let peerConnection = null;
     let localStream = null;
+    let remoteStream = null;
     let callStartTime = null;
     let callTimerInterval = null;
     let isMuted = false;
+    let audioContext = null;
+    let audioAnalyser = null;
 
     socket.on('connect', () => {
       console.log("Conectado al servidor");
@@ -602,15 +649,17 @@
     function initiateCall(callee, type) {
       currentCall = { callee, type, caller: username };
       socket.emit('call_user', { callee, type });
-      document.getElementById('incoming-call').style.display = 'none';
       
       showNotification(`Llamando a ${callee}...`, 'info');
       
+      // Timeout para simular espera de respuesta
       setTimeout(() => {
         if (currentCall) {
-          startCall(type, callee);
+          // Si no hay respuesta después de 10 segundos, cancelar
+          showNotification(`${callee} no respondió`, 'error');
+          endCall();
         }
-      }, 1000);
+      }, 10000);
     }
 
     function answerCall(accepted) {
@@ -621,6 +670,8 @@
       });
       if (accepted) {
         startCall(currentCall.type, currentCall.caller);
+      } else {
+        showNotification('Llamada rechazada', 'info');
       }
       currentCall = null;
     }
@@ -638,6 +689,7 @@
       startCallTimer(type);
 
       try {
+        // Configurar stream local según el tipo de llamada
         if (type === 'video') {
           localStream = await navigator.mediaDevices.getUserMedia({ 
             video: { width: 1280, height: 720 }, 
@@ -650,10 +702,14 @@
               echoCancellation: true,
               noiseSuppression: true,
               autoGainControl: true
-            } 
+            },
+            video: false
           });
+          // Iniciar análisis de audio para indicador visual
+          setupAudioAnalysis();
         }
 
+        // Configurar conexión WebRTC
         peerConnection = new RTCPeerConnection({
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
@@ -661,11 +717,27 @@
           ]
         });
 
-        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+        // Añadir tracks locales
+        localStream.getTracks().forEach(track => {
+          peerConnection.addTrack(track, localStream);
+        });
 
+        // Manejar stream remoto
+        remoteStream = new MediaStream();
         peerConnection.ontrack = (event) => {
+          event.streams[0].getTracks().forEach(track => {
+            remoteStream.addTrack(track);
+          });
+
           if (type === 'video') {
-            document.getElementById('remote-video').srcObject = event.streams[0];
+            document.getElementById('remote-video').srcObject = remoteStream;
+          } else {
+            // Para llamadas de audio, crear un elemento de audio oculto
+            const remoteAudio = document.createElement('audio');
+            remoteAudio.srcObject = remoteStream;
+            remoteAudio.autoplay = true;
+            remoteAudio.style.display = 'none';
+            document.body.appendChild(remoteAudio);
           }
         };
 
@@ -675,6 +747,13 @@
               target: peer,
               candidate: event.candidate
             });
+          }
+        };
+
+        peerConnection.onconnectionstatechange = () => {
+          console.log('Estado de conexión:', peerConnection.connectionState);
+          if (peerConnection.connectionState === 'connected') {
+            showNotification('Conexión establecida', 'success');
           }
         };
 
@@ -717,6 +796,18 @@
       }
     }
 
+    function setupAudioAnalysis() {
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        audioAnalyser = audioContext.createAnalyser();
+        const source = audioContext.createMediaStreamSource(localStream);
+        source.connect(audioAnalyser);
+        audioAnalyser.fftSize = 256;
+      } catch (error) {
+        console.error('Error configurando análisis de audio:', error);
+      }
+    }
+
     function startCallTimer(type) {
       const timerElement = document.getElementById(type + '-timer');
       callTimerInterval = setInterval(() => {
@@ -756,6 +847,16 @@
         clearInterval(callTimerInterval);
         callTimerInterval = null;
       }
+      if (audioContext) {
+        audioContext.close();
+        audioContext = null;
+      }
+      
+      // Remover elemento de audio remoto si existe
+      const remoteAudio = document.querySelector('audio[style*="display: none"]');
+      if (remoteAudio) {
+        remoteAudio.remove();
+      }
       
       document.getElementById('audio-call').style.display = 'none';
       document.getElementById('video-call').style.display = 'none';
@@ -764,10 +865,11 @@
       
       currentCall = null;
       isMuted = false;
+      
+      showNotification('Llamada finalizada', 'info');
     }
 
     function showNotification(message, type) {
-      // Implementación simple de notificación
       const notification = document.createElement('div');
       notification.style.cssText = `
         position: fixed;
@@ -782,17 +884,35 @@
         background: ${type === 'error' ? 'linear-gradient(135deg, #ef4444, #f87171)' : 
                     type === 'info' ? 'linear-gradient(135deg, #3b82f6, #60a5fa)' : 
                     'linear-gradient(135deg, #10b981, #34d399)'};
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
       `;
       notification.textContent = message;
       document.body.appendChild(notification);
       
       setTimeout(() => {
-        notification.remove();
+        notification.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => {
+          notification.remove();
+        }, 300);
       }, 3000);
     }
 
     // Inicialización
     socket.emit('connect');
+
+    // Añadir estilos para animaciones de notificación
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slideOutRight {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
   </script>
 </body>
 </html>
