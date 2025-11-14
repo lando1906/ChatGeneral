@@ -1,5 +1,6 @@
 # server.py
 import os
+import sqlite3
 from flask import Flask, render_template, request, session, redirect, url_for
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import eventlet
@@ -10,8 +11,23 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Simulación de base de datos en memoria
-users = {}
+# Inicializar base de datos SQLite
+def init_db():
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# Simulación de base de datos en memoria para usuarios en línea
 online_users = {}
 
 @app.route('/')
@@ -27,16 +43,33 @@ def login():
         password = request.form['password']
         action = request.form.get('action')
 
+        conn = sqlite3.connect('users.db')
+        c = conn.cursor()
+
         if action == 'register':
-            if username in users:
+            # Verificar si el usuario ya existe
+            c.execute('SELECT * FROM users WHERE username = ?', (username,))
+            if c.fetchone():
+                conn.close()
                 return render_template('auth.html', error="Usuario ya existe")
+            
             if len(username) < 3:
+                conn.close()
                 return render_template('auth.html', error="Usuario muy corto")
-            users[username] = password
+            
+            # Registrar nuevo usuario
+            c.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password))
+            conn.commit()
+            conn.close()
             return render_template('auth.html', success="Registro exitoso, inicia sesión")
 
         elif action == 'login':
-            if username in users and users[username] == password:
+            # Verificar credenciales
+            c.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password))
+            user = c.fetchone()
+            conn.close()
+            
+            if user:
                 session['username'] = username
                 return redirect(url_for('home'))
             else:
