@@ -3,115 +3,290 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Usuarios</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <title>VideoCall App - Usuarios</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Poppins', sans-serif;
-      background: #f0f7ff;
-      color: #1e3a8a;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
       height: 100vh;
       overflow: hidden;
     }
+    
     .header {
-      background: #1e3a8a;
-      color: white;
-      padding: 1rem;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      padding: 1.2rem 2rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
-    .header h1 { font-size: 1.4rem; font-weight: 500; }
-    .logout { color: #fca5a5; text-decoration: none; font-weight: 500; }
-    .container { padding: 1.5rem; }
+    
+    .header-content {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .logo {
+      font-size: 1.8rem;
+      background: linear-gradient(135deg, #ff6b6b, #feca57);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+    
+    .welcome-text {
+      opacity: 0.9;
+      font-weight: 300;
+    }
+    
+    .logout {
+      background: rgba(255, 107, 107, 0.2);
+      color: #ff6b6b;
+      padding: 10px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(255, 107, 107, 0.3);
+    }
+    
+    .logout:hover {
+      background: rgba(255, 107, 107, 0.3);
+      transform: translateY(-2px);
+    }
+    
+    .container {
+      padding: 2rem;
+      height: calc(100vh - 80px);
+      overflow-y: auto;
+    }
+    
+    .section-title {
+      font-size: 1.8rem;
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
     .users-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1.5rem;
+    }
+    
+    .user-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 1.5rem;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .user-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+    }
+    
+    .user-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+      background: rgba(255, 255, 255, 0.15);
+    }
+    
+    .user-card .avatar {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+      border-radius: 50%;
+      margin: 0 auto 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 2rem;
+      box-shadow: 0 8px 20px rgba(79, 172, 254, 0.3);
+    }
+    
+    .user-card h3 {
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+    
+    .status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      opacity: 0.8;
+      margin-bottom: 1rem;
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .call-buttons {
+      display: flex;
+      gap: 0.8rem;
+      justify-content: center;
+    }
+    
+    .call-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .audio {
+      background: linear-gradient(135deg, #10b981, #34d399);
+    }
+    
+    .video {
+      background: linear-gradient(135deg, #3b82f6, #60a5fa);
+    }
+    
+    .call-btn:hover {
+      transform: scale(1.1) translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Modal de llamada entrante mejorado */
+    #incoming-call {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(30px);
+      padding: 2.5rem;
+      border-radius: 24px;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      z-index: 1000;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+      animation: modalAppear 0.4s ease;
+    }
+    
+    @keyframes modalAppear {
+      from { opacity: 0; transform: translate(-50%, -60%); }
+      to { opacity: 1; transform: translate(-50%, -50%); }
+    }
+    
+    .caller-avatar {
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, #f59e0b, #fbbf24);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+    
+    .call-type {
+      font-size: 1.1rem;
+      opacity: 0.9;
+      margin-bottom: 0.5rem;
+    }
+    
+    .call-buttons-modal {
+      display: flex;
       gap: 1rem;
       margin-top: 1rem;
     }
-    .user-card {
-      background: white;
-      border-radius: 12px;
-      padding: 1rem;
-      text-align: center;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      transition: 0.3s;
-    }
-    .user-card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15); }
-    .user-card .avatar {
-      width: 60px; height: 60px;
-      background: #60a5fa;
-      border-radius: 50%;
-      margin: 0 auto 0.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: 600;
-      font-size: 1.5rem;
-    }
-    .user-card h3 { font-size: 1rem; margin-bottom: 0.5rem; }
-    .call-buttons {
-      display: flex;
-      gap: 0.5rem;
-      justify-content: center;
-      margin-top: 0.5rem;
-    }
-    .call-btn {
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-    .audio { background: #10b981; }
-    .video { background: #3b82f6; }
-    .call-btn:hover { transform: scale(1.1); }
-
-    /* Modal de llamada entrante */
-    #incoming-call {
-      position: fixed;
-      top: 20px; left: 50%;
-      transform: translateX(-50%);
-      background: #1e3a8a;
-      color: white;
-      padding: 1rem 2rem;
-      border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-      display: none;
-      align-items: center;
-      gap: 1rem;
-      z-index: 1000;
-      animation: slideDown 0.4s ease;
-    }
-    @keyframes slideDown {
-      from { transform: translate(-50%, -100px); opacity: 0; }
-      to { transform: translateX(-50%); opacity: 1; }
-    }
-    #incoming-call button {
-      padding: 0.5rem 1rem;
+    
+    .call-buttons-modal button {
+      padding: 12px 30px;
       border: none;
-      border-radius: 8px;
+      border-radius: 12px;
       cursor: pointer;
-      font-weight: 500;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
-    .accept { background: #10b981; color: white; }
-    .reject { background: #ef4444; color: white; }
-
-    /* Pantallas de llamada */
+    
+    .accept {
+      background: linear-gradient(135deg, #10b981, #34d399);
+      color: white;
+    }
+    
+    .accept:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+    }
+    
+    .reject {
+      background: linear-gradient(135deg, #ef4444, #f87171);
+      color: white;
+    }
+    
+    .reject:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+    }
+    
+    /* Pantallas de llamada mejoradas */
     .call-screen {
       position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: #000;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
       display: none;
       flex-direction: column;
       align-items: center;
@@ -119,61 +294,208 @@
       color: white;
       z-index: 999;
     }
-    .call-screen video {
+    
+    .video-container {
+      position: relative;
+      width: 90%;
+      max-width: 1000px;
+      margin-bottom: 2rem;
+    }
+    
+    #remote-video {
       width: 100%;
-      max-width: 800px;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+    
+    #local-video {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 200px;
       border-radius: 12px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .audio-call-container {
+      text-align: center;
+      padding: 3rem;
+    }
+    
+    .audio-avatar {
+      width: 150px;
+      height: 150px;
+      background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 3.5rem;
+      font-weight: 700;
+      margin: 0 auto 2rem;
+      box-shadow: 0 15px 40px rgba(139, 92, 246, 0.4);
+      animation: pulse 2s infinite;
+    }
+    
+    .call-info {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    
+    .call-status {
+      font-size: 1.3rem;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+    
+    .call-timer {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
       margin-bottom: 1rem;
     }
+    
     .call-controls {
       display: flex;
-      gap: 1rem;
+      gap: 1.5rem;
+      justify-content: center;
     }
-    .hangup {
-      background: #ef4444;
-      color: white;
+    
+    .control-btn {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
       border: none;
-      padding: 1rem 2rem;
-      border-radius: 50px;
-      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.3rem;
       cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
     }
-    .status { margin: 1rem 0; font-size: 1.2rem; }
+    
+    .hangup {
+      background: linear-gradient(135deg, #ef4444, #f87171);
+    }
+    
+    .hangup:hover {
+      transform: scale(1.1);
+      box-shadow: 0 12px 30px rgba(239, 68, 68, 0.4);
+    }
+    
+    .mute {
+      background: linear-gradient(135deg, #6b7280, #9ca3af);
+    }
+    
+    .mute:hover {
+      transform: scale(1.1);
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      opacity: 0.7;
+    }
+    
+    .empty-state i {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>¡Hola, {{ username }}!</h1>
-    <a href="/logout" class="logout">Cerrar sesión</a>
+    <div class="header-content">
+      <div class="logo">
+        <i class="fas fa-video"></i>
+      </div>
+      <div>
+        <h1>VideoCall App</h1>
+        <div class="welcome-text">¡Hola, {{ username }}!</div>
+      </div>
+    </div>
+    <a href="/logout" class="logout">
+      <i class="fas fa-sign-out-alt"></i>
+      Cerrar sesión
+    </a>
   </div>
 
   <div class="container">
-    <h2>Usuarios en línea</h2>
-    <div class="users-grid" id="users-grid"></div>
-  </div>
-
-  <!-- Llamada entrante -->
-  <div id="incoming-call">
-    <span id="caller-name"></span>
-    <button class="accept" onclick="answerCall(true)">Aceptar</button>
-    <button class="reject" onclick="answerCall(false)">Rechazar</button>
-  </div>
-
-  <!-- Pantalla de audio -->
-  <div id="audio-call" class="call-screen">
-    <div class="status">Llamada de audio con <span id="audio-callee"></span></div>
-    <div class="call-controls">
-      <button class="hangup" onclick="endCall()">Colgar</button>
+    <h2 class="section-title">
+      <i class="fas fa-users"></i>
+      Usuarios en línea
+    </h2>
+    <div class="users-grid" id="users-grid">
+      <div class="empty-state" id="empty-state">
+        <i class="fas fa-user-friends"></i>
+        <h3>No hay usuarios en línea</h3>
+        <p>Espera a que otros usuarios se conecten</p>
+      </div>
     </div>
   </div>
 
-  <!-- Pantalla de video -->
+  <!-- Llamada entrante mejorada -->
+  <div id="incoming-call">
+    <div class="caller-avatar" id="caller-avatar"></div>
+    <h3 id="caller-name">Llamada entrante</h3>
+    <div class="call-type" id="call-type"></div>
+    <div class="call-buttons-modal">
+      <button class="accept" onclick="answerCall(true)">
+        <i class="fas fa-phone"></i>
+        Aceptar
+      </button>
+      <button class="reject" onclick="answerCall(false)">
+        <i class="fas fa-phone-slash"></i>
+        Rechazar
+      </button>
+    </div>
+  </div>
+
+  <!-- Pantalla de audio mejorada -->
+  <div id="audio-call" class="call-screen">
+    <div class="audio-call-container">
+      <div class="audio-avatar" id="audio-avatar"></div>
+      <div class="call-info">
+        <div class="call-status">Llamada de audio con</div>
+        <div class="call-timer" id="audio-timer">00:00</div>
+        <h2 id="audio-callee">Usuario</h2>
+      </div>
+      <div class="call-controls">
+        <button class="control-btn mute" onclick="toggleMute()">
+          <i class="fas fa-microphone"></i>
+        </button>
+        <button class="control-btn hangup" onclick="endCall()">
+          <i class="fas fa-phone-slash"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pantalla de video mejorada -->
   <div id="video-call" class="call-screen">
-    <video id="remote-video" autoplay playsinline></video>
-    <video id="local-video" autoplay playsinline muted style="width: 200px; position: absolute; bottom: 20px; right: 20px; border-radius: 12px;"></video>
-    <div class="status">Videollamada con <span id="video-callee"></span></div>
+    <div class="video-container">
+      <video id="remote-video" autoplay playsinline></video>
+      <video id="local-video" autoplay playsinline muted></video>
+    </div>
+    <div class="call-info">
+      <div class="call-status">Videollamada con</div>
+      <div class="call-timer" id="video-timer">00:00</div>
+      <h2 id="video-callee">Usuario</h2>
+    </div>
     <div class="call-controls">
-      <button class="hangup" onclick="endCall()">Colgar</button>
+      <button class="control-btn mute" onclick="toggleMute()">
+        <i class="fas fa-microphone"></i>
+      </button>
+      <button class="control-btn hangup" onclick="endCall()">
+        <i class="fas fa-phone-slash"></i>
+      </button>
     </div>
   </div>
 
@@ -183,6 +505,9 @@
     let currentCall = null;
     let peerConnection = null;
     let localStream = null;
+    let callStartTime = null;
+    let callTimerInterval = null;
+    let isMuted = false;
 
     socket.on('connect', () => {
       console.log("Conectado al servidor");
@@ -202,13 +527,15 @@
 
     socket.on('incoming_call', (data) => {
       currentCall = data;
-      document.getElementById('caller-name').textContent = `${data.caller} te llama (${data.type})`;
+      document.getElementById('caller-avatar').textContent = data.caller[0].toUpperCase();
+      document.getElementById('caller-name').textContent = data.caller;
+      document.getElementById('call-type').textContent = data.type === 'audio' ? 'Llamada de audio' : 'Videollamada';
       document.getElementById('incoming-call').style.display = 'flex';
     });
 
     socket.on('call_responded', (data) => {
       if (!data.accepted) {
-        alert(`${data.callee} rechazó la llamada`);
+        showNotification(`${data.callee} rechazó la llamada`, 'error');
         endCall();
       } else {
         startCall(currentCall.type, data.callee);
@@ -221,6 +548,14 @@
 
     function renderUsers(users) {
       const grid = document.getElementById('users-grid');
+      const emptyState = document.getElementById('empty-state');
+      
+      if (users.filter(u => u !== username).length === 0) {
+        emptyState.style.display = 'block';
+        return;
+      }
+      
+      emptyState.style.display = 'none';
       grid.innerHTML = '';
       users.forEach(u => {
         if (u !== username) addUser(u);
@@ -230,7 +565,7 @@
     function addUser(user) {
       if (user === username) return;
       const grid = document.getElementById('users-grid');
-      if ([...grid.children].some(c => c.dataset.user === user)) return;
+      if ([...grid.children].some(c => c.classList?.contains('user-card') && c.dataset.user === user)) return;
 
       const card = document.createElement('div');
       card.className = 'user-card';
@@ -238,6 +573,10 @@
       card.innerHTML = `
         <div class="avatar">${user[0].toUpperCase()}</div>
         <h3>${user}</h3>
+        <div class="status">
+          <div class="status-dot"></div>
+          En línea
+        </div>
         <div class="call-buttons">
           <div class="call-btn audio" onclick="initiateCall('${user}', 'audio')">
             <i class="fas fa-phone"></i>
@@ -253,14 +592,24 @@
     function removeUser(user) {
       const card = document.querySelector(`.user-card[data-user="${user}"]`);
       if (card) card.remove();
+      
+      const grid = document.getElementById('users-grid');
+      if (grid.children.length === 1 && grid.children[0].id === 'empty-state') {
+        document.getElementById('empty-state').style.display = 'block';
+      }
     }
 
     function initiateCall(callee, type) {
-      currentCall = { callee, type };
+      currentCall = { callee, type, caller: username };
       socket.emit('call_user', { callee, type });
       document.getElementById('incoming-call').style.display = 'none';
+      
+      showNotification(`Llamando a ${callee}...`, 'info');
+      
       setTimeout(() => {
-        if (currentCall) startCall(type, callee);
+        if (currentCall) {
+          startCall(type, callee);
+        }
       }, 1000);
     }
 
@@ -279,73 +628,167 @@
     async function startCall(type, peer) {
       document.getElementById(type + '-call').style.display = 'flex';
       document.getElementById(type + '-callee').textContent = peer;
-
-      if (type === 'video') {
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        document.getElementById('local-video').srcObject = localStream;
-      } else {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      if (type === 'audio') {
+        document.getElementById('audio-avatar').textContent = peer[0].toUpperCase();
       }
 
-      peerConnection = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-      });
+      // Iniciar temporizador
+      callStartTime = new Date();
+      startCallTimer(type);
 
-      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-      peerConnection.ontrack = (event) => {
+      try {
         if (type === 'video') {
-          document.getElementById('remote-video').srcObject = event.streams[0];
-        }
-      };
-
-      peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          socket.emit('webrtc_signal', {
-            target: peer,
-            candidate: event.candidate
+          localStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { width: 1280, height: 720 }, 
+            audio: true 
+          });
+          document.getElementById('local-video').srcObject = localStream;
+        } else {
+          localStream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            } 
           });
         }
-      };
 
-      if (currentCall && currentCall.caller === username) {
-        const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
-        socket.emit('webrtc_signal', {
-          target: peer,
-          sdp: peerConnection.localDescription
+        peerConnection = new RTCPeerConnection({
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
         });
+
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+        peerConnection.ontrack = (event) => {
+          if (type === 'video') {
+            document.getElementById('remote-video').srcObject = event.streams[0];
+          }
+        };
+
+        peerConnection.onicecandidate = (event) => {
+          if (event.candidate) {
+            socket.emit('webrtc_signal', {
+              target: peer,
+              candidate: event.candidate
+            });
+          }
+        };
+
+        // Crear oferta si somos el iniciador
+        if (currentCall && currentCall.caller === username) {
+          const offer = await peerConnection.createOffer();
+          await peerConnection.setLocalDescription(offer);
+          socket.emit('webrtc_signal', {
+            target: peer,
+            sdp: peerConnection.localDescription
+          });
+        }
+
+      } catch (error) {
+        console.error('Error al acceder a los medios:', error);
+        showNotification('Error al acceder a la cámara/micrófono', 'error');
+        endCall();
       }
     }
 
     async function handleSignal(data) {
       if (!peerConnection) return;
 
-      if (data.sdp) {
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
-        if (data.sdp.type === 'offer') {
-          const answer = await peerConnection.createAnswer();
-          await peerConnection.setLocalDescription(answer);
-          socket.emit('webrtc_signal', {
-            target: data.sender || currentCall.caller,
-            sdp: peerConnection.localDescription
-          });
+      try {
+        if (data.sdp) {
+          await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+          if (data.sdp.type === 'offer') {
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            socket.emit('webrtc_signal', {
+              target: data.sender || currentCall.caller,
+              sdp: peerConnection.localDescription
+            });
+          }
+        } else if (data.candidate) {
+          await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
         }
-      } else if (data.candidate) {
-        await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+      } catch (error) {
+        console.error('Error en señal WebRTC:', error);
+      }
+    }
+
+    function startCallTimer(type) {
+      const timerElement = document.getElementById(type + '-timer');
+      callTimerInterval = setInterval(() => {
+        const now = new Date();
+        const diff = Math.floor((now - callStartTime) / 1000);
+        const minutes = Math.floor(diff / 60);
+        const seconds = diff % 60;
+        timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      }, 1000);
+    }
+
+    function toggleMute() {
+      if (localStream) {
+        const audioTracks = localStream.getAudioTracks();
+        audioTracks.forEach(track => {
+          track.enabled = !track.enabled;
+        });
+        isMuted = !isMuted;
+        
+        const muteButton = document.querySelector('.mute i');
+        muteButton.className = isMuted ? 'fas fa-microphone-slash' : 'fas fa-microphone';
+        
+        showNotification(isMuted ? 'Micrófono silenciado' : 'Micrófono activado', 'info');
       }
     }
 
     function endCall() {
-      if (peerConnection) peerConnection.close();
-      if (localStream) localStream.getTracks().forEach(t => t.stop());
+      if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+      }
+      if (localStream) {
+        localStream.getTracks().forEach(t => t.stop());
+        localStream = null;
+      }
+      if (callTimerInterval) {
+        clearInterval(callTimerInterval);
+        callTimerInterval = null;
+      }
+      
       document.getElementById('audio-call').style.display = 'none';
       document.getElementById('video-call').style.display = 'none';
       document.getElementById('remote-video').srcObject = null;
       document.getElementById('local-video').srcObject = null;
-      peerConnection = null;
-      localStream = null;
+      
       currentCall = null;
+      isMuted = false;
+    }
+
+    function showNotification(message, type) {
+      // Implementación simple de notificación
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        color: white;
+        font-weight: 500;
+        z-index: 2000;
+        animation: slideInRight 0.3s ease;
+        background: ${type === 'error' ? 'linear-gradient(135deg, #ef4444, #f87171)' : 
+                    type === 'info' ? 'linear-gradient(135deg, #3b82f6, #60a5fa)' : 
+                    'linear-gradient(135deg, #10b981, #34d399)'};
+      `;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.remove();
+      }, 3000);
     }
 
     // Inicialización
