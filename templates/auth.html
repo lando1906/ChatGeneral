@@ -1,229 +1,76 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iniciar Sesión o Registrarse</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --color-primary: #2563eb;
-            --color-primary-dark: #1d4ed8;
-            --color-background: #f0f7ff;
-            --color-text: #1f2937;
-            --color-text-light: #6b7280;
-            --spacing-md: 1rem;
-            --spacing-lg: 1.5rem;
-            --border-radius: 12px;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
-        }
-
-        body {
-            background-color: var(--color-background);
-            color: var(--color-text);
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: var(--spacing-md);
-        }
-
-        .auth-container {
-            background: white;
-            padding: var(--spacing-lg);
-            border-radius: var(--border-radius);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .auth-container h1 {
-            text-align: center;
-            margin-bottom: var(--spacing-lg);
-            font-size: 1.5rem;
-            font-weight: 600;
-        }
-
-        .form-group {
-            margin-bottom: var(--spacing-md);
-        }
-
-        .form-group label {
-            display: block;
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: var(--spacing-md);
-            border: 1px solid #ddd;
-            border-radius: var(--border-radius);
-            font-size: 0.9rem;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: var(--color-primary);
-        }
-
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            margin-bottom: var(--spacing-lg);
-        }
-
-        .checkbox-group input {
-            margin-right: 0.5rem;
-        }
-
-        .auth-button {
-            width: 100%;
-            padding: var(--spacing-md);
-            background-color: var(--color-primary);
-            color: white;
-            border: none;
-            border-radius: var(--border-radius);
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .auth-button:hover {
-            background-color: var(--color-primary-dark);
-        }
-
-        .switch-form {
-            text-align: center;
-            margin-top: var(--spacing-md);
-            font-size: 0.9rem;
-        }
-
-        .switch-form a {
-            color: var(--color-primary);
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .switch-form a:hover {
-            text-decoration: underline;
-        }
-
-        .error-message {
-            color: #ef4444;
-            font-size: 0.8rem;
-            text-align: center;
-            margin-bottom: var(--spacing-md);
-            display: none;
-        }
-
-        .terms-link {
-            text-align: center;
-            margin-top: var(--spacing-md);
-            font-size: 0.8rem;
-        }
-
-        .terms-link a {
-            color: var(--color-primary);
-            text-decoration: none;
-        }
-
-        .terms-link a:hover {
-            text-decoration: underline;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login / Registro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 2.5rem;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    h2 { font-weight: 600; margin-bottom: 1.5rem; text-align: center; }
+    input {
+      width: 100%;
+      padding: 12px 16px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      font-size: 1rem;
+    }
+    input::placeholder { color: rgba(255, 255, 255, 0.7); }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 8px;
+      background: #60a5fa;
+      color: white;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover { background: #3b82f6; }
+    .error, .success { text-align: center; margin: 10px 0; font-size: 0.9rem; }
+    .error { color: #fca5a5; }
+    .success { color: #86efac; }
+  </style>
 </head>
 <body>
-    <div class="auth-container">
-        <h1 id="formTitle">Iniciar Sesión</h1>
-        <div class="error-message" id="errorMessage"></div>
-        <form id="authForm">
-            <div class="form-group">
-                <label for="username">Usuario</label>
-                <input type="text" id="username" name="username" required>
-            </div>
-            <div class="form-group">
-                <label for="password">Contraseña</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <div class="checkbox-group">
-                <input type="checkbox" id="rememberMe" name="rememberMe">
-                <label for="rememberMe">Recuérdame</label>
-            </div>
-            <button type="submit" class="auth-button" id="submitButton">Iniciar Sesión</button>
-        </form>
-        <div class="switch-form">
-            <span id="switchText">¿No tienes cuenta? </span>
-            <a href="#" id="switchLink">Regístrate</a>
-        </div>
-        <div class="terms-link">
-            <a href="/terminos">Términos y Condiciones</a>
-        </div>
-    </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const authForm = document.getElementById('authForm');
-            const formTitle = document.getElementById('formTitle');
-            const submitButton = document.getElementById('submitButton');
-            const switchLink = document.getElementById('switchLink');
-            const switchText = document.getElementById('switchText');
-            const errorMessage = document.getElementById('errorMessage');
-            let isLogin = true;
-
-            // Cambiar entre login y registro
-            switchLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                isLogin = !isLogin;
-                formTitle.textContent = isLogin ? 'Iniciar Sesión' : 'Registrarse';
-                submitButton.textContent = isLogin ? 'Iniciar Sesión' : 'Registrarse';
-                switchText.textContent = isLogin ? '¿No tienes cuenta? ' : '¿Ya tienes cuenta? ';
-                switchLink.textContent = isLogin ? 'Regístrate' : 'Inicia Sesión';
-                errorMessage.style.display = 'none';
-            });
-
-            // Enviar formulario
-            authForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const username = document.getElementById('username').value;
-                const password = document.getElementById('password').value;
-                const rememberMe = document.getElementById('rememberMe').checked;
-                const url = isLogin ? '/api/login' : '/api/register';
-
-                fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        username,
-                        password,
-                        remember_me: rememberMe
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        window.location.href = '/chat';
-                    } else {
-                        errorMessage.textContent = data.message;
-                        errorMessage.style.display = 'block';
-                    }
-                })
-                .catch(error => {
-                    errorMessage.textContent = 'Error en la conexión. Intenta de nuevo.';
-                    errorMessage.style.display = 'block';
-                });
-            });
-        });
-    </script>
+  <div class="container">
+    <h2>VideoCall App</h2>
+    <form method="POST">
+      <input type="text" name="username" placeholder="Usuario" required />
+      <input type="password" name="password" placeholder="Contraseña" required />
+      {% if error %}
+        <p class="error">{{ error }}</p>
+      {% endif %}
+      {% if success %}
+        <p class="success">{{ success }}</p>
+      {% endif %}
+      <button type="submit" name="action" value="login">Iniciar Sesión</button>
+      <button type="submit" name="action" value="register">Registrarse</button>
+    </form>
+  </div>
 </body>
 </html>
