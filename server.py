@@ -1,40 +1,24 @@
 # server.py
 import os
-import sqlite3
 from flask import Flask, render_template, request, session, redirect, url_for
-from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask_socketio import SocketIO, emit
 import eventlet
 
 eventlet.monkey_patch()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here'
-socketio = SocketIO(app, cors_allowed_origins="*")
+app.config['SECRET_KEY'] = 'cambia-esta-clave-en-produccion-123!'
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
-# Inicializar base de datos SQLite
-def init_db():
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-init_db()
-
-# Simulación de base de datos en memoria para usuarios en línea
-online_users = {}
+# Base de datos en memoria
+users = {}  # username: password
+online_users = {}  # username: socket_id
 
 @app.route('/')
 def home():
     if 'username' not in session:
         return redirect(url_for('login'))
-    return render_template('index.html', username=session['username'], online_users=online_users)
+    return render_template('users.html', username=session['username'])
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -43,92 +27,73 @@ def login():
         password = request.form['password']
         action = request.form.get('action')
 
-        conn = sqlite3.connect('users.db')
-        c = conn.cursor()
+        if len(username) < 3:
+            return render_template('auth.html', error="Usuario debe tener al menos 3 caracteres")
+        if len(password) < 6:
+            return render_template('auth.html', error="Contraseña debe tener al menos 6 caracteres")
 
         if action == 'register':
-            # Verificar si el usuario ya existe
-            c.execute('SELECT * FROM users WHERE username = ?', (username,))
-            if c.fetchone():
-                conn.close()
+            if username in users:
                 return render_template('auth.html', error="Usuario ya existe")
-            
-            if len(username) < 3:
-                conn.close()
-                return render_template('auth.html', error="Usuario muy corto")
-            
-            # Registrar nuevo usuario
-            c.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password))
-            conn.commit()
-            conn.close()
+            users[username] = password
             return render_template('auth.html', success="Registro exitoso, inicia sesión")
-
         elif action == 'login':
-            # Verificar credenciales
-            c.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password))
-            user = c.fetchone()
-            conn.close()
-            
-            if user:
+            if users.get(username) == password:
                 session['username'] = username
                 return redirect(url_for('home'))
             else:
                 return render_template('auth.html', error="Credenciales inválidas")
-
     return render_template('auth.html')
 
 @app.route('/logout')
 def logout():
     username = session.pop('username', None)
-    if username:
-        online_users.pop(username, None)
-        socketio.emit('user_offline', {'username': username})
+    if username and username in online_users:
+        sid = online_users.pop(username)
+        emit('user_offline', {'username': username}, broadcast=True)
+        emit('force_disconnect', room=sid)
     return redirect(url_for('login'))
 
-# Socket.IO Events
+# Socket.IO
 @socketio.on('connect')
 def handle_connect():
     username = session.get('username')
-    if username:
-        online_users[username] = request.sid
-        emit('user_online', {'username': username}, broadcast=True)
-        emit('online_users', {'users': list(online_users.keys())})
+    if not username:
+        return False
+    if username in online_users:
+        emit('force_disconnect', room=online_users[username])
+    online_users[username] = request.sid
+    emit('online_users', {'users': list(online_users.keys())}, broadcast=True)
+    emit('user_online', {'username': username}, broadcast=True)
 
 @socketio.on('disconnect')
 def handle_disconnect():
     username = session.get('username')
     if username and online_users.get(username) == request.sid:
-        online_users.pop(username)
+        online_users.pop(username, None)
         emit('user_offline', {'username': username}, broadcast=True)
 
 @socketio.on('call_user')
 def handle_call(data):
     caller = session.get('username')
-    callee = data['callee']
-    call_type = data['type']  # 'audio' or 'video'
-    if callee in online_users:
-        emit('incoming_call', {
-            'caller': caller,
-            'type': call_type
-        }, room=online_users[callee])
+    callee = data.get('callee')
+    if callee in online_users and callee != caller:
+        emit('incoming_call', {'caller': caller, 'type': data['type']}, room=online_users[callee])
 
 @socketio.on('answer_call')
 def handle_answer(data):
     callee = session.get('username')
-    caller = data['caller']
-    accepted = data['accepted']
+    caller = data.get('caller')
     if caller in online_users:
-        emit('call_responded', {
-            'callee': callee,
-            'accepted': accepted
-        }, room=online_users[caller])
+        emit('call_responded', {'callee': callee, 'accepted': data['accepted']}, room=online_users[caller])
 
 @socketio.on('webrtc_signal')
 def handle_signal(data):
-    target = data['target']
+    target = data.get('target')
     if target in online_users:
+        data['sender'] = session.get('username')
         emit('webrtc_signal', data, room=online_users[target])
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
-    socketio.run(app, host='0.0.0.0', port=port)
+    socketio.run(app, host='0.0.0.0', port=port, debug=True)
