@@ -2,2384 +2,621 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat en Tiempo Real</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Llamadas de Audio Real</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.4.0/purify.min.js"></script>
     <style>
-        :root {
-            --primary-blue: #2563eb;
-            --dark-blue: #1d4ed8;
-            --light-blue: #3b82f6;
-            --gradient-start: #667eea;
-            --gradient-end: #764ba2;
-            --bg-color: #f8fafc;
-            --card-bg: #ffffff;
-            --text-dark: #1e293b;
-            --text-light: #64748b;
-            --border-color: #e2e8f0;
-            --received-msg: #e2e8f0;
-            --sent-msg: #2563eb;
-            --online: #10b981;
-            --typing: #f59e0b;
-            --error: #ef4444;
-            --success: #10b981;
-            --recording: #ef4444;
-            --reply-bg: #f1f5f9;
-            --system-msg: #6366f1;
-            --edit-msg: #fef3c7;
-            --read-indicator: #3b82f6;
-        }
-
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: 'Poppins', sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        html, body {
-            height: 100%;
-            width: 100%;
-            overflow: hidden;
         }
 
         body {
-            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-        }
-
-        .chat-app {
-            height: 100vh;
-            height: -webkit-fill-available;
-            width: 100vw;
-            background: var(--card-bg);
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            position: relative;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 10px;
         }
 
         .screen {
-            position: absolute;
-            top: 0;
-            left: 0;
             width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .chat-screen, .profile-screen, .private-chat-screen {
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             display: none;
         }
 
-        .chat-screen.active, .profile-screen.active, .private-chat-screen.active {
+        #loginScreen {
+            display: block;
+            text-align: center;
+        }
+
+        .avatar-selection {
             display: flex;
-            animation: slideInRight 0.3s ease;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
         }
 
-        @keyframes slideInRight {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        .chat-header, .private-chat-header {
-            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
-            color: white;
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            flex-shrink: 0;
-            z-index: 100;
-        }
-
-        .header-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .avatar {
-            width: 40px;
-            height: 40px;
+        .avatar-option {
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 2rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            overflow: hidden;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
         }
 
-        .avatar img {
+        .avatar-option.selected {
+            border-color: #4CAF50;
+            transform: scale(1.1);
+        }
+
+        input {
             width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .avatar:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-
-        .user-info h2 {
-            font-size: 1rem;
-            font-weight: 600;
-        }
-
-        .user-info p {
-            font-size: 0.75rem;
-            opacity: 0.9;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .status-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--online);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 12px;
-        }
-
-        .header-actions i, .back-button {
-            font-size: 1.1rem;
-            cursor: pointer;
-            opacity: 0.9;
-            transition: all 0.3s ease;
-            padding: 8px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .header-actions i:hover, .back-button:hover {
-            opacity: 1;
-            transform: scale(1.1);
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .users-panel {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            width: 320px;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-            z-index: 1000;
-            transform: translateY(-20px) scale(0.95);
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            max-height: 70vh;
-            overflow-y: auto;
-            border: 1px solid var(--border-color);
-        }
-
-        .users-panel.active {
-            transform: translateY(8px) scale(1);
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .users-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border-color);
-            font-weight: 600;
-            color: var(--text-dark);
-            background: var(--bg-color);
-            border-radius: 16px 16px 0 0;
-        }
-
-        .close-panel {
-            background: none;
+            max-width: 400px;
+            padding: 15px;
+            margin: 10px 0;
             border: none;
-            color: var(--text-light);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
+        }
+
+        button {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            background: #4CAF50;
+            color: white;
+            font-size: 1rem;
             cursor: pointer;
-            font-size: 1.1rem;
-            padding: 6px;
-            border-radius: 50%;
             transition: all 0.3s ease;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            margin: 5px;
         }
 
-        .close-panel:hover {
-            transform: scale(1.1);
-            background: var(--border-color);
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
 
-        .user-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 20px;
-            transition: all 0.3s ease;
+        button.secondary {
+            background: #2196F3;
+        }
+
+        button.danger {
+            background: #F44336;
+        }
+
+        .user-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .user-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
             cursor: pointer;
-            border-bottom: 1px solid var(--border-color);
+            transition: all 0.3s ease;
         }
 
-        .user-item:hover {
-            background: var(--bg-color);
-            transform: translateX(4px);
+        .user-card:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-5px);
         }
 
         .user-avatar {
-            width: 44px;
-            height: 44px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--light-blue) 100%);
+            margin: 0 auto 10px;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 1rem;
-            border: 3px solid white;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .user-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .user-details {
-            flex: 1;
-        }
-
-        .user-details h4 {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--text-dark);
-            margin-bottom: 2px;
-        }
-
-        .user-status {
-            font-size: 0.75rem;
-            color: var(--text-light);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .user-status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--online);
-            animation: pulse 2s infinite;
-        }
-
-        .user-status-dot.offline {
-            background: var(--text-light);
-            animation: none;
-        }
-
-        .profile-header {
-            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
-            color: white;
-            padding: 16px 20px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            flex-shrink: 0;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .back-button {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            font-size: 1.3rem;
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 12px;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .profile-content {
-            flex: 1;
-            padding: 30px 20px 100px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 30px;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .profile-picture-section {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-            animation: fadeInUp 0.6s ease;
-        }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .profile-picture {
-            width: 140px;
-            height: 140px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--light-blue) 0%, var(--primary-blue) 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
-            color: white;
-            position: relative;
-            overflow: hidden;
-            border: 5px solid white;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .profile-picture:hover {
-            transform: scale(1.05);
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
-        }
-
-        .profile-picture img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .edit-profile-pic {
-            background: var(--primary-blue);
-            color: white;
-            border: none;
-            border-radius: 25px;
-            padding: 12px 24px;
-            font-size: 0.9rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
-        }
-
-        .edit-profile-pic:hover {
-            background: var(--dark-blue);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
-        }
-
-        .profile-form {
-            width: 100%;
-            max-width: 400px;
-            background: var(--bg-color);
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            animation: fadeInUp 0.6s ease 0.1s both;
-        }
-
-        .form-group {
-            margin-bottom: 24px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--text-dark);
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 14px 18px;
-            border: 2px solid var(--border-color);
-            border-radius: 12px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            outline: none;
-            background: white;
-        }
-
-        .form-group input:focus {
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-            transform: translateY(-1px);
-        }
-
-        .profile-actions {
-            position: fixed;
-            bottom: 25px;
-            left: 25px;
-            right: 25px;
-            max-width: 400px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            animation: fadeInUp 0.6s ease 0.2s both;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 14px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-        }
-
-        .btn:active {
-            transform: translateY(2px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, var(--error) 0%, #dc2626 100%);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, var(--text-light) 0%, #475569 100%);
-            color: white;
-        }
-
-        .btn-read {
-            background: var(--read-indicator);
-            color: white;
-        }
-
-        .connection-status {
-            padding: 10px 16px;
-            text-align: center;
-            font-size: 0.8rem;
-            background: rgba(37, 99, 235, 0.1);
-            color: var(--primary-blue);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            flex-shrink: 0;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .connection-status.connected {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--online);
-        }
-
-        .connection-status.error {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--error);
-        }
-
-        .messages-container {
-            flex: 1;
-            padding: 16px;
-            overflow-y: auto;
-            background: var(--bg-color);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            -webkit-overflow-scrolling: touch;
-            scroll-behavior: smooth;
-        }
-
-        .message {
-            max-width: 85%;
-            padding: 12px 16px;
-            border-radius: 18px;
-            position: relative;
-            word-wrap: break-word;
-            animation: messageAppear 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            transition: all 0.3s ease;
-            touch-action: pan-y;
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            role: listitem;
-        }
-
-        @keyframes messageAppear {
-            from { opacity: 0; transform: translateY(20px) scale(0.9); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        .message.replying {
-            transform: translateX(50px);
-            background: rgba(37, 99, 235, 0.1);
-            animation: replyPulse 2s ease;
-        }
-
-        @keyframes replyPulse {
-            0%, 100% { background: rgba(37, 99, 235, 0.1); }
-            50% { background: rgba(37, 99, 235, 0.2); }
-        }
-
-        .message.editing {
-            background: var(--edit-msg);
-            border: 2px solid #f59e0b;
-            animation: editPulse 1.5s ease-in-out;
-        }
-
-        @keyframes editPulse {
-            0%, 100% { border-color: #f59e0b; }
-            50% { border-color: #d97706; }
-        }
-
-        .received {
-            background: var(--received-msg);
-            color: var(--text-dark);
-            border-bottom-left-radius: 6px;
-            align-self: flex-start;
-            margin-left: 8px;
-        }
-
-        .sent {
-            background: var(--sent-msg);
-            color: white;
-            border-bottom-right-radius: 6px;
-            align-self: flex-end;
-            margin-right: 8px;
-        }
-
-        .system {
-            background: rgba(99, 102, 241, 0.1);
-            color: var(--system-msg);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            align-self: center;
-            max-width: 70%;
-            text-align: center;
-            padding: 10px 18px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            animation: systemPulse 2s ease;
-        }
-
-        @keyframes systemPulse {
-            0% { transform: scale(0.8); opacity: 0; }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        .message-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 0.8rem;
-            flex-shrink: 0;
-            overflow: hidden;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .message-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .message-content {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .message-sender {
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-bottom: 4px;
-            opacity: 0.8;
-        }
-
-        .message-text {
-            font-size: 0.9rem;
-            line-height: 1.4;
-            word-wrap: break-word;
-        }
-
-        .message-text.edited::after {
-            content: ' (editado)';
-            font-size: 0.7rem;
-            opacity: 0.7;
-            margin-left: 4px;
-        }
-
-        .reply-context {
-            font-size: 0.7rem;
-            color: var(--text-light);
-            margin-bottom: 6px;
-            font-style: italic;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 6px 10px;
-            background: rgba(0, 0, 0, 0.05);
-            border-radius: 10px;
-            border-left: 3px solid var(--primary-blue);
-        }
-
-        .reply-indicator {
-            color: var(--primary-blue);
-        }
-
-        .reply-preview {
-            font-size: 0.75rem;
-            opacity: 0.8;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .message-image, .message-video {
-            max-width: 100%;
-            border-radius: 12px;
-            margin-top: 6px;
-            cursor: pointer;
-            max-height: 200px;
-            object-fit: cover;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .message-image:hover, .message-video:hover {
-            transform: scale(1.02);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-        }
-
-        .file-message {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            margin-top: 6px;
-            transition: all 0.3s ease;
-        }
-
-        .file-message:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-1px);
-        }
-
-        .file-message i {
-            color: var(--primary-blue);
-            font-size: 1.3rem;
-        }
-
-        .file-message a {
-            color: var(--primary-blue);
-            text-decoration: none;
-            font-size: 0.85rem;
-            padding: 6px 12px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 6px;
-            transition: background 0.2s;
-        }
-
-        .file-message a:hover {
-            background: rgba(255, 255, 255, 0.5);
-        }
-
-        .message-time {
-            font-size: 0.7rem;
-            text-align: right;
-            margin-top: 6px;
-            opacity: 0.7;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .read-indicator {
-            color: var(--read-indicator);
-            font-size: 0.7rem;
-        }
-
-        .message-actions {
-            position: absolute;
-            top: -10px;
-            right: -10px;
-            display: none;
-            gap: 5px;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.8); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        .message-action-btn {
-            width: 28px;
-            height: 28px;
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8rem;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .edit-btn {
-            background: var(--success);
-            color: white;
-        }
-
-        .delete-btn {
-            background: var(--error);
-            color: white;
-        }
-
-        .read-btn {
-            background: var(--read-indicator);
-            color: white;
-        }
-
-        .message-action-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-
-        .reply-panel {
-            display: none;
-            background: var(--reply-bg);
-            padding: 10px 16px;
-            border-top: 1px solid var(--border-color);
-            flex-shrink: 0;
-            position: relative;
-            animation: slideUp 0.3s ease;
-        }
-
-        .reply-panel.active {
-            display: block;
-        }
-
-        .reply-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 6px;
-        }
-
-        .reply-text {
-            font-size: 0.85rem;
-            color: var(--text-light);
-            flex: 1;
-            margin-right: 12px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .reply-close {
-            background: none;
-            border: none;
-            color: var(--text-light);
-            cursor: pointer;
-            font-size: 1rem;
-            padding: 4px;
-            border-radius: 50%;
-            transition: all 0.3s ease;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .reply-close:hover {
-            transform: scale(1.1);
-            background: var(--border-color);
-        }
-
-        .reply-preview {
-            font-size: 0.8rem;
-            color: var(--text-dark);
-            padding: 6px 10px;
-            background: white;
-            border-radius: 8px;
-            border-left: 3px solid var(--primary-blue);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .input-container {
-            padding: 12px 16px;
-            background: white;
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            gap: 10px;
-            align-items: flex-end;
-            flex-shrink: 0;
-        }
-
-        #messageInput {
-            flex: 1;
-            padding: 12px 18px;
-            border: 2px solid var(--border-color);
-            border-radius: 25px;
-            outline: none;
-            font-size: 0.9rem;
-            resize: none;
-            max-height: 120px;
-            transition: all 0.3s ease;
-            line-height: 1.4;
-            -webkit-appearance: none;
-            background: var(--bg-color);
-        }
-
-        #messageInput:focus {
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-            background: white;
-        }
-
-        .input-actions {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
-        .action-btn {
-            background: var(--primary-blue);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 42px;
-            height: 42px;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: all 0.3s ease;
-            font-size: 1rem;
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
-        }
-
-        .action-btn:hover {
-            background: var(--dark-blue);
-            transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
-        }
-
-        .action-btn:active {
-            transform: scale(0.95);
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .file-panel {
-            display: none;
-            background: white;
-            padding: 16px 20px;
-            border-top: 1px solid var(--border-color);
-            flex-shrink: 0;
-            animation: slideUp 0.3s ease;
-        }
-
-        .file-panel.active {
-            display: flex;
-        }
-
-        .file-options {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            flex: 1;
-            justify-content: center;
-        }
-
-        .file-option {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            padding: 12px 16px;
-            border-radius: 15px;
-            transition: all 0.3s ease;
-            min-width: 70px;
-        }
-
-        .file-option:hover {
-            background: var(--bg-color);
-            transform: translateY(-3px);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .file-option i {
             font-size: 1.5rem;
-            color: var(--primary-blue);
         }
 
-        .file-option span {
-            font-size: 0.8rem;
-            color: var(--text-dark);
-            font-weight: 500;
+        .call-display {
+            text-align: center;
+            margin: 30px 0;
         }
 
-        .send-btn { display: none; }
-        .audio-btn { display: flex; }
+        .call-timer {
+            font-size: 3rem;
+            font-weight: 300;
+            margin: 20px 0;
+        }
 
-        #messageInput:not(:placeholder-shown) ~ .input-actions .send-btn {
+        .call-controls {
             display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
         }
 
-        #messageInput:not(:placeholder-shown) ~ .input-actions .audio-btn {
-            display: none;
+        .control-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
 
-        .toast {
+        .control-btn.active {
+            background: #2196F3;
+            color: white;
+        }
+
+        .notification {
             position: fixed;
             top: 20px;
             right: 20px;
-            padding: 12px 20px;
-            background: var(--success);
-            color: white;
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 20px;
             border-radius: 10px;
-            z-index: 3000;
-            animation: slideIn 0.3s ease;
-            max-width: 300px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .toast.error {
-            background: var(--error);
-        }
-
-        .file-preview {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-            z-index: 2000;
-            max-width: 90%;
-            text-align: center;
-        }
-
-        .file-preview img, .file-preview video {
-            max-width: 300px;
-            max-height: 300px;
-            border-radius: 12px;
-        }
-
-        .file-preview-actions {
-            margin-top: 10px;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
             display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
         }
 
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            max-width: 400px;
-            width: 90%;
-            text-align: center;
-        }
-
-        .modal-actions {
-            margin-top: 20px;
+        .notification-buttons {
             display: flex;
             gap: 10px;
-            justify-content: center;
+            margin-top: 10px;
         }
 
-        @media (max-width: 480px) {
-            .chat-header, .private-chat-header {
-                padding: 10px 12px;
-            }
-
-            .messages-container {
-                padding: 12px;
-            }
-
-            .input-container {
-                padding: 10px 12px;
-            }
-
-            .message {
-                max-width: 90%;
-                padding: 10px 14px;
-            }
-
-            .users-panel {
-                width: 100%;
-                border-radius: 0;
-                max-height: 80vh;
-            }
-
-            .profile-content {
-                padding: 20px 15px 100px;
-            }
-
-            .profile-form {
-                padding: 20px;
-            }
-
-            .profile-actions {
-                bottom: 20px;
-                left: 20px;
-                right: 20px;
-            }
-
-            .action-btn {
-                width: 38px;
-                height: 38px;
-            }
+        .status {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            background: #4CAF50;
         }
 
-        @supports(padding: max(0px)) {
-            .messages-container, .input-container {
-                padding-left: max(12px, env(safe-area-inset-left));
-                padding-right: max(12px, env(safe-area-inset-right));
-            }
+        .status.offline {
+            background: #F44336;
+        }
 
-            .input-container {
-                padding-bottom: max(12px, env(safe-area-inset-bottom));
-            }
+        #localAudio, #remoteAudio {
+            width: 100%;
+            margin: 10px 0;
         }
     </style>
 </head>
 <body>
-    <div class="chat-app" id="chatApp">
-        <!-- Pantalla principal de chat -->
-        <div class="screen chat-screen active" id="chatScreen">
-            <div class="chat-header">
-                <div class="header-info">
-                    <div class="avatar" id="userAvatarBtn" aria-label="Ver perfil">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <div class="user-info">
-                        <h2 id="userName">Usuario</h2>
-                        <p><span class="status-indicator"></span> <span id="userCount">Conectando...</span></p>
-                    </div>
-                </div>
-                <div class="header-actions">
-                    <i class="fas fa-users" id="usersBtn" title="Usuarios registrados" aria-label="Ver usuarios registrados"></i>
-                </div>
+    <div class="container">
+        <header>
+            <h1>Llamadas de Audio Real</h1>
+            <p>Conecta con audio de alta calidad en tiempo real</p>
+        </header>
+
+        <!-- Pantalla de Login -->
+        <div id="loginScreen" class="screen">
+            <h2>Configura tu perfil</h2>
+            <div class="avatar-selection">
+                <div class="avatar-option selected" data-avatar="👤">👤</div>
+                <div class="avatar-option" data-avatar="👨">👨</div>
+                <div class="avatar-option" data-avatar="👩">👩</div>
+                <div class="avatar-option" data-avatar="😊">😊</div>
+            </div>
+            <input type="text" id="userName" placeholder="Ingresa tu nombre" maxlength="20">
+            <button onclick="registerUser()">Entrar a la Sala</button>
+        </div>
+
+        <!-- Pantalla de Usuarios -->
+        <div id="usersScreen" class="screen">
+            <h2>Usuarios Conectados</h2>
+            <div id="usersList" class="user-list">
+                <!-- Los usuarios se cargarán aquí -->
+            </div>
+            <button onclick="logout()" class="secondary">Salir</button>
+        </div>
+
+        <!-- Pantalla de Llamada -->
+        <div id="callScreen" class="screen">
+            <div class="call-display">
+                <h2 id="callStatus">Llamando...</h2>
+                <div class="call-timer" id="callTimer">00:00</div>
+                <div id="callerInfo"></div>
             </div>
 
-            <div class="users-panel" id="usersPanel">
-                <div class="users-header">
-                    <span>Usuarios Registrados</span>
-                    <button class="close-panel" id="closeUsersPanel" aria-label="Cerrar panel de usuarios">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="users-list" id="usersList"></div>
-            </div>
+            <audio id="localAudio" muted></audio>
+            <audio id="remoteAudio" autoplay></audio>
 
-            <div class="connection-status" id="status">
-                <i class="fas fa-circle-notch fa-spin"></i>
-                <span>Conectando al servidor...</span>
-            </div>
-
-            <div class="messages-container" id="messagesContainer" role="list">
-                <div class="message system">
-                    <i class="fas fa-info-circle"></i>
-                    <div class="message-text">¡Bienvenido al chat! Desliza un mensaje hacia la derecha para responder.</div>
-                </div>
-            </div>
-
-            <div class="reply-panel" id="replyPanel">
-                <div class="reply-info">
-                    <div class="reply-text">Respondiendo a <span id="replyUserName">Usuario</span></div>
-                    <button class="reply-close" id="closeReply" aria-label="Cerrar respuesta">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="reply-preview" id="replyPreview"></div>
-            </div>
-
-            <div class="file-panel" id="filePanel">
-                <div class="file-options">
-                    <div class="file-option" id="fileImageBtn" aria-label="Enviar imagen">
-                        <i class="fas fa-image"></i>
-                        <span>Imagen</span>
-                    </div>
-                    <div class="file-option" id="fileVideoBtn" aria-label="Enviar video">
-                        <i class="fas fa-video"></i>
-                        <span>Video</span>
-                    </div>
-                    <div class="file-option" id="fileDocumentBtn" aria-label="Enviar archivo">
-                        <i class="fas fa-file"></i>
-                        <span>Archivo</span>
-                    </div>
-                </div>
-                <button class="close-panel" id="closeFilePanel" aria-label="Cerrar panel de archivos">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-
-            <div class="input-container">
-                <input type="file" id="imageInput" class="file-input" accept="image/jpeg,image/png,image/gif">
-                <input type="file" id="videoInput" class="file-input" accept="video/mp4,video/webm">
-                <input type="file" id="fileInput" class="file-input" accept="*/*">
-                <input type="file" id="profilePictureInput" class="file-input" accept="image/jpeg,image/png,image/gif">
-
-                <textarea id="messageInput" placeholder="Escribe un mensaje..." rows="1" autocomplete="off" aria-label="Escribir mensaje"></textarea>
-
-                <div class="input-actions">
-                    <button class="action-btn" id="clipBtn" title="Enviar archivo" aria-label="Enviar archivo">
-                        <i class="fas fa-paperclip"></i>
-                    </button>
-                    <button class="action-btn audio-btn" id="audioBtn" title="Grabar audio" aria-label="Grabar audio">
-                        <i class="fas fa-microphone"></i>
-                    </button>
-                    <button class="action-btn send-btn" id="sendButton" title="Enviar mensaje" aria-label="Enviar mensaje">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
+            <div class="call-controls">
+                <button class="control-btn" id="muteBtn" onclick="toggleMute()">🎤</button>
+                <button class="control-btn" id="hangupBtn" onclick="endCall()">📞</button>
             </div>
         </div>
 
-        <!-- Pantalla de perfil -->
-        <div class="screen profile-screen" id="profileScreen">
-            <div class="profile-header">
-                <button class="back-button" id="backButton" aria-label="Volver al chat">
-                    <i class="fas fa-arrow-left"></i>
-                </button>
-                <h2>Mi Perfil</h2>
-            </div>
-
-            <div class="profile-content">
-                <div class="profile-picture-section">
-                    <div class="profile-picture" id="profilePicture" aria-label="Foto de perfil">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <button class="edit-profile-pic" id="editProfilePic" aria-label="Cambiar foto de perfil">
-                        <i class="fas fa-camera"></i> Cambiar Foto
-                    </button>
-                </div>
-
-                <div class="profile-form">
-                    <div class="form-group">
-                        <label for="profileName">
-                            <i class="fas fa-user-edit"></i> Nombre de Usuario
-                        </label>
-                        <input type="text" id="profileName" placeholder="Ingresa tu nombre" aria-label="Nombre de usuario">
-                    </div>
-                </div>
-            </div>
-
-            <div class="profile-actions">
-                <button class="btn btn-danger" id="deleteAccountBtn" aria-label="Eliminar cuenta">
-                    <i class="fas fa-trash"></i> Eliminar Cuenta
-                </button>
-                <button class="btn btn-secondary" id="logoutBtn" aria-label="Cerrar sesión">
-                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-                </button>
-            </div>
-        </div>
-
-        <!-- Pantalla de chat privado -->
-        <div class="screen private-chat-screen" id="privateChatScreen">
-            <div class="private-chat-header">
-                <button class="back-button" id="privateChatBackButton" aria-label="Volver al chat principal">
-                    <i class="fas fa-arrow-left"></i>
-                </button>
-                <div class="header-info">
-                    <div class="user-avatar" id="privateChatAvatar"></div>
-                    <div class="user-info">
-                        <h2 id="privateChatUserName"></h2>
-                        <p><span class="user-status-dot" id="privateChatStatus"></span> <span id="privateChatStatusText"></span></p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="messages-container" id="privateMessagesContainer" role="list">
-                <div class="message system">
-                    <i class="fas fa-info-circle"></i>
-                    <div class="message-text">Inicia una conversación privada</div>
-                </div>
-            </div>
-
-            <div class="reply-panel" id="privateReplyPanel">
-                <div class="reply-info">
-                    <div class="reply-text">Respondiendo a <span id="privateReplyUserName">Usuario</span></div>
-                    <button class="reply-close" id="privateCloseReply" aria-label="Cerrar respuesta">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="reply-preview" id="privateReplyPreview"></div>
-            </div>
-
-            <div class="file-panel" id="privateFilePanel">
-                <div class="file-options">
-                    <div class="file-option" id="privateFileImageBtn" aria-label="Enviar imagen">
-                        <i class="fas fa-image"></i>
-                        <span>Imagen</span>
-                    </div>
-                    <div class="file-option" id="privateFileVideoBtn" aria-label="Enviar video">
-                        <i class="fas fa-video"></i>
-                        <span>Video</span>
-                    </div>
-                    <div class="file-option" id="privateFileDocumentBtn" aria-label="Enviar archivo">
-                        <i class="fas fa-file"></i>
-                        <span>Archivo</span>
-                    </div>
-                </div>
-                <button class="close-panel" id="privateCloseFilePanel" aria-label="Cerrar panel de archivos">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-
-            <div class="input-container">
-                <textarea id="privateMessageInput" placeholder="Escribe un mensaje..." rows="1" autocomplete="off" aria-label="Escribir mensaje privado"></textarea>
-                <div class="input-actions">
-                    <button class="action-btn" id="privateClipBtn" title="Enviar archivo" aria-label="Enviar archivo">
-                        <i class="fas fa-paperclip"></i>
-                    </button>
-                    <button class="action-btn audio-btn" id="privateAudioBtn" title="Grabar audio" aria-label="Grabar audio">
-                        <i class="fas fa-microphone"></i>
-                    </button>
-                    <button class="action-btn send-btn" id="privateSendButton" title="Enviar mensaje" aria-label="Enviar mensaje privado">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal de confirmación -->
-        <div class="modal" id="confirmModal">
-            <div class="modal-content">
-                <h3 id="confirmModalTitle">¿Eliminar cuenta?</h3>
-                <p id="confirmModalText">Esta acción no se puede deshacer. Se perderán todos tus datos y mensajes.</p>
-                <div class="modal-actions">
-                    <button class="btn btn-secondary" id="cancelModal" aria-label="Cancelar">Cancelar</button>
-                    <button class="btn btn-danger" id="confirmModalAction" aria-label="Confirmar acción">Eliminar</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal de vista previa de archivos -->
-        <div class="modal" id="filePreviewModal">
-            <div class="file-preview">
-                <div id="filePreviewContent"></div>
-                <div class="file-preview-actions">
-                    <button class="btn btn-secondary" id="cancelFilePreview" aria-label="Cancelar">Cancelar</button>
-                    <button class="btn btn-primary" id="confirmFilePreview" aria-label="Enviar archivo">Enviar</button>
-                </div>
+        <!-- Notificación de Llamada Entrante -->
+        <div id="incomingCallNotification" class="notification">
+            <h3>Llamada entrante</h3>
+            <p id="callerName"></p>
+            <div class="notification-buttons">
+                <button onclick="acceptCall()" class="secondary">Aceptar</button>
+                <button onclick="rejectCall()" class="danger">Rechazar</button>
             </div>
         </div>
     </div>
 
+    <script src="/socket.io/socket.io.js"></script>
     <script>
-        const MESSAGE_TYPES = {
-            TEXT: 'message',
-            IMAGE: 'image',
-            VIDEO: 'video',
-            FILE: 'file'
+        // Variables globales
+        let socket;
+        let localStream;
+        let remoteStream;
+        let peerConnection;
+        let currentUser;
+        let currentCall = null;
+        let callStartTime;
+        let timerInterval;
+        let selectedAvatar = '👤';
+
+        // Configuración STUN servers para WebRTC
+        const configuration = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
         };
 
-        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-        const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
-        const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm'];
-
-        let currentUser = null;
-        let socket = null;
-        let replyingTo = null;
-        let touchStartX = null;
-        let touchStartY = null;
-        let allUsers = [];
-        let longPressTimer = null;
-        let selectedMessage = null;
-        let currentChat = { type: 'group', recipientId: null };
-        let pendingFile = null;
-        let typingTimeout = null;
-
-        const elements = {
-            chatScreen: document.getElementById('chatScreen'),
-            profileScreen: document.getElementById('profileScreen'),
-            privateChatScreen: document.getElementById('privateChatScreen'),
-            userAvatarBtn: document.getElementById('userAvatarBtn'),
-            backButton: document.getElementById('backButton'),
-            privateChatBackButton: document.getElementById('privateChatBackButton'),
-            usersBtn: document.getElementById('usersBtn'),
-            usersPanel: document.getElementById('usersPanel'),
-            closeUsersPanel: document.getElementById('closeUsersPanel'),
-            usersList: document.getElementById('usersList'),
-            profileName: document.getElementById('profileName'),
-            editProfilePic: document.getElementById('editProfilePic'),
-            profilePictureInput: document.getElementById('profilePictureInput'),
-            deleteAccountBtn: document.getElementById('deleteAccountBtn'),
-            logoutBtn: document.getElementById('logoutBtn'),
-            confirmModal: document.getElementById('confirmModal'),
-            confirmModalTitle: document.getElementById('confirmModalTitle'),
-            confirmModalText: document.getElementById('confirmModalText'),
-            cancelModal: document.getElementById('cancelModal'),
-            confirmModalAction: document.getElementById('confirmModalAction'),
-            messagesContainer: document.getElementById('messagesContainer'),
-            privateMessagesContainer: document.getElementById('privateMessagesContainer'),
-            messageInput: document.getElementById('messageInput'),
-            privateMessageInput: document.getElementById('privateMessageInput'),
-            sendButton: document.getElementById('sendButton'),
-            privateSendButton: document.getElementById('privateSendButton'),
-            status: document.getElementById('status'),
-            userCount: document.getElementById('userCount'),
-            userName: document.getElementById('userName'),
-            privateChatUserName: document.getElementById('privateChatUserName'),
-            privateChatStatus: document.getElementById('privateChatStatus'),
-            privateChatStatusText: document.getElementById('privateChatStatusText'),
-            privateChatAvatar: document.getElementById('privateChatAvatar'),
-            replyPanel: document.getElementById('replyPanel'),
-            privateReplyPanel: document.getElementById('privateReplyPanel'),
-            closeReply: document.getElementById('closeReply'),
-            privateCloseReply: document.getElementById('privateCloseReply'),
-            replyUserName: document.getElementById('replyUserName'),
-            privateReplyUserName: document.getElementById('privateReplyUserName'),
-            replyPreview: document.getElementById('replyPreview'),
-            privateReplyPreview: document.getElementById('privateReplyPreview'),
-            clipBtn: document.getElementById('clipBtn'),
-            privateClipBtn: document.getElementById('privateClipBtn'),
-            filePanel: document.getElementById('filePanel'),
-            privateFilePanel: document.getElementById('privateFilePanel'),
-            closeFilePanel: document.getElementById('closeFilePanel'),
-            privateCloseFilePanel: document.getElementById('privateCloseFilePanel'),
-            fileImageBtn: document.getElementById('fileImageBtn'),
-            fileVideoBtn: document.getElementById('fileVideoBtn'),
-            fileDocumentBtn: document.getElementById('fileDocumentBtn'),
-            privateFileImageBtn: document.getElementById('privateFileImageBtn'),
-            privateFileVideoBtn: document.getElementById('privateFileVideoBtn'),
-            privateFileDocumentBtn: document.getElementById('privateFileDocumentBtn'),
-            imageInput: document.getElementById('imageInput'),
-            videoInput: document.getElementById('videoInput'),
-            fileInput: document.getElementById('fileInput'),
-            filePreviewModal: document.getElementById('filePreviewModal'),
-            filePreviewContent: document.getElementById('filePreviewContent'),
-            cancelFilePreview: document.getElementById('cancelFilePreview'),
-            confirmFilePreview: document.getElementById('confirmFilePreview')
-        };
-
-        window.addEventListener('load', () => {
-            const savedUser = localStorage.getItem('chatUser');
-            if (!savedUser) {
-                window.location.href = '/auth.html';
-                return;
-            }
-
-            currentUser = JSON.parse(savedUser);
-            initializeChat();
+        // Selección de avatar
+        document.querySelectorAll('.avatar-option').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.avatar-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                option.classList.add('selected');
+                selectedAvatar = option.getAttribute('data-avatar');
+            });
         });
 
-        function initializeChat() {
-            elements.userName.textContent = currentUser.name;
-            elements.profileName.value = currentUser.name;
-            if (currentUser.profilePicture) {
-                updateProfilePicture(currentUser.profilePicture);
+        // Registrar usuario
+        function registerUser() {
+            const userName = document.getElementById('userName').value.trim();
+            if (!userName) {
+                alert('Por favor ingresa tu nombre');
+                return;
             }
 
-            connectWebSocket();
-            setupEventListeners();
-            loadRegisteredUsers();
-            loadChatHistory();
+            currentUser = {
+                name: userName,
+                avatar: selectedAvatar
+            };
+
+            // Conectar al servidor Socket.io
+            socket = io();
+
+            // Configurar event listeners del socket
+            setupSocketListeners();
+
+            // Registrar usuario en el servidor
+            socket.emit('register', currentUser);
+
+            // Mostrar pantalla de usuarios
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('usersScreen').style.display = 'block';
         }
 
-        function setupEventListeners() {
-            elements.userAvatarBtn.addEventListener('click', showProfileScreen);
-            elements.backButton.addEventListener('click', showChatScreen);
-            elements.privateChatBackButton.addEventListener('click', showChatScreen);
-            elements.usersBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                elements.usersPanel.classList.toggle('active');
+        // Configurar listeners del socket
+        function setupSocketListeners() {
+            socket.on('users-update', (users) => {
+                updateUsersList(users);
             });
-            elements.closeUsersPanel.addEventListener('click', () => elements.usersPanel.classList.remove('active'));
 
-            elements.profileName.addEventListener('input', () => {
-                clearTimeout(window.profileSaveTimeout);
-                window.profileSaveTimeout = setTimeout(updateProfile, 1000);
+            socket.on('incoming-call', async (data) => {
+                showIncomingCall(data);
             });
-            elements.profileName.addEventListener('blur', updateProfile);
-            elements.editProfilePic.addEventListener('click', () => elements.profilePictureInput.click());
-            elements.profilePicture.addEventListener('click', () => elements.profilePictureInput.click());
-            elements.profilePictureInput.addEventListener('change', handleProfilePictureChange);
-            elements.deleteAccountBtn.addEventListener('click', () => showConfirmModal('deleteAccount', '¿Eliminar cuenta?', 'Esta acción no se puede deshacer. Se perderán todos tus datos y mensajes.'));
-            elements.logoutBtn.addEventListener('click', logout);
-            elements.cancelModal.addEventListener('click', hideConfirmModal);
 
-            elements.messageInput.addEventListener('input', () => {
-                autoResizeTextarea(elements.messageInput);
-                sendTypingStatus(true);
+            socket.on('call-started', (data) => {
+                currentCall = data.callId;
+                showCallScreen('Llamando...', 'Esperando respuesta...');
             });
-            elements.messageInput.addEventListener('blur', () => sendTypingStatus(false));
-            elements.messageInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
+
+            socket.on('call-accepted', async (data) => {
+                await handleCallAccepted(data);
             });
-            elements.sendButton.addEventListener('click', sendMessage);
-            elements.closeReply.addEventListener('click', () => closeReplyHandler(elements.replyPanel, elements.messageInput));
 
-            elements.privateMessageInput.addEventListener('input', () => {
-                autoResizeTextarea(elements.privateMessageInput);
-                sendTypingStatus(true, currentChat.recipientId);
+            socket.on('call-rejected', (data) => {
+                alert('Llamada rechazada');
+                hideCallScreen();
             });
-            elements.privateMessageInput.addEventListener('blur', () => sendTypingStatus(false, currentChat.recipientId));
-            elements.privateMessageInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendPrivateMessage();
-                }
+
+            socket.on('call-ended', () => {
+                endCall();
             });
-            elements.privateSendButton.addEventListener('click', sendPrivateMessage);
-            elements.privateCloseReply.addEventListener('click', () => closeReplyHandler(elements.privateReplyPanel, elements.privateMessageInput));
 
-            elements.clipBtn.addEventListener('click', () => toggleFilePanel(elements.filePanel));
-            elements.privateClipBtn.addEventListener('click', () => toggleFilePanel(elements.privateFilePanel));
-            elements.closeFilePanel.addEventListener('click', () => toggleFilePanel(elements.filePanel));
-            elements.privateCloseFilePanel.addEventListener('click', () => toggleFilePanel(elements.privateFilePanel));
-            elements.fileImageBtn.addEventListener('click', () => elements.imageInput.click());
-            elements.fileVideoBtn.addEventListener('click', () => elements.videoInput.click());
-            elements.fileDocumentBtn.addEventListener('click', () => elements.fileInput.click());
-            elements.privateFileImageBtn.addEventListener('click', () => elements.imageInput.click());
-            elements.privateFileVideoBtn.addEventListener('click', () => elements.videoInput.click());
-            elements.privateFileDocumentBtn.addEventListener('click', () => elements.fileInput.click());
-            elements.imageInput.addEventListener('change', (e) => handleFileSelection(e, 'image'));
-            elements.videoInput.addEventListener('change', (e) => handleFileSelection(e, 'video'));
-            elements.fileInput.addEventListener('change', (e) => handleFileSelection(e, 'file'));
-            elements.cancelFilePreview.addEventListener('click', closeFilePreview);
-            elements.confirmFilePreview.addEventListener('click', sendFileMessage);
-
-            elements.messagesContainer.addEventListener('touchstart', handleTouchStart);
-            elements.messagesContainer.addEventListener('touchmove', handleTouchMove);
-            elements.messagesContainer.addEventListener('touchend', handleTouchEnd);
-            elements.privateMessagesContainer.addEventListener('touchstart', handleTouchStart);
-            elements.privateMessagesContainer.addEventListener('touchmove', handleTouchMove);
-            elements.privateMessagesContainer.addEventListener('touchend', handleTouchEnd);
-
-            document.addEventListener('click', (e) => {
-                if (!elements.usersPanel.contains(e.target) && !elements.usersBtn.contains(e.target)) {
-                    elements.usersPanel.classList.remove('active');
+            socket.on('ice-candidate', (data) => {
+                if (peerConnection) {
+                    peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
                 }
             });
         }
 
-        function connectWebSocket() {
-            socket = new WebSocket(`ws://${window.location.host}`);
+        // Actualizar lista de usuarios
+        function updateUsersList(users) {
+            const usersList = document.getElementById('usersList');
+            usersList.innerHTML = '';
 
-            socket.onopen = () => {
-                elements.status.classList.add('connected');
-                elements.status.innerHTML = '<i class="fas fa-check-circle"></i> Conectado al servidor';
-                socket.send(JSON.stringify({
-                    type: 'user_join',
-                    user: currentUser,
-                    token: localStorage.getItem('token')
-                }));
-            };
+            users.forEach(user => {
+                const userCard = document.createElement('div');
+                userCard.className = 'user-card';
+                userCard.onclick = () => startCall(user.id);
 
-            socket.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    switch (data.type) {
-                        case 'chat_history':
-                            displayChatHistory(data.messages);
-                            break;
-                        case 'user_join':
-                            showToast(`${data.user.name} se unió al chat`);
-                            addSystemMessage(`${data.user.name} se unió al chat`, data.timestamp);
-                            break;
-                        case 'user_leave':
-                            showToast(`${data.user.name} salió del chat`);
-                            addSystemMessage(`${data.user.name} salió del chat`, data.timestamp);
-                            break;
-                        case 'user_count':
-                            elements.userCount.textContent = `${data.count} usuario${data.count !== 1 ? 's' : ''} en línea`;
-                            break;
-                        case 'online_users':
-                            allUsers = data.users;
-                            updateUsersList();
-                            updatePrivateChatStatus();
-                            break;
-                        case 'typing':
-                            handleTypingStatus(data);
-                            break;
-                        case 'message':
-                        case 'image':
-                        case 'video':
-                        case 'file':
-                            addMessage(data);
-                            break;
-                        case 'message_edited':
-                            updateMessage(data.messageId, data.text);
-                            break;
-                        case 'message_deleted':
-                            deleteMessage(data.messageId);
-                            break;
-                        case 'messages_read':
-                            updateReadStatus(data.messageIds);
-                            break;
-                        case 'error':
-                            showToast(data.text, true);
-                            break;
-                    }
-                } catch (error) {
-                    console.error('Error procesando mensaje del servidor:', error);
-                    showToast('Error procesando mensaje del servidor', true);
-                }
-            };
+                userCard.innerHTML = `
+                    <div class="user-avatar">${user.avatar}</div>
+                    <h3>${user.name}</h3>
+                    <div class="status">En línea</div>
+                `;
 
-            socket.onclose = () => {
-                elements.status.classList.remove('connected');
-                elements.status.classList.add('error');
-                elements.status.innerHTML = '<i class="fas fa-exclamation-circle"></i> Desconectado. Intentando reconectar...';
-                setTimeout(connectWebSocket, 3000);
-            };
-
-            socket.onerror = (error) => {
-                console.error('Error WebSocket:', error);
-                showToast('Error de conexión', true);
-            };
-        }
-
-        function showToast(message, isError = false) {
-            const toast = document.createElement('div');
-            toast.className = `toast ${isError ? 'error' : ''}`;
-            toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i> ${DOMPurify.sanitize(message)}`;
-            document.body.appendChild(toast);
-            setTimeout(() => {
-                toast.style.animation = 'slideOut 0.3s ease forwards';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        function addSystemMessage(text, timestamp) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message system';
-            messageDiv.innerHTML = `
-                <i class="fas fa-info-circle"></i>
-                <div class="message-text">${DOMPurify.sanitize(text)}</div>
-                <div class="message-time">${timestamp}</div>
-            `;
-            const container = currentChat.type === 'private' ? elements.privateMessagesContainer : elements.messagesContainer;
-            container.appendChild(messageDiv);
-            scrollToBottom(container);
-        }
-
-        function addMessage(data) {
-            if (data.recipientId && data.recipientId !== currentUser.id && data.userId !== currentUser.id) {
-                return;
-            }
-
-            const isPrivate = data.recipientId || currentChat.type === 'private';
-            const container = isPrivate ? elements.privateMessagesContainer : elements.messagesContainer;
-
-            if (isPrivate && currentChat.type !== 'private') {
-                return;
-            }
-
-            if (currentChat.type === 'private' && (data.recipientId !== currentChat.recipientId && data.userId !== currentChat.recipientId)) {
-                return;
-            }
-
-            const isOwnMessage = data.userId === currentUser.id;
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isOwnMessage ? 'sent' : 'received'}`;
-            messageDiv.dataset.messageId = data.messageId;
-            messageDiv.dataset.userId = data.userId;
-
-            const avatarInitial = data.user?.name?.charAt(0).toUpperCase() || 'U';
-            const avatarHtml = data.user?.profilePicture
-                ? `<img src="${DOMPurify.sanitize(data.user.profilePicture)}" alt="Avatar de ${DOMPurify.sanitize(data.user.name)}">`
-                : avatarInitial;
-
-            let contentHtml = '';
-            if (data.type === MESSAGE_TYPES.TEXT) {
-                contentHtml = `<div class="message-text${data.edited ? ' edited' : ''}">${DOMPurify.sanitize(data.text)}</div>`;
-            } else if (data.type === MESSAGE_TYPES.IMAGE) {
-                contentHtml = `<img class="message-image" src="${DOMPurify.sanitize(data.fileData)}" alt="Imagen enviada">`;
-            } else if (data.type === MESSAGE_TYPES.VIDEO) {
-                contentHtml = `<video class="message-video" controls><source src="${DOMPurify.sanitize(data.fileData)}" type="${data.fileType}"></video>`;
-            } else if (data.type === MESSAGE_TYPES.FILE) {
-                contentHtml = `
-                    <div class="file-message">
-                        <i class="fas fa-file"></i>
-                        <a href="${DOMPurify.sanitize(data.fileData)}" download="${DOMPurify.sanitize(data.fileName)}">${DOMPurify.sanitize(data.fileName)}</a>
-                    </div>`;
-            }
-
-            let replyHtml = '';
-            if (data.replyTo) {
-                const repliedMessage = findMessageById(data.replyTo);
-                const replyText = repliedMessage
-                    ? (repliedMessage.type === MESSAGE_TYPES.TEXT ? repliedMessage.text : `[${repliedMessage.type}]`)
-                    : 'Mensaje no encontrado';
-                replyHtml = `
-                    <div class="reply-context">
-                        <i class="fas fa-reply reply-indicator"></i>
-                        <span class="reply-preview">${DOMPurify.sanitize(replyText)}</span>
-                    </div>`;
-            }
-
-            messageDiv.innerHTML = `
-                <div class="message-avatar">${avatarHtml}</div>
-                <div class="message-content">
-                    <div class="message-sender">${DOMPurify.sanitize(data.user?.name || 'Usuario')}</div>
-                    ${replyHtml}
-                    ${contentHtml}
-                    <div class="message-time">
-                        ${data.timestamp}
-                        ${isOwnMessage ? `<span class="read-indicator">${data.read ? '<i class="fas fa-check-double"></i>' : '<i class="fas fa-check"></i>'}</span>` : ''}
-                    </div>
-                    ${isOwnMessage ? `
-                        <div class="message-actions">
-                            <button class="message-action-btn edit-btn" title="Editar mensaje" aria-label="Editar mensaje"><i class="fas fa-edit"></i></button>
-                            <button class="message-action-btn delete-btn" title="Eliminar mensaje" aria-label="Eliminar mensaje"><i class="fas fa-trash"></i></button>
-                        </div>` : ''}
-                    ${!isOwnMessage && data.recipientId === currentUser.id && !data.read ? `
-                        <div class="message-actions">
-                            <button class="message-action-btn read-btn" title="Marcar como leído" aria-label="Marcar como leído"><i class="fas fa-check-double"></i></button>
-                        </div>` : ''}
-            `;
-
-            container.appendChild(messageDiv);
-            scrollToBottom(container);
-
-            if (!isOwnMessage && data.recipientId === currentUser.id && !data.read) {
-                markMessagesAsRead([data.messageId]);
-            }
-
-            messageDiv.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', () => editMessage(data.messageId)));
-            messageDiv.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', () => deleteMessage(data.messageId)));
-            messageDiv.querySelectorAll('.read-btn').forEach(btn => btn.addEventListener('click', () => markMessagesAsRead([data.messageId])));
-        }
-
-        function displayChatHistory(messages) {
-            const container = currentChat.type === 'private' ? elements.privateMessagesContainer : elements.messagesContainer;
-            container.innerHTML = `
-                <div class="message system">
-                    <i class="fas fa-info-circle"></i>
-                    <div class="message-text">¡Bienvenido al chat! Desliza un mensaje hacia la derecha para responder.</div>
-                </div>`;
-            messages.forEach(addMessage);
-        }
-
-        function updateMessage(messageId, text) {
-            const messageDiv = document.querySelector(`.message[data-message-id="${messageId}"]`);
-            if (messageDiv) {
-                const textElement = messageDiv.querySelector('.message-text');
-                if (textElement) {
-                    textElement.textContent = DOMPurify.sanitize(text);
-                    textElement.classList.add('edited');
-                }
-                showToast('Mensaje editado');
-            }
-        }
-
-        function deleteMessage(messageId) {
-            const messageDiv = document.querySelector(`.message[data-message-id="${messageId}"]`);
-            if (messageDiv) {
-                messageDiv.remove();
-                showToast('Mensaje eliminado');
-                fetch('/api/message/' + messageId, {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: currentUser.id })
-                }).catch(error => showToast('Error al eliminar mensaje', true));
-            }
-        }
-
-        function updateReadStatus(messageIds) {
-            messageIds.forEach(messageId => {
-                const messageDiv = document.querySelector(`.message[data-message-id="${messageId}"]`);
-                if (messageDiv) {
-                    const readIndicator = messageDiv.querySelector('.read-indicator');
-                    if (readIndicator) {
-                        readIndicator.innerHTML = '<i class="fas fa-check-double"></i>';
-                    }
-                    const readBtn = messageDiv.querySelector('.read-btn');
-                    if (readBtn) {
-                        readBtn.parentElement.remove();
-                    }
-                }
+                usersList.appendChild(userCard);
             });
         }
 
-        function markMessagesAsRead(messageIds) {
-            fetch('/api/mark-read', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: currentUser.id, messageIds })
-            }).then(response => response.json())
-              .then(data => {
-                  if (data.success) {
-                      socket.send(JSON.stringify({
-                          type: 'messages_read',
-                          messageIds,
-                          userId: currentUser.id,
-                          timestamp: new Date().toLocaleTimeString()
-                      }));
-                  } else {
-                      showToast('Error al marcar mensajes como leídos', true);
-                  }
-              })
-              .catch(error => showToast('Error al marcar mensajes', true));
-        }
-
-        function findMessageById(messageId) {
-            const container = currentChat.type === 'private' ? elements.privateMessagesContainer : elements.messagesContainer;
-            const messageDiv = container.querySelector(`.message[data-message-id="${messageId}"]`);
-            if (messageDiv) {
-                const textElement = messageDiv.querySelector('.message-text');
-                return {
-                    type: messageDiv.querySelector('.message-image') ? 'image' :
-                          messageDiv.querySelector('.message-video') ? 'video' :
-                          messageDiv.querySelector('.file-message') ? 'file' : 'message',
-                    text: textElement ? textElement.textContent.replace(' (editado)', '') : ''
-                };
-            }
-            return null;
-        }
-
-        function sendMessage() {
-            const text = elements.messageInput.value.trim();
-            if (!text && !pendingFile) return;
-
-            const messageData = {
-                type: pendingFile ? pendingFile.type : MESSAGE_TYPES.TEXT,
-                userId: currentUser.id,
-                user: currentUser,
-                messageId: generateUUID(),
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                replyTo: replyingTo ? replyingTo.messageId : null
-            };
-
-            if (pendingFile) {
-                messageData.fileData = pendingFile.data;
-                messageData.fileName = pendingFile.name;
-                messageData.fileType = pendingFile.fileType;
-            } else {
-                messageData.text = text;
-            }
-
-            socket.send(JSON.stringify(messageData));
-            elements.messageInput.value = '';
-            autoResizeTextarea(elements.messageInput);
-            closeReplyHandler(elements.replyPanel, elements.messageInput);
-            closeFilePreview();
-            scrollToBottom(elements.messagesContainer);
-            sendTypingStatus(false);
-        }
-
-        function sendPrivateMessage() {
-            const text = elements.privateMessageInput.value.trim();
-            if (!text && !pendingFile) return;
-
-            const messageData = {
-                type: pendingFile ? pendingFile.type : MESSAGE_TYPES.TEXT,
-                userId: currentUser.id,
-                user: currentUser,
-                recipientId: currentChat.recipientId,
-                messageId: generateUUID(),
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                replyTo: replyingTo ? replyingTo.messageId : null
-            };
-
-            if (pendingFile) {
-                messageData.fileData = pendingFile.data;
-                messageData.fileName = pendingFile.name;
-                messageData.fileType = pendingFile.fileType;
-            } else {
-                messageData.text = text;
-            }
-
-            socket.send(JSON.stringify(messageData));
-            elements.privateMessageInput.value = '';
-            autoResizeTextarea(elements.privateMessageInput);
-            closeReplyHandler(elements.privateReplyPanel, elements.privateMessageInput);
-            closeFilePreview();
-            scrollToBottom(elements.privateMessagesContainer);
-            sendTypingStatus(false, currentChat.recipientId);
-        }
-
-        function sendFileMessage() {
-            if (!pendingFile) return;
-            const messageData = {
-                type: pendingFile.type,
-                userId: currentUser.id,
-                user: currentUser,
-                messageId: generateUUID(),
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                fileData: pendingFile.data,
-                fileName: pendingFile.name,
-                fileType: pendingFile.fileType,
-                replyTo: replyingTo ? replyingTo.messageId : null
-            };
-
-            if (currentChat.type === 'private') {
-                messageData.recipientId = currentChat.recipientId;
-            }
-
-            socket.send(JSON.stringify(messageData));
-            closeFilePreview();
-            const container = currentChat.type === 'private' ? elements.privateMessagesContainer : elements.messagesContainer;
-            const input = currentChat.type === 'private' ? elements.privateMessageInput : elements.messageInput;
-            const replyPanel = currentChat.type === 'private' ? elements.privateReplyPanel : elements.replyPanel;
-            closeReplyHandler(replyPanel, input);
-            scrollToBottom(container);
-        }
-
-        function handleFileSelection(event, type) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            if (file.size > MAX_FILE_SIZE) {
-                showToast('El archivo es demasiado grande (máx. 5MB)', true);
-                event.target.value = '';
-                return;
-            }
-
-            if (type === 'image' && !ALLOWED_IMAGE_TYPES.includes(file.type)) {
-                showToast('Formato de imagen no permitido', true);
-                event.target.value = '';
-                return;
-            }
-
-            if (type === 'video' && !ALLOWED_VIDEO_TYPES.includes(file.type)) {
-                showToast('Formato de video no permitido', true);
-                event.target.value = '';
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = () => {
-                pendingFile = {
-                    type,
-                    data: reader.result,
-                    name: file.name,
-                    fileType: file.type
-                };
-                showFilePreview();
-            };
-            reader.readAsDataURL(file);
-            event.target.value = '';
-            toggleFilePanel(currentChat.type === 'private' ? elements.privateFilePanel : elements.filePanel);
-        }
-
-        function showFilePreview() {
-            let content;
-            if (pendingFile.type === 'image') {
-                content = `<img src="${pendingFile.data}" alt="Vista previa de la imagen">`;
-            } else if (pendingFile.type === 'video') {
-                content = `<video controls><source src="${pendingFile.data}" type="${pendingFile.fileType}"></video>`;
-            } else {
-                content = `<div><i class="fas fa-file"></i> ${DOMPurify.sanitize(pendingFile.name)}</div>`;
-            }
-            elements.filePreviewContent.innerHTML = content;
-            elements.filePreviewModal.classList.add('active');
-        }
-
-        function closeFilePreview() {
-            elements.filePreviewModal.classList.remove('active');
-            elements.filePreviewContent.innerHTML = '';
-            pendingFile = null;
-        }
-
-        function toggleFilePanel(panel) {
-            panel.classList.toggle('active');
-        }
-
-        function handleTypingStatus(data) {
-            if (data.recipientId && data.recipientId !== currentUser.id) return;
-            if (currentChat.type === 'private' && data.userId !== currentChat.recipientId) return;
-
-            const container = currentChat.type === 'private' ? elements.privateMessagesContainer : elements.messagesContainer;
-            let typingMessage = container.querySelector('.message.typing');
-            if (data.typing) {
-                if (!typingMessage) {
-                    typingMessage = document.createElement('div');
-                    typingMessage.className = 'message received typing';
-                    typingMessage.innerHTML = `
-                        <div class="message-avatar">${data.user?.profilePicture ? `<img src="${DOMPurify.sanitize(data.user.profilePicture)}" alt="Avatar de ${DOMPurify.sanitize(data.user.name)}">` : data.user?.name?.charAt(0).toUpperCase() || 'U'}</div>
-                        <div class="message-content">
-                            <div class="message-sender">${DOMPurify.sanitize(data.user?.name || 'Usuario')}</div>
-                            <div class="message-text"><i class="fas fa-circle-notch fa-spin"></i> Escribiendo...</div>
-                        </div>`;
-                    container.appendChild(typingMessage);
-                    scrollToBottom(container);
-                }
-            } else if (typingMessage) {
-                typingMessage.remove();
-            }
-
-            if (currentChat.type === 'private' && data.userId === currentChat.recipientId) {
-                elements.privateChatStatusText.textContent = data.typing ? 'Escribiendo...' : (allUsers.find(u => u.id === currentChat.recipientId)?.isOnline ? 'En línea' : 'Desconectado');
-                elements.privateChatStatus.classList.toggle('typing', data.typing);
-            }
-        }
-
-        function sendTypingStatus(isTyping, recipientId = null) {
-            clearTimeout(typingTimeout);
-            socket.send(JSON.stringify({
-                type: 'typing',
-                typing: isTyping,
-                userId: currentUser.id,
-                user: currentUser,
-                recipientId
-            }));
-            if (isTyping) {
-                typingTimeout = setTimeout(() => sendTypingStatus(false, recipientId), 3000);
-            }
-        }
-
-        function updateProfile() {
-            const newName = elements.profileName.value.trim();
-            if (!newName) {
-                showToast('El nombre no puede estar vacío', true);
-                elements.profileName.value = currentUser.name;
-                return;
-            }
-
-            if (newName === currentUser.name) return;
-
-            fetch('/api/update-profile', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: currentUser.id, name: newName })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        currentUser.name = data.user.name;
-                        localStorage.setItem('chatUser', JSON.stringify(currentUser));
-                        elements.userName.textContent = currentUser.name;
-                        showToast('Nombre actualizado');
-                    } else {
-                        showToast(data.message, true);
-                    }
-                })
-                .catch(error => showToast('Error al actualizar perfil', true));
-        }
-
-        function handleProfilePictureChange(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            if (file.size > MAX_FILE_SIZE) {
-                showToast('La imagen es demasiado grande (máx. 5MB)', true);
-                return;
-            }
-
-            if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-                showToast('Formato de imagen no permitido', true);
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = () => {
-                const profilePicture = reader.result;
-                fetch('/api/update-profile', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: currentUser.id, profilePicture })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            currentUser.profilePicture = profilePicture;
-                            localStorage.setItem('chatUser', JSON.stringify(currentUser));
-                            updateProfilePicture(profilePicture);
-                            showToast('Foto de perfil actualizada');
-                        } else {
-                            showToast(data.message, true);
-                        }
-                    })
-                    .catch(error => showToast('Error al actualizar foto', true));
-            };
-            reader.readAsDataURL(file);
-            event.target.value = '';
-        }
-
-        function updateProfilePicture(pictureUrl) {
-            const avatarElements = [elements.userAvatarBtn, elements.profilePicture];
-            avatarElements.forEach(el => {
-                el.innerHTML = `<img src="${DOMPurify.sanitize(pictureUrl)}" alt="Foto de perfil">`;
-            });
-        }
-
-        function showProfileScreen() {
-            elements.chatScreen.classList.remove('active');
-            elements.privateChatScreen.classList.remove('active');
-            elements.profileScreen.classList.add('active');
-        }
-
-        function showChatScreen() {
-            currentChat = { type: 'group', recipientId: null };
-            elements.profileScreen.classList.remove('active');
-            elements.privateChatScreen.classList.remove('active');
-            elements.chatScreen.classList.add('active');
-            loadChatHistory();
-            scrollToBottom(elements.messagesContainer);
-        }
-
-        function showPrivateChatScreen(recipientId) {
-            const recipient = allUsers.find(u => u.id === recipientId);
-            if (!recipient) return;
-
-            currentChat = { type: 'private', recipientId };
-            elements.chatScreen.classList.remove('active');
-            elements.profileScreen.classList.remove('active');
-            elements.privateChatScreen.classList.add('active');
-            elements.privateChatUserName.textContent = recipient.name;
-            elements.privateChatAvatar.innerHTML = recipient.profilePicture
-                ? `<img src="${DOMPurify.sanitize(recipient.profilePicture)}" alt="Avatar de ${DOMPurify.sanitize(recipient.name)}">`
-                : recipient.name.charAt(0).toUpperCase();
-            updatePrivateChatStatus();
-            loadPrivateChatHistory(recipientId);
-            scrollToBottom(elements.privateMessagesContainer);
-        }
-
-        function updatePrivateChatStatus() {
-            const recipient = allUsers.find(u => u.id === currentChat.recipientId);
-            if (recipient) {
-                elements.privateChatStatusText.textContent = recipient.isOnline ? 'En línea' : 'Desconectado';
-                elements.privateChatStatus.classList.toggle('offline', !recipient.isOnline);
-            }
-        }
-
-        function loadRegisteredUsers() {
-            fetch('/api/registered-users')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        allUsers = data.users;
-                        updateUsersList();
-                    }
-                })
-                .catch(error => showToast('Error al cargar usuarios', true));
-        }
-
-        function updateUsersList() {
-            elements.usersList.innerHTML = '';
-            allUsers.forEach(user => {
-                if (user.id === currentUser.id) return;
-                const userItem = document.createElement('div');
-                userItem.className = 'user-item';
-                userItem.dataset.userId = user.id;
-                userItem.innerHTML = `
-                    <div class="user-avatar">${user.profilePicture ? `<img src="${DOMPurify.sanitize(user.profilePicture)}" alt="Avatar de ${DOMPurify.sanitize(user.name)}">` : user.name.charAt(0).toUpperCase()}</div>
-                    <div class="user-details">
-                        <h4>${DOMPurify.sanitize(user.name)}</h4>
-                        <div class="user-status">
-                            <span class="user-status-dot ${user.isOnline ? '' : 'offline'}"></span>
-                            ${user.isOnline ? 'En línea' : 'Desconectado'}
-                        </div>
-                    </div>`;
-                userItem.addEventListener('click', () => {
-                    elements.usersPanel.classList.remove('active');
-                    showPrivateChatScreen(user.id);
+        // Iniciar llamada
+        async function startCall(targetUserId) {
+            try {
+                // Obtener stream local
+                localStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: true,
+                    video: false 
                 });
-                elements.usersList.appendChild(userItem);
+
+                // Crear conexión peer
+                peerConnection = new RTCPeerConnection(configuration);
+
+                // Agregar stream local
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+
+                // Obtener stream remoto
+                peerConnection.ontrack = (event) => {
+                    remoteStream = event.streams[0];
+                    document.getElementById('remoteAudio').srcObject = remoteStream;
+                };
+
+                // Manejar ICE candidates
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        socket.emit('ice-candidate', {
+                            target: targetUserId,
+                            candidate: event.candidate
+                        });
+                    }
+                };
+
+                // Crear oferta
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+
+                // Enviar oferta al servidor
+                socket.emit('call-user', {
+                    targetId: targetUserId,
+                    offer: offer
+                });
+
+                // Mostrar pantalla de llamada
+                showCallScreen('Llamando...', 'Esperando respuesta...');
+
+            } catch (error) {
+                console.error('Error iniciando llamada:', error);
+                alert('Error al acceder al micrófono');
+            }
+        }
+
+        // Mostrar notificación de llamada entrante
+        function showIncomingCall(data) {
+            currentCall = data.callId;
+            document.getElementById('callerName').textContent = `${data.caller.avatar} ${data.caller.name}`;
+            document.getElementById('incomingCallNotification').style.display = 'block';
+        }
+
+        // Aceptar llamada
+        async function acceptCall() {
+            document.getElementById('incomingCallNotification').style.display = 'none';
+
+            try {
+                // Obtener stream local
+                localStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: true,
+                    video: false 
+                });
+
+                // Crear conexión peer
+                peerConnection = new RTCPeerConnection(configuration);
+
+                // Agregar stream local
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+
+                // Obtener stream remoto
+                peerConnection.ontrack = (event) => {
+                    remoteStream = event.streams[0];
+                    document.getElementById('remoteAudio').srcObject = remoteStream;
+                };
+
+                // Manejar ICE candidates
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        socket.emit('ice-candidate', {
+                            target: socket.id, // Enviar al caller
+                            candidate: event.candidate
+                        });
+                    }
+                };
+
+                // Establecer descripción remota (offer del caller)
+                await peerConnection.setRemoteDescription(socket.receivedOffer);
+
+                // Crear respuesta
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+
+                // Enviar respuesta al servidor
+                socket.emit('accept-call', {
+                    callId: currentCall,
+                    answer: answer
+                });
+
+                // Mostrar pantalla de llamada
+                showCallScreen('En llamada', 'Llamada en curso');
+                startCallTimer();
+
+            } catch (error) {
+                console.error('Error aceptando llamada:', error);
+                alert('Error al aceptar la llamada');
+            }
+        }
+
+        // Manejar llamada aceptada
+        async function handleCallAccepted(data) {
+            await peerConnection.setRemoteDescription(data.answer);
+            showCallScreen('En llamada', 'Llamada en curso');
+            startCallTimer();
+        }
+
+        // Rechazar llamada
+        function rejectCall() {
+            socket.emit('reject-call', {
+                callId: currentCall,
+                reason: 'Usuario ocupado'
             });
+            document.getElementById('incomingCallNotification').style.display = 'none';
+            currentCall = null;
         }
 
-        function loadChatHistory() {
-            fetch('/api/chat-history')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        displayChatHistory(data.messages);
-                    }
-                })
-                .catch(error => showToast('Error al cargar historial', true));
+        // Mostrar pantalla de llamada
+        function showCallScreen(status, info) {
+            document.getElementById('usersScreen').style.display = 'none';
+            document.getElementById('callScreen').style.display = 'block';
+            document.getElementById('callStatus').textContent = status;
+            document.getElementById('callerInfo').textContent = info;
         }
 
-        function loadPrivateChatHistory(recipientId) {
-            fetch(`/api/chat-history?userId=${currentUser.id}&recipientId=${recipientId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        elements.privateMessagesContainer.innerHTML = `
-                            <div class="message system">
-                                <i class="fas fa-info-circle"></i>
-                                <div class="message-text">Inicia una conversación privada</div>
-                            </div>`;
-                        data.messages.forEach(addMessage);
-                        const unreadMessageIds = data.messages
-                            .filter(m => m.recipientId === currentUser.id && !m.read)
-                            .map(m => m.messageId);
-                        if (unreadMessageIds.length > 0) {
-                            markMessagesAsRead(unreadMessageIds);
-                        }
-                    }
-                })
-                .catch(error => showToast('Error al cargar historial privado', true));
+        // Ocultar pantalla de llamada
+        function hideCallScreen() {
+            document.getElementById('callScreen').style.display = 'none';
+            document.getElementById('usersScreen').style.display = 'block';
+            stopCallTimer();
+            currentCall = null;
         }
 
-        function scrollToBottom(container) {
-            container.scrollTop = container.scrollHeight;
+        // Iniciar temporizador de llamada
+        function startCallTimer() {
+            callStartTime = Date.now();
+            timerInterval = setInterval(updateCallTimer, 1000);
         }
 
-        function autoResizeTextarea(textarea) {
-            textarea.style.height = 'auto';
-            textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+        // Actualizar temporizador
+        function updateCallTimer() {
+            const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('callTimer').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
 
-        function handleTouchStart(e) {
-            const messageDiv = e.target.closest('.message:not(.system):not(.typing)');
-            if (!messageDiv) return;
-
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-            longPressTimer = setTimeout(() => {
-                showMessageActions(messageDiv);
-            }, 500);
+        // Detener temporizador
+        function stopCallTimer() {
+            clearInterval(timerInterval);
+            document.getElementById('callTimer').textContent = '00:00';
         }
 
-        function handleTouchMove(e) {
-            if (!touchStartX || !touchStartY) return;
+        // Alternar silencio
+        function toggleMute() {
+            if (localStream) {
+                const audioTracks = localStream.getAudioTracks();
+                audioTracks.forEach(track => {
+                    track.enabled = !track.enabled;
+                });
 
-            const touchX = e.touches[0].clientX;
-            const touchY = e.touches[0].clientY;
-            const deltaX = touchStartX - touchX;
-            const deltaY = Math.abs(touchStartY - touchY);
-
-            if (deltaX > 50 && deltaY < 50) {
-                const messageDiv = e.target.closest('.message:not(.system):not(.typing)');
-                if (messageDiv) {
-                    startReply(messageDiv);
-                }
-                clearTimeout(longPressTimer);
+                const muteBtn = document.getElementById('muteBtn');
+                muteBtn.classList.toggle('active', !audioTracks[0].enabled);
             }
         }
 
-        function handleTouchEnd() {
-            touchStartX = null;
-            touchStartY = null;
-            clearTimeout(longPressTimer);
-        }
-
-        function showMessageActions(messageDiv) {
-            const existingActions = document.querySelectorAll('.message-actions.active');
-            existingActions.forEach(actions => actions.classList.remove('active'));
-
-            const actions = messageDiv.querySelector('.message-actions');
-            if (actions) {
-                actions.classList.add('active');
-                setTimeout(() => {
-                    document.addEventListener('click', () => actions.classList.remove('active'), { once: true });
-                }, 100);
-            }
-        }
-
-        function startReply(messageDiv) {
-            const messageId = messageDiv.dataset.messageId;
-            const userId = messageDiv.dataset.userId;
-            const message = findMessageById(messageId);
-            if (!message) return;
-
-            const user = allUsers.find(u => u.id === userId) || currentUser;
-            replyingTo = { messageId, userId };
-
-            const replyPanel = currentChat.type === 'private' ? elements.privateReplyPanel : elements.replyPanel;
-            const replyUserName = currentChat.type === 'private' ? elements.privateReplyUserName : elements.replyUserName;
-            const replyPreview = currentChat.type === 'private' ? elements.privateReplyPreview : elements.replyPreview;
-            const input = currentChat.type === 'private' ? elements.privateMessageInput : elements.messageInput;
-
-            replyUserName.textContent = user.name;
-            replyPreview.textContent = message.type === MESSAGE_TYPES.TEXT ? DOMPurify.sanitize(message.text) : `[${message.type}]`;
-            replyPanel.classList.add('active');
-            input.focus();
-        }
-
-        function closeReplyHandler(replyPanel, input) {
-            replyPanel.classList.remove('active');
-            replyingTo = null;
-            input.value = '';
-            autoResizeTextarea(input);
-        }
-
-        function editMessage(messageId) {
-            const messageDiv = document.querySelector(`.message[data-message-id="${messageId}"]`);
-            if (!messageDiv) return;
-
-            const textElement = messageDiv.querySelector('.message-text');
-            if (!textElement) return;
-
-            const currentText = textElement.textContent.replace(' (editado)', '');
-            const input = currentChat.type === 'private' ? elements.privateMessageInput : elements.messageInput;
-            input.value = currentText;
-            input.focus();
-            autoResizeTextarea(input);
-
-            messageDiv.classList.add('editing');
-            selectedMessage = messageId;
-
-            const sendButton = currentChat.type === 'private' ? elements.privateSendButton : elements.sendButton;
-            const originalSendText = sendButton.innerHTML;
-            sendButton.innerHTML = '<i class="fas fa-save"></i>';
-
-            function saveEdit() {
-                const newText = input.value.trim();
-                if (newText) {
-                    fetch(`/api/message/${messageId}/edit`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId: currentUser.id, text: newText })
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                socket.send(JSON.stringify({
-                                    type: 'message_edited',
-                                    messageId,
-                                    text: newText,
-                                    timestamp: new Date().toLocaleTimeString()
-                                }));
-                                messageDiv.classList.remove('editing');
-                                selectedMessage = null;
-                                input.value = '';
-                                autoResizeTextarea(input);
-                                sendButton.innerHTML = originalSendText;
-                            } else {
-                                showToast(data.message, true);
-                            }
-                        })
-                        .catch(error => showToast('Error al editar mensaje', true));
-                }
+        // Finalizar llamada
+        function endCall() {
+            if (currentCall) {
+                socket.emit('end-call', { callId: currentCall });
             }
 
-            sendButton.onclick = saveEdit;
-            input.onkeypress = (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    saveEdit();
-                }
-            };
+            // Detener streams
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+
+            // Cerrar conexión peer
+            if (peerConnection) {
+                peerConnection.close();
+            }
+
+            hideCallScreen();
         }
 
-        function showConfirmModal(action, title, text) {
-            elements.confirmModalTitle.textContent = title;
-            elements.confirmModalText.textContent = text;
-            elements.confirmModal.classList.add('active');
-
-            elements.confirmModalAction.onclick = () => {
-                if (action === 'deleteAccount') {
-                    fetch('/api/delete-account', {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId: currentUser.id })
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                logout();
-                            } else {
-                                showToast(data.message, true);
-                            }
-                        })
-                        .catch(error => showToast('Error al eliminar cuenta', true));
-                }
-                hideConfirmModal();
-            };
-        }
-
-        function hideConfirmModal() {
-            elements.confirmModal.classList.remove('active');
-        }
-
+        // Salir
         function logout() {
-            localStorage.removeItem('chatUser');
-            localStorage.removeItem('token');
-            window.location.href = '/auth.html';
+            if (socket) {
+                socket.disconnect();
+            }
+            document.getElementById('usersScreen').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'block';
+            currentUser = null;
         }
 
-        function generateUUID() {
-            return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-                (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-            );
-        }
+        // Al cargar la página, configurar el socket para recibir ofertas
+        document.addEventListener('DOMContentLoaded', function() {
+            // Guardar ofertas recibidas para cuando se acepte la llamada
+            if (socket) {
+                socket.on('incoming-call', (data) => {
+                    socket.receivedOffer = data.offer;
+                });
+            }
+        });
     </script>
 </body>
 </html>
