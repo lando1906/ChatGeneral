@@ -1,0 +1,11 @@
+services:
+  - type: worker
+    name: deltachat-bot
+    env: python
+    buildCommand: ""
+    startCommand: ./start.sh
+    envVars:
+      - key: MAIL_ADDR
+        value: jeug7wvl9@nine.testrun.org
+      - key: MAIL_PW
+        value: mO*061119
