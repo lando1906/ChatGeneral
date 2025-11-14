@@ -1,158 +1,101 @@
+# server.py
 import os
-from flask import Flask, render_template, request, jsonify, session
-from flask_socketio import SocketIO, emit
-from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
-import secrets
+from flask import Flask, render_template, request, session, redirect, url_for
+from flask_socketio import SocketIO, emit, join_room, leave_room
+import eventlet
 
-# --- App Configuration ---
-app = Flask(__name__, template_folder='templates', static_folder='static')
+eventlet.monkey_patch()
 
-# Use environment variable for secret key in production for security
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(16))
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your-secret-key-here'
+socketio = SocketIO(app, cors_allowed_origins="*")
 
-# --- Database Configuration ---
-# Set the base directory for the app
-basedir = os.path.abspath(os.path.dirname(__file__))
-# Configure the database URI for SQLite. Render uses a persistent disk at /var/data
-db_path = os.path.join(os.environ.get('RENDER_DISK_PATH', basedir), 'toduslinks.db')
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Simulación de base de datos en memoria
+users = {}
+online_users = {}
 
-db = SQLAlchemy(app)
-socketio = SocketIO(app)
-
-# --- Database Models ---
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
-    posts = db.relationship('Post', backref='author', lazy=True)
-
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
-
-class Post(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    link = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text, nullable=False)
-    image = db.Column(db.String(200), nullable=False)
-    post_type = db.Column(db.String(50), nullable=False)
-    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'link': self.link,
-            'description': self.description,
-            'image': self.image,
-            'type': self.post_type,
-            'author': self.author.username,
-            'timestamp': self.timestamp.isoformat()
-        }
-
-# --- Main Route ---
 @app.route('/')
-def index():
-    return render_template('index.html')
+def home():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    return render_template('index.html', username=session['username'], online_users=online_users)
 
-# --- API Routes ---
-# (El resto de las rutas API no cambian y van aquí...)
-@app.route('/api/signup', methods=['POST'])
-def signup():
-    data = request.get_json()
-    username = data.get('username')
-    email = data.get('email')
-    password = data.get('password')
-    if not all([username, email, password]):
-        return jsonify({'status': 'error', 'message': 'Missing data'}), 400
-    if User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first():
-        return jsonify({'status': 'error', 'message': 'User already exists'}), 409
-    new_user = User(username=username, email=email)
-    new_user.set_password(password)
-    db.session.add(new_user)
-    db.session.commit()
-    session['user_id'] = new_user.id
-    session['username'] = new_user.username
-    return jsonify({'status': 'success', 'message': 'User created successfully', 'username': new_user.username})
-
-@app.route('/api/login', methods=['POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    data = request.get_json()
-    email = data.get('email')
-    password = data.get('password')
-    user = User.query.filter_by(email=email).first()
-    if user and user.check_password(password):
-        session['user_id'] = user.id
-        session['username'] = user.username
-        return jsonify({'status': 'success', 'message': 'Logged in successfully', 'username': user.username})
-    return jsonify({'status': 'error', 'message': 'Invalid credentials'}), 401
+    if request.method == 'POST':
+        username = request.form['username'].strip()
+        password = request.form['password']
+        action = request.form.get('action')
 
-@app.route('/api/logout', methods=['POST'])
+        if action == 'register':
+            if username in users:
+                return render_template('auth.html', error="Usuario ya existe")
+            if len(username) < 3:
+                return render_template('auth.html', error="Usuario muy corto")
+            users[username] = password
+            return render_template('auth.html', success="Registro exitoso, inicia sesión")
+
+        elif action == 'login':
+            if username in users and users[username] == password:
+                session['username'] = username
+                return redirect(url_for('home'))
+            else:
+                return render_template('auth.html', error="Credenciales inválidas")
+
+    return render_template('auth.html')
+
+@app.route('/logout')
 def logout():
-    session.clear()
-    return jsonify({'status': 'success', 'message': 'Logged out successfully'})
+    username = session.pop('username', None)
+    if username:
+        online_users.pop(username, None)
+        socketio.emit('user_offline', {'username': username})
+    return redirect(url_for('login'))
 
-@app.route('/api/session', methods=['GET'])
-def check_session():
-    if 'user_id' in session:
-        return jsonify({'logged_in': True, 'username': session.get('username')})
-    return jsonify({'logged_in': False})
+# Socket.IO Events
+@socketio.on('connect')
+def handle_connect():
+    username = session.get('username')
+    if username:
+        online_users[username] = request.sid
+        emit('user_online', {'username': username}, broadcast=True)
+        emit('online_users', {'users': list(online_users.keys())})
 
-@app.route('/api/posts', methods=['GET'])
-def get_posts():
-    posts = Post.query.order_by(Post.timestamp.desc()).all()
-    return jsonify([post.to_dict() for post in posts])
+@socketio.on('disconnect')
+def handle_disconnect():
+    username = session.get('username')
+    if username and online_users.get(username) == request.sid:
+        online_users.pop(username)
+        emit('user_offline', {'username': username}, broadcast=True)
 
-@app.route('/api/posts', methods=['POST'])
-def create_post():
-    if 'user_id' not in session:
-        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 401
-    data = request.get_json()
-    link = data.get('link')
-    description = data.get('description')
-    image = data.get('image')
-    post_type = data.get('type')
-    if not all([link, description, image, post_type]):
-        return jsonify({'status': 'error', 'message': 'Missing data'}), 400
-    new_post = Post(link=link, description=description, image=image, post_type=post_type, user_id=session['user_id'])
-    db.session.add(new_post)
-    db.session.commit()
-    socketio.emit('new_post', new_post.to_dict())
-    return jsonify({'status': 'success', 'message': 'Post created', 'post': new_post.to_dict()}), 201
+@socketio.on('call_user')
+def handle_call(data):
+    caller = session.get('username')
+    callee = data['callee']
+    call_type = data['type']  # 'audio' or 'video'
+    if callee in online_users:
+        emit('incoming_call', {
+            'caller': caller,
+            'type': call_type
+        }, room=online_users[callee])
 
-# --- Utility to create tables ---
-def init_db():
-    with app.app_context():
-        print("Creating database tables...")
-        db.create_all()
-        print("Database tables created.")
-        if not User.query.first():
-            print("Creating default data...")
-            default_user = User(username='admin', email='admin@todus.links')
-            default_user.set_password('admin')
-            db.session.add(default_user)
-            db.session.commit()
-            posts_data = [
-                 {'link': "#", 'description': "Canal de noticias de Devs de Cuba.", 'image': "https://placehold.co/100x100/1f2937/9ca3af?text=DevCU", 'post_type': "Canal", 'user_id': default_user.id},
-                 {'link': "#", 'description': "Grupo para amantes de la fotografía.", 'image': "https://placehold.co/100x100/1f2937/9ca3af?text=Foto", 'post_type': "Grupo", 'user_id': default_user.id},
-            ]
-            for p in posts_data:
-                db.session.add(Post(**p))
-            db.session.commit()
-            print("Default data created.")
+@socketio.on('answer_call')
+def handle_answer(data):
+    callee = session.get('username')
+    caller = data['caller']
+    accepted = data['accepted']
+    if caller in online_users:
+        emit('call_responded', {
+            'callee': callee,
+            'accepted': accepted
+        }, room=online_users[caller])
 
-# --- CORRECCIÓN CLAVE ---
-# Esta sección se usará para desarrollo local. El comando de Gunicorn en Render
-# ignorará este bloque y ejecutará la app directamente.
+@socketio.on('webrtc_signal')
+def handle_signal(data):
+    target = data['target']
+    if target in online_users:
+        emit('webrtc_signal', data, room=online_users[target])
+
 if __name__ == '__main__':
-    # Obtener el puerto de la variable de entorno PORT, con 10000 como valor por defecto.
-    port = int(os.environ.get('PORT', 10000))
-    # Ejecutar la app escuchando en TODAS las interfaces de red (0.0.0.0)
-    socketio.run(app, host='0.0.0.0', port=port, debug=False)
+    port = int(os.environ.get("PORT", 10000))
+    socketio.run(app, host='0.0.0.0', port=port)
