@@ -1,4 +1,1 @@
-Flask
-flask-socketio
-eventlet
-python-socketio
+deltachat-rpc-client
