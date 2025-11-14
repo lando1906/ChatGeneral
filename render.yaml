@@ -2,8 +2,12 @@ services:
   - type: worker
     name: deltachat-bot
     env: python
-    buildCommand: ""
-    startCommand: ./start.sh
+    buildCommand: |
+      pip install -r requirements.txt
+      curl -L "https://github.com/deltachat/deltachat-core-rust/releases/download/v2.26.0/deltachat-rpc-server-x86_64-unknown-linux-gnu.tar.gz" \
+        | tar xz
+      mv deltachat-rpc-server /usr/local/bin/
+    startCommand: "python bot.py"
     envVars:
       - key: MAIL_ADDR
         value: jeug7wvl9@nine.testrun.org
